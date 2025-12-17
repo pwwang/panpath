@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omegapath"
+version = "0.1.0"
+description = "Universal sync/async local/cloud path library with pathlib-compatible interface"
+authors = [
+    {name = "omegapath contributors"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Filesystems",
+]
+keywords = ["path", "pathlib", "s3", "gcs", "azure", "cloud", "async", "asyncio"]
+
+dependencies = [
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+# Sync cloud storage backends
+s3 = ["boto3>=1.20.0"]
+gs = ["google-cloud-storage>=2.0.0"]
+azure = ["azure-storage-blob>=12.0.0"]
+
+# Async cloud storage backends
+async-s3 = ["aioboto3>=11.0.0", "aiofiles>=23.0.0"]
+async-gs = ["gcloud-aio-storage>=8.0.0", "aiofiles>=23.0.0"]
+async-azure = ["azure-storage-blob[aio]>=12.0.0", "aiofiles>=23.0.0"]
+
+# Convenience groups
+all-sync = ["boto3>=1.20.0", "google-cloud-storage>=2.0.0", "azure-storage-blob>=12.0.0"]
+all-async = ["aioboto3>=11.0.0", "gcloud-aio-storage>=8.0.0", "azure-storage-blob[aio]>=12.0.0", "aiofiles>=23.0.0"]
+all = [
+    "boto3>=1.20.0",
+    "google-cloud-storage>=2.0.0", 
+    "azure-storage-blob[aio]>=12.0.0",
+    "aioboto3>=11.0.0",
+    "gcloud-aio-storage>=8.0.0",
+    "aiofiles>=23.0.0",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "moto[s3]>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pwwang/omegapath"
+Repository = "https://github.com/pwwang/omegapath"
+Documentation = "https://github.com/pwwang/omegapath#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["omegapath*"]
+
+[tool.setuptools.package-data]
+omegapath = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "I", "N", "W", "UP"]
