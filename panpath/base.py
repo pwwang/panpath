@@ -26,13 +26,18 @@ class CloudPath(PurePosixPath, ABC):
         return obj  # type: ignore
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize cloud path (client already handled in __new__)."""
-        # Remove client from kwargs if present (already handled in __new__)
+        """Initialize cloud path (client already handled in __new__())."""
+        # Remove client from kwargs if present (already handled in __new__())
         kwargs.pop('client', None)
-        # Call super().__init__() with same args to initialize internal pathlib properties
-        # Python 3.13+ requires this for _raw_paths, _drv, etc.
-        # Python 3.9 works fine with this too
-        super().__init__(*args, **kwargs)  # type: ignore
+        # Python version compatibility for PurePosixPath.__init__():
+        # - Python 3.9: Fully initialized in __new__(), __init__() does nothing useful but passes args to object.__init__() which rejects them
+        # - Python 3.10-3.11: Similar to 3.9
+        # - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.
+        import sys
+        if sys.version_info >= (3, 12):
+            # Python 3.12+ requires calling __init__ with args to set internal properties
+            super().__init__(*args)  # type: ignore
+        # else: Python 3.9-3.11 don't need __init__ called (already done in __new__)
 
     @property
     def client(self) -> "Client":
@@ -492,13 +497,18 @@ class AsyncCloudPath(PurePosixPath, ABC):
         return obj  # type: ignore
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize async cloud path (client already handled in __new__)."""
-        # Remove client from kwargs if present (already handled in __new__)
+        """Initialize async cloud path (client already handled in __new__())."""
+        # Remove client from kwargs if present (already handled in __new__())
         kwargs.pop('client', None)
-        # Call super().__init__() with same args to initialize internal pathlib properties
-        # Python 3.13+ requires this for _raw_paths, _drv, etc.
-        # Python 3.9 works fine with this too
-        super().__init__(*args, **kwargs)  # type: ignore
+        # Python version compatibility for PurePosixPath.__init__():
+        # - Python 3.9: Fully initialized in __new__(), __init__() does nothing useful but passes args to object.__init__() which rejects them
+        # - Python 3.10-3.11: Similar to 3.9
+        # - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.
+        import sys
+        if sys.version_info >= (3, 12):
+            # Python 3.12+ requires calling __init__ with args to set internal properties
+            super().__init__(*args)  # type: ignore
+        # else: Python 3.9-3.11 don't need __init__ called (already done in __new__)
 
     @property
     def client(self) -> "AsyncClient":
