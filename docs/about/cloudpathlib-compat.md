@@ -187,4 +187,3 @@ Potential areas for further cloudpathlib compatibility:
 
 - [cloudpathlib GitHub](https://github.com/drivendataorg/cloudpathlib)
 - [cloudpathlib Documentation](https://cloudpathlib.drivendata.org/)
-- [PanPath Tests](tests/test_cloudpath_compat.py)
