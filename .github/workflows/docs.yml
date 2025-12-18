@@ -29,7 +29,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip poetry
           python -m poetry config virtualenvs.create false
-          python -m poetry install -v --extras docs
+          python -m poetry install -v --with docs
 
       - name: Build documentation
         run: mkdocs build
