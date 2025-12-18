@@ -9,18 +9,32 @@ sys.modules['boto3'] = MagicMock()
 sys.modules['aioboto3'] = MagicMock()
 sys.modules['botocore'] = MagicMock()
 sys.modules['botocore.exceptions'] = MagicMock()
-sys.modules['google.cloud'] = MagicMock()
-sys.modules['google.cloud.storage'] = MagicMock()
+
+# For GCS, we need google.cloud.storage to be accessible both ways
+mock_gcs_storage = MagicMock()
+sys.modules['google.cloud.storage'] = mock_gcs_storage
+mock_google_cloud = MagicMock()
+mock_google_cloud.storage = mock_gcs_storage  # Make storage accessible as attribute
+sys.modules['google.cloud'] = mock_google_cloud
+
 sys.modules['google.api_core'] = MagicMock()
 sys.modules['google.api_core.exceptions'] = MagicMock()
 sys.modules['gcloud'] = MagicMock()
 sys.modules['gcloud.aio'] = MagicMock()
 sys.modules['gcloud.aio.storage'] = MagicMock()
-sys.modules['azure'] = MagicMock()
+
+# For Azure, similar setup
+mock_azure_blob = MagicMock()
+sys.modules['azure.storage.blob'] = mock_azure_blob
+mock_azure_storage = MagicMock()
+mock_azure_storage.blob = mock_azure_blob
+sys.modules['azure.storage'] = mock_azure_storage
+mock_azure = MagicMock()
+mock_azure.storage = mock_azure_storage
+sys.modules['azure'] = mock_azure
+
 sys.modules['azure.core'] = MagicMock()
 sys.modules['azure.core.exceptions'] = MagicMock()
-sys.modules['azure.storage'] = MagicMock()
-sys.modules['azure.storage.blob'] = MagicMock()
 sys.modules['azure.storage.blob.aio'] = MagicMock()
 
 

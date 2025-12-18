@@ -10,14 +10,16 @@ class TestSymlinkMethods:
     def test_s3_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on S3."""
         from panpath.router import PanPath
+        from panpath.s3_sync import S3Path
 
-        # Mock boto3
-        mock_s3_client = MagicMock()
-        mock_boto3 = MagicMock()
+        # Configure the conftest mock
+        mock_boto3 = sys.modules["boto3"]
+        mock_s3_client = Mock()
         mock_boto3.client.return_value = mock_s3_client
-        mock_boto3.resource.return_value = MagicMock()
-        sys.modules["boto3"] = mock_boto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+        mock_boto3.resource.return_value = Mock()
+
+        # Clear default client to force new client creation
+        S3Path._default_client = None
 
         # Create symlink
         link_path = PanPath("s3://bucket/link")
@@ -45,19 +47,19 @@ class TestSymlinkMethods:
     def test_gs_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on GCS."""
         from panpath.router import PanPath
+        from panpath.gs_sync import GSPath
 
-        # Mock google-cloud-storage
+        # Configure the conftest mock
+        mock_storage = sys.modules["google.cloud.storage"]
         mock_blob = MagicMock()
         mock_bucket = MagicMock()
         mock_bucket.blob.return_value = mock_blob
         mock_client = MagicMock()
         mock_client.bucket.return_value = mock_bucket
-
-        mock_storage = MagicMock()
         mock_storage.Client.return_value = mock_client
-        sys.modules["google.cloud"] = MagicMock()
-        sys.modules["google.cloud.storage"] = mock_storage
-        sys.modules["google.api_core.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        GSPath._default_client = None
 
         # Create symlink
         link_path = PanPath("gs://bucket/link")
@@ -81,16 +83,17 @@ class TestSymlinkMethods:
     def test_azure_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on Azure."""
         from panpath.router import PanPath
+        from panpath.azure_sync import AzureBlobPath
 
-        # Mock azure-storage-blob
+        # Configure the conftest mock
+        mock_azure = sys.modules["azure.storage.blob"]
         mock_blob_client = MagicMock()
         mock_service_client = MagicMock()
         mock_service_client.get_blob_client.return_value = mock_blob_client
-
-        mock_azure = MagicMock()
         mock_azure.BlobServiceClient.return_value = mock_service_client
-        sys.modules["azure.storage.blob"] = mock_azure
-        sys.modules["azure.core.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        AzureBlobPath._default_client = None
 
         # Create symlink
         link_path = PanPath("az://container/link")
@@ -121,9 +124,11 @@ class TestGlobMethods:
     def test_s3_glob_simple_pattern(self):
         """Test simple glob pattern on S3."""
         from panpath.router import PanPath
+        from panpath.s3_sync import S3Path
 
-        # Mock boto3
-        mock_s3_client = MagicMock()
+        # Configure the conftest mock
+        mock_boto3 = sys.modules["boto3"]
+        mock_s3_client = Mock()
         mock_s3_client.list_objects_v2.return_value = {
             "Contents": [
                 {"Key": "prefix/file1.txt"},
@@ -131,12 +136,11 @@ class TestGlobMethods:
                 {"Key": "prefix/file3.log"},
             ]
         }
-
-        mock_boto3 = MagicMock()
         mock_boto3.client.return_value = mock_s3_client
-        mock_boto3.resource.return_value = MagicMock()
-        sys.modules["boto3"] = mock_boto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+        mock_boto3.resource.return_value = Mock()
+
+        # Clear default client to force new client creation
+        S3Path._default_client = None
 
         # Glob for txt files
         path = PanPath("s3://bucket/prefix")
@@ -149,8 +153,10 @@ class TestGlobMethods:
     def test_gs_rglob_recursive(self):
         """Test recursive glob on GCS."""
         from panpath.router import PanPath
+        from panpath.gs_sync import GSPath
 
-        # Mock google-cloud-storage
+        # Configure the conftest mock
+        mock_storage = sys.modules["google.cloud.storage"]
         mock_blob1 = MagicMock()
         mock_blob1.name = "prefix/dir1/file1.py"
         mock_blob2 = MagicMock()
@@ -163,12 +169,10 @@ class TestGlobMethods:
 
         mock_client = MagicMock()
         mock_client.bucket.return_value = mock_bucket
-
-        mock_storage = MagicMock()
         mock_storage.Client.return_value = mock_client
-        sys.modules["google.cloud"] = MagicMock()
-        sys.modules["google.cloud.storage"] = mock_storage
-        sys.modules["google.api_core.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        GSPath._default_client = None
 
         # Recursively glob for py files
         path = PanPath("gs://bucket/prefix")
@@ -185,16 +189,17 @@ class TestTouchMethod:
     def test_s3_touch_creates_empty_file(self):
         """Test touch creates empty file on S3."""
         from panpath.router import PanPath
+        from panpath.s3_sync import S3Path
 
-        # Mock boto3
-        mock_s3_client = MagicMock()
+        # Configure the conftest mock
+        mock_boto3 = sys.modules["boto3"]
+        mock_s3_client = Mock()
         mock_s3_client.head_object.side_effect = Exception("Not found")
-
-        mock_boto3 = MagicMock()
         mock_boto3.client.return_value = mock_s3_client
-        mock_boto3.resource.return_value = MagicMock()
-        sys.modules["boto3"] = mock_boto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+        mock_boto3.resource.return_value = Mock()
+
+        # Clear default client to force new client creation
+        S3Path._default_client = None
 
         # Touch file
         path = PanPath("s3://bucket/newfile.txt")
@@ -210,8 +215,10 @@ class TestTouchMethod:
     def test_gs_touch_with_exist_ok_false(self):
         """Test touch with exist_ok=False on GCS."""
         from panpath.router import PanPath
+        from panpath.gs_sync import GSPath
 
-        # Mock google-cloud-storage
+        # Configure the conftest mock
+        mock_storage = sys.modules["google.cloud.storage"]
         mock_blob = MagicMock()
         mock_blob.exists.return_value = True
 
@@ -220,12 +227,10 @@ class TestTouchMethod:
 
         mock_client = MagicMock()
         mock_client.bucket.return_value = mock_bucket
-
-        mock_storage = MagicMock()
         mock_storage.Client.return_value = mock_client
-        sys.modules["google.cloud"] = MagicMock()
-        sys.modules["google.cloud.storage"] = mock_storage
-        sys.modules["google.api_core.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        GSPath._default_client = None
 
         # Touch existing file with exist_ok=False should raise
         path = PanPath("gs://bucket/existing.txt")
@@ -239,15 +244,16 @@ class TestRenameMethod:
     def test_s3_rename_moves_file(self):
         """Test rename moves file on S3."""
         from panpath.router import PanPath
+        from panpath.s3_sync import S3Path
 
-        # Mock boto3
-        mock_s3_client = MagicMock()
-
-        mock_boto3 = MagicMock()
+        # Configure the conftest mock
+        mock_boto3 = sys.modules["boto3"]
+        mock_s3_client = Mock()
         mock_boto3.client.return_value = mock_s3_client
-        mock_boto3.resource.return_value = MagicMock()
-        sys.modules["boto3"] = mock_boto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+        mock_boto3.resource.return_value = Mock()
+
+        # Clear default client to force new client creation
+        S3Path._default_client = None
 
         # Rename file
         source = PanPath("s3://bucket/old.txt")
@@ -274,8 +280,10 @@ class TestWalkMethod:
     def test_s3_walk_directory_tree(self):
         """Test walk returns directory structure on S3."""
         from panpath.router import PanPath
+        from panpath.s3_sync import S3Path
 
-        # Mock boto3
+        # Configure the conftest mock
+        mock_boto3 = sys.modules["boto3"]
         mock_paginator = MagicMock()
         mock_paginator.paginate.return_value = [
             {
@@ -287,14 +295,13 @@ class TestWalkMethod:
             }
         ]
 
-        mock_s3_client = MagicMock()
+        mock_s3_client = Mock()
         mock_s3_client.get_paginator.return_value = mock_paginator
-
-        mock_boto3 = MagicMock()
         mock_boto3.client.return_value = mock_s3_client
-        mock_boto3.resource.return_value = MagicMock()
-        sys.modules["boto3"] = mock_boto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+        mock_boto3.resource.return_value = Mock()
+
+        # Clear default client to force new client creation
+        S3Path._default_client = None
 
         # Walk directory
         path = PanPath("s3://bucket/dir")
@@ -315,8 +322,10 @@ class TestRmdirMethod:
     def test_gs_rmdir_removes_directory_marker(self):
         """Test rmdir removes directory marker on GCS."""
         from panpath.router import PanPath
+        from panpath.gs_sync import GSPath
 
-        # Mock google-cloud-storage
+        # Configure the conftest mock
+        mock_storage = sys.modules["google.cloud.storage"]
         mock_blob = MagicMock()
 
         mock_bucket = MagicMock()
@@ -324,12 +333,10 @@ class TestRmdirMethod:
 
         mock_client = MagicMock()
         mock_client.bucket.return_value = mock_bucket
-
-        mock_storage = MagicMock()
         mock_storage.Client.return_value = mock_client
-        sys.modules["google.cloud"] = MagicMock()
-        sys.modules["google.cloud.storage"] = mock_storage
-        sys.modules["google.api_core.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        GSPath._default_client = None
 
         # Remove directory
         path = PanPath("gs://bucket/mydir")
@@ -374,25 +381,24 @@ class TestAsyncSymlinkMethods:
     async def test_async_s3_symlink(self):
         """Test async symlink creation on S3."""
         from panpath.router import PanPath
+        from panpath.s3_async import AsyncS3Path
 
-        # Mock aioboto3
+        # Configure the conftest mock
+        mock_aioboto3 = sys.modules["aioboto3"]
         mock_s3_client = AsyncMock()
         mock_session = MagicMock()
 
-        async def mock_client_context(*args, **kwargs):
-            class MockContext:
-                async def __aenter__(self):
-                    return mock_s3_client
-                async def __aexit__(self, *args):
-                    pass
-            return MockContext()
+        class MockContext:
+            async def __aenter__(self):
+                return mock_s3_client
+            async def __aexit__(self, *args):
+                pass
 
-        mock_session.client.side_effect = mock_client_context
-
-        mock_aioboto3 = MagicMock()
+        mock_session.client.return_value = MockContext()
         mock_aioboto3.Session.return_value = mock_session
-        sys.modules["aioboto3"] = mock_aioboto3
-        sys.modules["botocore.exceptions"] = MagicMock()
+
+        # Clear default client to force new client creation
+        AsyncS3Path._default_client = None
 
         # Create async symlink
         link_path = PanPath("s3://bucket/link", mode="async")
@@ -409,22 +415,24 @@ class TestAsyncGlobMethods:
     async def test_async_gs_glob(self):
         """Test async glob on GCS."""
         from panpath.router import PanPath
+        from panpath.gs_async import AsyncGSPath
 
-        # Mock gcloud-aio-storage
-        mock_storage = AsyncMock()
-        mock_storage.list_objects.return_value = {
+        # Configure the conftest mock
+        mock_gcloud = sys.modules["gcloud.aio.storage"]
+        mock_storage = MagicMock()
+        # Make list_objects an AsyncMock that returns the data
+        mock_storage.list_objects = AsyncMock(return_value={
             "items": [
                 {"name": "prefix/file1.txt"},
                 {"name": "prefix/file2.log"},
             ]
-        }
+        })
 
-        mock_storage_class = MagicMock()
-        mock_storage_class.return_value = mock_storage
+        # Configure the existing Storage class mock to return our storage instance
+        mock_gcloud.Storage.return_value = mock_storage
 
-        sys.modules["gcloud.aio.storage"] = MagicMock()
-        sys.modules["gcloud.aio.storage"].Storage = mock_storage_class
-        sys.modules["aiofiles"] = MagicMock()
+        # Clear default client to force new client creation
+        AsyncGSPath._default_client = None
 
         # Glob for files
         path = PanPath("gs://bucket/prefix", mode="async")

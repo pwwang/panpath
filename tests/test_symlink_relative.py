@@ -7,14 +7,17 @@ import pytest
 def test_symlink_absolute_target():
     """Test symlink with absolute target (has scheme)."""
     from panpath.router import PanPath
+    from panpath.s3_sync import S3Path
+    from unittest.mock import Mock
 
-    # Mock boto3
-    mock_s3_client = MagicMock()
-    mock_boto3 = MagicMock()
+    # Configure the conftest mock
+    mock_boto3 = sys.modules["boto3"]
+    mock_s3_client = Mock()
     mock_boto3.client.return_value = mock_s3_client
-    mock_boto3.resource.return_value = MagicMock()
-    sys.modules["boto3"] = mock_boto3
-    sys.modules["botocore.exceptions"] = MagicMock()
+    mock_boto3.resource.return_value = Mock()
+
+    # Clear default client to force new client creation
+    S3Path._default_client = None
 
     # Create symlink with absolute target
     link = PanPath("s3://bucket/dir/link")
@@ -29,14 +32,17 @@ def test_symlink_absolute_target():
 def test_symlink_relative_target():
     """Test symlink with relative target (no scheme)."""
     from panpath.router import PanPath
+    from panpath.s3_sync import S3Path
+    from unittest.mock import Mock
 
-    # Mock boto3
-    mock_s3_client = MagicMock()
-    mock_boto3 = MagicMock()
+    # Configure the conftest mock
+    mock_boto3 = sys.modules["boto3"]
+    mock_s3_client = Mock()
     mock_boto3.client.return_value = mock_s3_client
-    mock_boto3.resource.return_value = MagicMock()
-    sys.modules["boto3"] = mock_boto3
-    sys.modules["botocore.exceptions"] = MagicMock()
+    mock_boto3.resource.return_value = Mock()
+
+    # Clear default client to force new client creation
+    S3Path._default_client = None
 
     # Create symlink with relative target
     link = PanPath("s3://bucket/dir/link")
@@ -51,14 +57,17 @@ def test_symlink_relative_target():
 def test_symlink_relative_target_with_dotdot():
     """Test symlink with relative target using ../."""
     from panpath.router import PanPath
+    from panpath.s3_sync import S3Path
+    from unittest.mock import Mock
 
-    # Mock boto3
-    mock_s3_client = MagicMock()
-    mock_boto3 = MagicMock()
+    # Configure the conftest mock
+    mock_boto3 = sys.modules["boto3"]
+    mock_s3_client = Mock()
     mock_boto3.client.return_value = mock_s3_client
-    mock_boto3.resource.return_value = MagicMock()
-    sys.modules["boto3"] = mock_boto3
-    sys.modules["botocore.exceptions"] = MagicMock()
+    mock_boto3.resource.return_value = Mock()
+
+    # Clear default client to force new client creation
+    S3Path._default_client = None
 
     # Create symlink with relative target using ../
     link = PanPath("s3://bucket/dir/subdir/link")
@@ -74,19 +83,19 @@ def test_symlink_relative_target_with_dotdot():
 def test_symlink_gcs_relative():
     """Test GCS symlink with relative target."""
     from panpath.router import PanPath
+    from panpath.gs_sync import GSPath
 
-    # Mock google-cloud-storage
+    # Configure the conftest mock
+    mock_storage = sys.modules["google.cloud.storage"]
     mock_blob = MagicMock()
     mock_bucket = MagicMock()
     mock_bucket.blob.return_value = mock_blob
     mock_client = MagicMock()
     mock_client.bucket.return_value = mock_bucket
-
-    mock_storage = MagicMock()
     mock_storage.Client.return_value = mock_client
-    sys.modules["google.cloud"] = MagicMock()
-    sys.modules["google.cloud.storage"] = mock_storage
-    sys.modules["google.api_core.exceptions"] = MagicMock()
+
+    # Clear default client to force new client creation
+    GSPath._default_client = None
 
     # Create symlink with relative target
     link = PanPath("gs://bucket/folder/link")
@@ -99,16 +108,17 @@ def test_symlink_gcs_relative():
 def test_symlink_azure_absolute():
     """Test Azure symlink with absolute target."""
     from panpath.router import PanPath
+    from panpath.azure_sync import AzureBlobPath
 
-    # Mock azure-storage-blob
+    # Configure the conftest mock
+    mock_azure = sys.modules["azure.storage.blob"]
     mock_blob_client = MagicMock()
     mock_service_client = MagicMock()
     mock_service_client.get_blob_client.return_value = mock_blob_client
-
-    mock_azure = MagicMock()
     mock_azure.BlobServiceClient.return_value = mock_service_client
-    sys.modules["azure.storage.blob"] = mock_azure
-    sys.modules["azure.core.exceptions"] = MagicMock()
+
+    # Clear default client to force new client creation
+    AzureBlobPath._default_client = None
 
     # Create symlink with absolute target
     link = PanPath("az://container/dir/link")
@@ -124,26 +134,25 @@ def test_symlink_azure_absolute():
 async def test_async_symlink_relative():
     """Test async symlink with relative target."""
     from panpath.router import PanPath
+    from panpath.s3_async import AsyncS3Path
     from unittest.mock import AsyncMock
 
-    # Mock aioboto3
+    # Configure the conftest mock
+    mock_aioboto3 = sys.modules["aioboto3"]
     mock_s3_client = AsyncMock()
     mock_session = MagicMock()
 
-    async def mock_client_context(*args, **kwargs):
-        class MockContext:
-            async def __aenter__(self):
-                return mock_s3_client
-            async def __aexit__(self, *args):
-                pass
-        return MockContext()
+    class MockContext:
+        async def __aenter__(self):
+            return mock_s3_client
+        async def __aexit__(self, *args):
+            pass
 
-    mock_session.client.side_effect = mock_client_context
-
-    mock_aioboto3 = MagicMock()
+    mock_session.client.return_value = MockContext()
     mock_aioboto3.Session.return_value = mock_session
-    sys.modules["aioboto3"] = mock_aioboto3
-    sys.modules["botocore.exceptions"] = MagicMock()
+
+    # Clear default client to force new client creation
+    AsyncS3Path._default_client = None
 
     # Create async symlink with relative target
     link = PanPath("s3://bucket/dir/link", mode="async")
