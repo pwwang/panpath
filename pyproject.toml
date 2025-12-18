@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "omegapath"
+name = "panpath"
 version = "0.1.0"
 description = "Universal sync/async local/cloud path library with pathlib-compatible interface"
 authors = [
-    {name = "omegapath contributors"}
+    {name = "panpath contributors"}
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -47,7 +47,7 @@ all-sync = ["boto3>=1.20.0", "google-cloud-storage>=2.0.0", "azure-storage-blob>
 all-async = ["aioboto3>=11.0.0", "gcloud-aio-storage>=8.0.0", "azure-storage-blob[aio]>=12.0.0", "aiofiles>=23.0.0"]
 all = [
     "boto3>=1.20.0",
-    "google-cloud-storage>=2.0.0", 
+    "google-cloud-storage>=2.0.0",
     "azure-storage-blob[aio]>=12.0.0",
     "aioboto3>=11.0.0",
     "gcloud-aio-storage>=8.0.0",
@@ -65,17 +65,25 @@ dev = [
     "moto[s3]>=4.0.0",
 ]
 
+# Documentation dependencies
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+]
+
 [project.urls]
-Homepage = "https://github.com/pwwang/omegapath"
-Repository = "https://github.com/pwwang/omegapath"
-Documentation = "https://github.com/pwwang/omegapath#readme"
+Homepage = "https://github.com/pwwang/panpath"
+Repository = "https://github.com/pwwang/panpath"
+Documentation = "https://github.com/pwwang/panpath#readme"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["omegapath*"]
+include = ["panpath*"]
 
 [tool.setuptools.package-data]
-omegapath = ["py.typed"]
+panpath = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

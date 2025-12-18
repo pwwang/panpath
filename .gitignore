@@ -74,3 +74,8 @@ Thumbs.db
 # Project specific
 *.log
 .tmp/
+site/
+.env
+gac_key.json
+examples/
+instructions/

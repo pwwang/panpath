@@ -3,17 +3,17 @@
 
 def test_imports():
     """Test that main exports are available."""
-    from omegapath import OmegaPath, AsyncOmegaPath, LocalPath, AsyncLocalPath
+    from panpath import PanPath, AsyncPanPath, LocalPath, AsyncLocalPath
 
-    assert OmegaPath is not None
-    assert AsyncOmegaPath is not None
+    assert PanPath is not None
+    assert AsyncPanPath is not None
     assert LocalPath is not None
     assert AsyncLocalPath is not None
 
 
 def test_version():
     """Test that version is defined."""
-    import omegapath
+    import panpath
 
-    assert hasattr(omegapath, "__version__")
-    assert isinstance(omegapath.__version__, str)
+    assert hasattr(panpath, "__version__")
+    assert isinstance(panpath.__version__, str)

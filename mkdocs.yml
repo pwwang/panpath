@@ -1,0 +1,163 @@
+site_name: PanPath
+site_description: Universal sync/async local/cloud path library with pathlib-compatible interface for Python
+site_author: panpath contributors
+site_url: https://pwwang.github.io/panpath
+
+repo_name: pwwang/panpath
+repo_url: https://github.com/pwwang/panpath
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2025 panpath contributors
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/cloud-upload
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pwwang/panpath
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/panpath/
+  version:
+    provider: mike
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 60
+            merge_init_into_class: true
+            show_if_no_docstring: false
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+    - Basic Concepts: getting-started/concepts.md
+  - User Guide:
+    - Local Paths: guide/local-paths.md
+    - Cloud Storage: guide/cloud-storage.md
+    - Async Operations: guide/async-operations.md
+    - Bulk Operations: guide/bulk-operations.md
+    - Cross-Storage Transfers: guide/cross-storage.md
+    - Path Operations: guide/path-operations.md
+    - Error Handling: guide/error-handling.md
+  - Cloud Providers:
+    - Amazon S3: providers/s3.md
+    - Google Cloud Storage: providers/gcs.md
+    - Azure Blob Storage: providers/azure.md
+  - Advanced:
+    - Configuration: advanced/configuration.md
+    - Custom Clients: advanced/custom-clients.md
+    - Testing: advanced/testing.md
+    - Performance: advanced/performance.md
+  - API Reference:
+    - PanPath: api/pan-path.md
+    - AsyncPanPath: api/async-pan-path.md
+    - Local Paths: api/local.md
+    - S3 Paths: api/s3.md
+    - GCS Paths: api/gcs.md
+    - Azure Paths: api/azure.md
+    - Exceptions: api/exceptions.md
+  - Migration:
+    - From pathlib: migration/from-pathlib.md
+    - From cloudpathlib: migration/from-cloudpathlib.md
+  - About:
+    - Changelog: about/changelog.md
+    - Contributing: about/contributing.md
+    - License: about/license.md

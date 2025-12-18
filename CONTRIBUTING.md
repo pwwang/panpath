@@ -1,13 +1,13 @@
-# Contributing to OmegaPath
+# Contributing to PanPath
 
-Thank you for your interest in contributing to OmegaPath!
+Thank you for your interest in contributing to PanPath!
 
 ## Development Setup
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/pwwang/omegapath.git
-   cd omegapath
+   git clone https://github.com/pwwang/panpath.git
+   cd panpath
    ```
 
 2. **Create a virtual environment**
@@ -30,7 +30,7 @@ pytest
 
 Run with coverage:
 ```bash
-pytest --cov=omegapath --cov-report=html
+pytest --cov=panpath --cov-report=html
 ```
 
 Run specific test file:
@@ -47,26 +47,26 @@ pytest -k async
 
 ### Format code with Black
 ```bash
-black omegapath tests
+black panpath tests
 ```
 
 ### Lint with Ruff
 ```bash
-ruff check omegapath tests
+ruff check panpath tests
 ```
 
 ### Type checking with MyPy
 ```bash
-mypy omegapath
+mypy panpath
 ```
 
 ## Project Structure
 
 ```
-omegapath/
-├── omegapath/              # Main package
+panpath/
+├── panpath/              # Main package
 │   ├── __init__.py        # Package exports and registration
-│   ├── router.py          # OmegaPath and AsyncOmegaPath routers
+│   ├── router.py          # PanPath and AsyncPanPath routers
 │   ├── base.py            # Base classes for cloud paths
 │   ├── clients.py         # Abstract client interfaces
 │   ├── registry.py        # Path class registration system
@@ -102,27 +102,27 @@ omegapath/
 To add support for a new cloud storage backend:
 
 1. **Create sync client** (`backend_client.py`)
-   - Inherit from `omegapath.clients.Client`
+   - Inherit from `panpath.clients.Client`
    - Implement all abstract methods
    - Add dependency check with helpful error message
 
 2. **Create async client** (`backend_async_client.py`)
-   - Inherit from `omegapath.clients.AsyncClient`
+   - Inherit from `panpath.clients.AsyncClient`
    - Implement all async methods
 
 3. **Create sync path class** (`backend_sync.py`)
-   - Inherit from `omegapath.base.CloudPath`
+   - Inherit from `panpath.base.CloudPath`
    - Implement `_create_default_client()` classmethod
 
 4. **Create async path class** (`backend_async.py`)
-   - Inherit from `omegapath.base.AsyncCloudPath`
+   - Inherit from `panpath.base.AsyncCloudPath`
    - Implement `_create_default_client()` classmethod
 
 5. **Register in `__init__.py`**
    ```python
    try:
-       from omegapath.backend_sync import BackendPath
-       from omegapath.backend_async import AsyncBackendPath
+       from panpath.backend_sync import BackendPath
+       from panpath.backend_async import AsyncBackendPath
        register_path_class("scheme", BackendPath, AsyncBackendPath)
    except ImportError:
        pass

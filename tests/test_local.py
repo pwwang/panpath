@@ -1,7 +1,7 @@
 """Tests for local path implementations."""
 import pytest
 
-from omegapath import LocalPath, AsyncLocalPath
+from panpath import LocalPath, AsyncLocalPath
 
 
 class TestLocalPath:
@@ -97,9 +97,11 @@ class TestAsyncLocalPath:
         assert isinstance(joined, AsyncLocalPath)
 
     def test_equality_with_sync_path(self, tmp_path):
-        """Test that async path is not equal to sync path."""
+        """Test that async and sync local paths are not equal (no ValueError for local paths)."""
         sync_path = LocalPath(tmp_path / "test.txt")
         async_path = AsyncLocalPath(tmp_path / "test.txt")
 
+        # Local paths don't raise ValueError, they just return False
+        # (because they don't inherit from CloudPath/AsyncCloudPath)
         assert sync_path != async_path
         assert async_path != sync_path
