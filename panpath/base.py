@@ -29,6 +29,9 @@ class CloudPath(PurePosixPath, ABC):
         """Initialize cloud path (client already handled in __new__)."""
         # Remove client from kwargs if present (already handled in __new__)
         kwargs.pop('client', None)
+        # Call super().__init__() with same args to initialize internal pathlib properties
+        # Python 3.13+ requires this for _raw_paths, _drv, etc.
+        # Python 3.9 works fine with this too
         super().__init__(*args, **kwargs)  # type: ignore
 
     @property
@@ -492,6 +495,9 @@ class AsyncCloudPath(PurePosixPath, ABC):
         """Initialize async cloud path (client already handled in __new__)."""
         # Remove client from kwargs if present (already handled in __new__)
         kwargs.pop('client', None)
+        # Call super().__init__() with same args to initialize internal pathlib properties
+        # Python 3.13+ requires this for _raw_paths, _drv, etc.
+        # Python 3.9 works fine with this too
         super().__init__(*args, **kwargs)  # type: ignore
 
     @property

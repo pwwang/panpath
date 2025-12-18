@@ -1,5 +1,6 @@
 """Asynchronous local path implementation."""
 import os
+import sys
 from pathlib import Path, PurePath
 from typing import Any, AsyncIterator, Optional, Union
 
@@ -19,7 +20,9 @@ class AsyncLocalPath(PurePath):
     and provides async methods for I/O operations.
     """
 
-    _flavour = type(Path())._flavour  # type: ignore
+    # _flavour was removed in Python 3.13+, but it's not needed for PurePath subclasses
+    if sys.version_info < (3, 13):
+        _flavour = type(Path())._flavour  # type: ignore
 
     def __new__(cls, *args: Any) -> "AsyncLocalPath":
         """Create new AsyncLocalPath instance."""
