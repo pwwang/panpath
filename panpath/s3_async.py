@@ -1,7 +1,7 @@
 """Async S3 path implementation."""
 from typing import TYPE_CHECKING, Optional
 
-from panpath.base import AsyncCloudPath
+from panpath.cloud import AsyncCloudPath
 from panpath.s3_async_client import AsyncS3Client
 
 if TYPE_CHECKING:

@@ -1,7 +1,7 @@
 """Async Google Cloud Storage path implementation."""
 from typing import TYPE_CHECKING, Optional
 
-from panpath.base import AsyncCloudPath
+from panpath.cloud import AsyncCloudPath
 from panpath.gs_async_client import AsyncGSClient
 
 if TYPE_CHECKING:

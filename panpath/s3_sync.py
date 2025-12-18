@@ -1,7 +1,7 @@
 """S3 path implementation."""
 from typing import TYPE_CHECKING, Optional
 
-from panpath.base import CloudPath
+from panpath.cloud import CloudPath
 from panpath.s3_client import S3Client
 
 if TYPE_CHECKING:

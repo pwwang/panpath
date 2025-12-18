@@ -11,7 +11,7 @@ from panpath.registry import (
 
 def test_register_and_get_path_class():
     """Test registering and retrieving path classes."""
-    from panpath.base import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath, AsyncCloudPath
 
     # Create mock classes
     class MockSyncPath(CloudPath):
@@ -79,7 +79,7 @@ def test_get_registered_schemes():
 def test_swap_implementation():
     """Test swapping implementations (for testing)."""
     from panpath import registry
-    from panpath.base import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath, AsyncCloudPath
 
     # Save current registry
     old_registry = registry._REGISTRY.copy()
@@ -141,7 +141,7 @@ def test_get_path_class_unknown_scheme():
 def test_clear_registry():
     """Test clearing the registry."""
     from panpath import registry
-    from panpath.base import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath, AsyncCloudPath
 
     # Save current registry
     old_registry = registry._REGISTRY.copy()

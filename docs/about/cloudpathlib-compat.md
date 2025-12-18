@@ -171,7 +171,7 @@ path.match("dir/*/file.py") # True - matches with wildcard
 Adding cloudpathlib compatibility tests increased:
 - Total tests: 70 → 101 tests (+44%)
 - Code coverage: 52% → 53%
-- `base.py` coverage: 72% → 73%
+- `cloud.py` coverage: 72% → 73%
 
 ## Future Enhancements
 

@@ -99,7 +99,7 @@ mkdocs gh-deploy
 panpath/
 ├── panpath/           # Source code
 │   ├── __init__.py      # Package exports
-│   ├── base.py          # Base path classes
+│   ├── cloud.py          # cloud path classes
 │   ├── router.py        # PanPath router
 │   ├── registry.py      # Path class registry
 │   ├── clients.py       # Client management
@@ -122,7 +122,7 @@ panpath/
 
 ### Adding a New Method
 
-1. **Add to base classes** (`base.py`):
+1. **Add to cloud classes** (`cloud.py`):
    ```python
    class CloudPath:
        def new_method(self, arg: str) -> str:

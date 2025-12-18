@@ -19,7 +19,7 @@ PanPath defines custom exceptions for better error handling.
 ## Exception Hierarchy
 
 ```
-PanPathException (base)
+PanPathException (cloud)
 ├── PathNotFoundError
 ├── PermissionError
 └── InvalidPathError

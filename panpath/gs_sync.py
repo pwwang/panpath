@@ -1,7 +1,7 @@
 """Google Cloud Storage path implementation."""
 from typing import TYPE_CHECKING, Optional
 
-from panpath.base import CloudPath
+from panpath.cloud import CloudPath
 from panpath.gs_client import GSClient
 
 if TYPE_CHECKING:

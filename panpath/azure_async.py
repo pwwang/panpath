@@ -1,7 +1,7 @@
 """Async Azure Blob Storage path implementation."""
 from typing import TYPE_CHECKING, Optional
 
-from panpath.base import AsyncCloudPath
+from panpath.cloud import AsyncCloudPath
 from panpath.azure_async_client import AsyncAzureBlobClient
 
 if TYPE_CHECKING:

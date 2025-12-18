@@ -67,7 +67,7 @@ panpath/
 ├── panpath/              # Main package
 │   ├── __init__.py        # Package exports and registration
 │   ├── router.py          # PanPath and AsyncPanPath routers
-│   ├── base.py            # Base classes for cloud paths
+│   ├── cloud.py            # cloud classes for cloud paths
 │   ├── clients.py         # Abstract client interfaces
 │   ├── registry.py        # Path class registration system
 │   ├── exceptions.py      # Custom exceptions
@@ -111,11 +111,11 @@ To add support for a new cloud storage backend:
    - Implement all async methods
 
 3. **Create sync path class** (`backend_sync.py`)
-   - Inherit from `panpath.base.CloudPath`
+   - Inherit from `panpath.cloud.CloudPath`
    - Implement `_create_default_client()` classmethod
 
 4. **Create async path class** (`backend_async.py`)
-   - Inherit from `panpath.base.AsyncCloudPath`
+   - Inherit from `panpath.cloud.AsyncCloudPath`
    - Implement `_create_default_client()` classmethod
 
 5. **Register in `__init__.py`**

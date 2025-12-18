@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Tuple, Type
 
 if TYPE_CHECKING:
-    from panpath.base import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath, AsyncCloudPath
 
 
 # Registry mapping URI schemes to (sync_class, async_class) tuples
