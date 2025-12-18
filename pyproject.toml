@@ -1,23 +1,23 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "panpath"
 version = "0.1.0"
 description = "Universal sync/async local/cloud path library with pathlib-compatible interface"
-authors = [
-    {name = "panpath contributors"}
-]
+authors = ["panpath contributors"]
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT"
+homepage = "https://github.com/pwwang/panpath"
+repository = "https://github.com/pwwang/panpath"
+documentation = "https://github.com/pwwang/panpath#readme"
+keywords = ["path", "pathlib", "s3", "gcs", "azure", "cloud", "async", "asyncio"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -25,65 +25,48 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Filesystems",
 ]
-keywords = ["path", "pathlib", "s3", "gcs", "azure", "cloud", "async", "asyncio"]
+packages = [{include = "panpath"}]
+include = ["panpath/py.typed"]
 
-dependencies = [
-    "typing-extensions>=4.0.0",
-]
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+typing-extensions = ">=4.0.0"
 
-[project.optional-dependencies]
 # Sync cloud storage backends
-s3 = ["boto3>=1.20.0"]
-gs = ["google-cloud-storage>=2.0.0"]
-azure = ["azure-storage-blob>=12.0.0"]
+boto3 = {version = ">=1.20.0", optional = true}
+google-cloud-storage = {version = ">=2.0.0", optional = true}
+azure-storage-blob = {version = ">=12.0.0", optional = true}
 
 # Async cloud storage backends
-async-s3 = ["aioboto3>=11.0.0", "aiofiles>=23.0.0"]
-async-gs = ["gcloud-aio-storage>=8.0.0", "aiofiles>=23.0.0"]
-async-azure = ["azure-storage-blob[aio]>=12.0.0", "aiofiles>=23.0.0"]
+aioboto3 = {version = ">=11.0.0", optional = true}
+aiofiles = {version = ">=23.0.0", optional = true}
+gcloud-aio-storage = {version = ">=8.0.0", optional = true}
 
-# Convenience groups
-all-sync = ["boto3>=1.20.0", "google-cloud-storage>=2.0.0", "azure-storage-blob>=12.0.0"]
-all-async = ["aioboto3>=11.0.0", "gcloud-aio-storage>=8.0.0", "azure-storage-blob[aio]>=12.0.0", "aiofiles>=23.0.0"]
-all = [
-    "boto3>=1.20.0",
-    "google-cloud-storage>=2.0.0",
-    "azure-storage-blob[aio]>=12.0.0",
-    "aioboto3>=11.0.0",
-    "gcloud-aio-storage>=8.0.0",
-    "aiofiles>=23.0.0",
-]
+[tool.poetry.extras]
+s3 = ["boto3"]
+gs = ["google-cloud-storage"]
+azure = ["azure-storage-blob"]
+async-s3 = ["aioboto3", "aiofiles"]
+async-gs = ["gcloud-aio-storage", "aiofiles"]
+async-azure = ["azure-storage-blob", "aiofiles"]
+all-sync = ["boto3", "google-cloud-storage", "azure-storage-blob"]
+all-async = ["aioboto3", "gcloud-aio-storage", "azure-storage-blob", "aiofiles"]
+all = ["boto3", "google-cloud-storage", "azure-storage-blob", "aioboto3", "gcloud-aio-storage", "aiofiles"]
 
-# Development dependencies
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "mypy>=1.0.0",
-    "black>=23.0.0",
-    "moto[s3]>=4.0.0",
-]
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.0.0"
+mypy = ">=1.0.0"
+black = ">=23.0.0"
+moto = {version = ">=4.0.0", extras = ["s3"]}
 
-# Documentation dependencies
-docs = [
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.5.0",
-    "ruff>=0.1.0",
-    "mkdocstrings[python]>=0.24.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/pwwang/panpath"
-Repository = "https://github.com/pwwang/panpath"
-Documentation = "https://github.com/pwwang/panpath#readme"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["panpath*"]
-
-[tool.setuptools.package-data]
-panpath = ["py.typed"]
+[tool.poetry.group.docs.dependencies]
+mkdocs = ">=1.5.0"
+mkdocs-material = ">=9.5.0"
+ruff = ">=0.1.0"
+mkdocstrings = {version = ">=0.24.0", extras = ["python"]}
+mkdocs-git-revision-date-localized-plugin = ">=1.2.0"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -93,7 +76,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -101,14 +84,10 @@ disallow_untyped_defs = true
 
 [tool.black]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311", "py312"]
+target-version = ["py39", "py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py39"
 select = ["E", "F", "I", "N", "W", "UP"]
 
-[dependency-groups]
-docs = [
-    "ruff>=0.14.9",
-]
