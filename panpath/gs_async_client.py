@@ -32,11 +32,36 @@ class AsyncGSClient(AsyncClient):
         self._storage: Optional[Storage] = None
         self._kwargs = kwargs
 
+    def _create_storage(self) -> Storage:
+        """Create a new Storage instance.
+
+        Each file handle gets its own Storage instance to avoid
+        session conflicts when multiple files are opened.
+        """
+        return Storage(**self._kwargs)
+
     async def _get_storage(self) -> Storage:
-        """Get or create storage client."""
+        """Get or create storage client for the AsyncGSClient.
+
+        This is used for operations on the client itself, not file handles.
+        """
         if self._storage is None:
             self._storage = Storage(**self._kwargs)
         return self._storage
+
+    async def close(self) -> None:
+        """Close the storage client and cleanup resources."""
+        if self._storage is not None:
+            await self._storage.close()
+            self._storage = None
+
+    async def __aenter__(self) -> "AsyncGSClient":
+        """Enter async context."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit async context and cleanup."""
+        await self.close()
 
     def _parse_gs_path(self, path: str) -> tuple[str, str]:
         """Parse GCS path into bucket and blob name."""
@@ -571,7 +596,7 @@ class AsyncGSClient(AsyncClient):
         """
         bucket_name, blob_name = self._parse_gs_path(path)
         return GSAsyncFileHandle(
-            storage_factory=self._get_storage,
+            storage_factory=self._create_storage,
             bucket=bucket_name,
             blob=blob_name,
             mode=mode,
@@ -611,6 +636,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
         self._encoding = encoding or "utf-8"
         self._chunk_size = chunk_size
         self._closed = False
+        self._storage: Optional[Storage] = None
 
         # For reading
         self._read_pos = 0
@@ -629,19 +655,20 @@ class GSAsyncFileHandle(AsyncFileHandle):
 
     async def __aenter__(self) -> "GSAsyncFileHandle":
         """Initialize file handle."""
+        # Create a dedicated Storage instance for this file handle
+        self._storage = self._storage_factory()
+
         if self._is_read:
             # Get blob size
-            storage = await self._storage_factory()
             try:
-                metadata = await storage.download_metadata(self._bucket, self._blob)
+                metadata = await self._storage.download_metadata(self._bucket, self._blob)
                 self._blob_size = int(metadata.get("size", 0))
             except Exception as e:
                 raise NoSuchFileError(f"GCS blob not found: gs://{self._bucket}/{self._blob}") from e
         elif self._is_append:
             # Load existing data for append
-            storage = await self._storage_factory()
             try:
-                existing = await storage.download(self._bucket, self._blob)
+                existing = await self._storage.download(self._bucket, self._blob)
                 if self._is_binary:
                     self._write_buffer = bytearray(existing)
                 else:
@@ -653,8 +680,11 @@ class GSAsyncFileHandle(AsyncFileHandle):
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Close file handle."""
+        """Close file handle and cleanup Storage client."""
         await self.close()
+        if self._storage is not None:
+            await self._storage.close()
+            self._storage = None
 
     async def _read_chunk(self, size: int) -> bytes:
         """Read a chunk from GCS using range request.
@@ -671,13 +701,12 @@ class GSAsyncFileHandle(AsyncFileHandle):
 
         end_pos = min(self._read_pos + size - 1, self._blob_size - 1)
 
-        storage = await self._storage_factory()
         # Note: gcloud-aio-storage doesn't directly support range requests
         # For now, we'll fall back to downloading chunks
         # In production, you might want to use google-cloud-storage instead
         if self._read_pos == 0 and size >= self._blob_size:
             # First read and it's the whole file
-            data = await storage.download(self._bucket, self._blob)
+            data = await self._storage.download(self._bucket, self._blob)
             self._read_pos = len(data)
             if self._read_pos >= self._blob_size:
                 self._eof = True
@@ -686,7 +715,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
             # For partial reads, download whole file and slice
             # This is a limitation of gcloud-aio-storage
             if not hasattr(self, '_full_data'):
-                self._full_data = await storage.download(self._bucket, self._blob)
+                self._full_data = await self._storage.download(self._bucket, self._blob)
 
             chunk = self._full_data[self._read_pos:self._read_pos + size]
             self._read_pos += len(chunk)
@@ -703,10 +732,9 @@ class GSAsyncFileHandle(AsyncFileHandle):
 
         if size == -1:
             # Read all remaining
-            storage = await self._storage_factory()
             if self._read_pos == 0:
                 # Haven't read anything yet, download whole file
-                data = await storage.download(self._bucket, self._blob)
+                data = await self._storage.download(self._bucket, self._blob)
                 self._eof = True
                 self._read_pos = len(data)
                 if self._is_binary:
@@ -800,14 +828,13 @@ class GSAsyncFileHandle(AsyncFileHandle):
         if self._closed:
             return
 
-        if self._is_write:
+        if self._is_write and self._storage is not None:
             if self._is_binary:
                 body = bytes(self._write_buffer)
             else:
                 body = "".join(self._write_buffer).encode(self._encoding)  # type: ignore
 
-            storage = await self._storage_factory()
-            await storage.upload(self._bucket, self._blob, body)
+            await self._storage.upload(self._bucket, self._blob, body)
 
         self._closed = True
 
