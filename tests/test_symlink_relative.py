@@ -6,8 +6,8 @@ import pytest
 
 def test_symlink_absolute_target():
     """Test symlink with absolute target (has scheme)."""
-    from panpath.router import PanPath
-    from panpath.s3_sync import S3Path
+    from panpath import PanPath
+    from panpath.s3_path import S3Path
     from unittest.mock import Mock
 
     # Configure the conftest mock
@@ -31,8 +31,8 @@ def test_symlink_absolute_target():
 
 def test_symlink_relative_target():
     """Test symlink with relative target (no scheme)."""
-    from panpath.router import PanPath
-    from panpath.s3_sync import S3Path
+    from panpath import PanPath
+    from panpath.s3_path import S3Path
     from unittest.mock import Mock
 
     # Configure the conftest mock
@@ -56,8 +56,8 @@ def test_symlink_relative_target():
 
 def test_symlink_relative_target_with_dotdot():
     """Test symlink with relative target using ../."""
-    from panpath.router import PanPath
-    from panpath.s3_sync import S3Path
+    from panpath import PanPath
+    from panpath.s3_path import S3Path
     from unittest.mock import Mock
 
     # Configure the conftest mock
@@ -82,8 +82,8 @@ def test_symlink_relative_target_with_dotdot():
 
 def test_symlink_gcs_relative():
     """Test GCS symlink with relative target."""
-    from panpath.router import PanPath
-    from panpath.gs_sync import GSPath
+    from panpath import PanPath
+    from panpath.gs_path import GSPath
 
     # Configure the conftest mock
     mock_storage = sys.modules["google.cloud.storage"]
@@ -107,8 +107,8 @@ def test_symlink_gcs_relative():
 
 def test_symlink_azure_absolute():
     """Test Azure symlink with absolute target."""
-    from panpath.router import PanPath
-    from panpath.azure_sync import AzureBlobPath
+    from panpath import PanPath
+    from panpath.azure_path import AzureBlobPath
 
     # Configure the conftest mock
     mock_azure = sys.modules["azure.storage.blob"]
@@ -133,8 +133,8 @@ def test_symlink_azure_absolute():
 @pytest.mark.asyncio
 async def test_async_symlink_relative():
     """Test async symlink with relative target."""
-    from panpath.router import PanPath
-    from panpath.s3_async import AsyncS3Path
+    from panpath import PanPath
+    from panpath.s3_path import S3Path
     from unittest.mock import AsyncMock
 
     # Configure the conftest mock
@@ -151,12 +151,12 @@ async def test_async_symlink_relative():
     mock_session.client.return_value = MockContext()
     mock_aioboto3.Session.return_value = mock_session
 
-    # Clear default client to force new client creation
-    AsyncS3Path._default_client = None
+    # Clear default async client to force new client creation
+    S3Path._default_async_client = None
 
     # Create async symlink with relative target
-    link = PanPath("s3://bucket/dir/link", mode="async")
-    await link.symlink_to("file.txt")
+    link = PanPath("s3://bucket/dir/link")
+    await link.a_symlink_to("file.txt")
 
     # Verify put_object was called with resolved path
     mock_s3_client.put_object.assert_called_once()

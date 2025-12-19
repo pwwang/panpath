@@ -318,7 +318,7 @@ class AsyncGSClient(AsyncClient):
             List of matching AsyncCloudPath objects
         """
         from fnmatch import fnmatch
-        from panpath.router import PanPath
+        from panpath.base import PanPath
 
         bucket_name, blob_prefix = self._parse_gs_path(path)
         storage = await self._get_storage()

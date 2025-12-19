@@ -3,12 +3,11 @@
 
 def test_imports():
     """Test that main exports are available."""
-    from panpath import PanPath, AsyncPanPath, LocalPath, AsyncLocalPath
+    from panpath import PanPath, LocalPath, CloudPath
 
     assert PanPath is not None
-    assert AsyncPanPath is not None
     assert LocalPath is not None
-    assert AsyncLocalPath is not None
+    assert CloudPath is not None
 
 
 def test_version():

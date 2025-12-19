@@ -11,7 +11,7 @@ class TestS3Path:
     def test_create_s3_path(self):
         """Test creating S3 path."""
         from panpath import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath.s3_path import S3Path
 
         path = PanPath("s3://test-bucket/key/file.txt")
         assert isinstance(path, S3Path)
@@ -71,7 +71,7 @@ class TestS3Path:
     def test_s3_parent_preserves_type(self):
         """Test that parent operation preserves S3Path type."""
         from panpath import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath.s3_path import S3Path
 
         path = PanPath("s3://test-bucket/dir/subdir/file.txt")
         parent = path.parent
@@ -82,7 +82,7 @@ class TestS3Path:
     def test_s3_joinpath_preserves_type(self):
         """Test that joinpath preserves S3Path type."""
         from panpath import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath.s3_path import S3Path
 
         path = PanPath("s3://test-bucket/dir")
         joined = path / "file.txt"
@@ -114,23 +114,25 @@ class TestS3Path:
 
 
 class TestAsyncS3Path:
-    """Tests for asynchronous AsyncS3Path."""
+    """Tests for asynchronous S3Path methods (with a_ prefix)."""
 
-    def test_create_async_s3_path(self):
-        """Test creating async S3 path."""
-        from panpath import PanPath, AsyncPanPath
-        from panpath.s3_async import AsyncS3Path
+    def test_s3_has_async_methods(self):
+        """Test that S3Path has async methods with a_ prefix."""
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
-        path = PanPath("s3://test-bucket/key.txt", mode="async")
-        assert isinstance(path, AsyncS3Path)
+        path = PanPath("s3://test-bucket/key.txt")
+        assert isinstance(path, S3Path)
 
-        path2 = AsyncPanPath("s3://test-bucket/key.txt")
-        assert isinstance(path2, AsyncS3Path)
+        # Check async methods exist
+        assert hasattr(path, 'a_read_text')
+        assert hasattr(path, 'a_write_text')
+        assert hasattr(path, 'a_exists')
 
     @pytest.mark.asyncio
     async def test_async_s3_read_text(self):
         """Test reading text from S3 asynchronously."""
-        from panpath import AsyncPanPath
+        from panpath import PanPath
 
         # Configure the conftest mock
         mock_aioboto3 = sys.modules['aioboto3']
@@ -152,15 +154,15 @@ class TestAsyncS3Path:
             'Body': mock_body
         }
 
-        path = AsyncPanPath("s3://test-bucket/key.txt")
-        content = await path.read_text()
+        path = PanPath("s3://test-bucket/key.txt")
+        content = await path.a_read_text()
 
         assert content == "async test content"
 
     @pytest.mark.asyncio
     async def test_async_s3_write_text(self):
         """Test writing text to S3 asynchronously."""
-        from panpath import AsyncPanPath
+        from panpath import PanPath
 
         # Configure the conftest mock
         mock_aioboto3 = sys.modules['aioboto3']
@@ -170,35 +172,24 @@ class TestAsyncS3Path:
         mock_client = AsyncMock()
         mock_session.client.return_value.__aenter__.return_value = mock_client
 
-        path = AsyncPanPath("s3://test-bucket/key.txt")
-        await path.write_text("async content")
+        path = PanPath("s3://test-bucket/key.txt")
+        await path.a_write_text("async content")
 
         mock_client.put_object.assert_called_once()
 
     def test_async_s3_parent_preserves_type(self):
-        """Test that parent preserves AsyncS3Path type."""
-        from panpath import AsyncPanPath
-        from panpath.s3_async import AsyncS3Path
+        """Test that parent preserves S3Path type."""
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
-        path = AsyncPanPath("s3://test-bucket/dir/file.txt")
+        path = PanPath("s3://test-bucket/dir/file.txt")
         parent = path.parent
 
-        assert isinstance(parent, AsyncS3Path)
+        assert isinstance(parent, S3Path)
+        assert hasattr(parent, 'a_read_text')
         assert str(parent) == "s3://test-bucket/dir"
 
-    def test_async_s3_not_equal_to_sync(self):
-        """Test that comparing async and sync S3 paths raises ValueError."""
-        from panpath import PanPath, AsyncPanPath
 
-        sync_path = PanPath("s3://test-bucket/key.txt")
-        async_path = AsyncPanPath("s3://test-bucket/key.txt")
-
-        # Comparing sync and async paths should raise ValueError
-        with pytest.raises(ValueError, match="Cannot compare sync and async paths"):
-            sync_path == async_path
-
-        with pytest.raises(ValueError, match="Cannot compare sync and async paths"):
-            async_path == sync_path
 
 
 def test_s3_missing_dependency():

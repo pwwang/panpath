@@ -45,24 +45,25 @@ assert pathlib_path.name == pan_path.name
 assert pathlib_path.suffix == pan_path.suffix
 ```
 
-### 3. Sync and Async Modes
+### 3. Unified Sync and Async
 
-Every path can be used in synchronous or asynchronous mode:
+Every path class provides both synchronous and asynchronous methods:
 
 ```python
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
 
-# Synchronous (blocks until complete)
-sync_path = PanPath("s3://bucket/file.txt")
-content = sync_path.read_text()  # Blocks
+# Create a path - same class for both sync and async
+path = PanPath("s3://bucket/file.txt")
 
-# Asynchronous (non-blocking)
-async_path = PanPath("s3://bucket/file.txt", mode="async")
-content = await async_path.read_text()  # Non-blocking
+# Synchronous methods (blocks until complete)
+content = path.read_text()  # Blocks
 
-# AsyncPanPath is always async
-always_async = AsyncPanPath("s3://bucket/file.txt")
-content = await always_async.read_text()
+# Asynchronous methods use a_ prefix (non-blocking)
+content = await path.a_read_text()  # Non-blocking
+
+# Both sync and async methods available on same instance
+path.write_text("sync write")  # Sync
+await path.a_write_text("async write")  # Async
 ```
 
 ## Architecture
@@ -79,13 +80,15 @@ graph TD
     B -->|gs://| E[GSPath]
     B -->|az:// or azure://| F[AzurePath]
 
-    C --> G{Mode?}
+    C --> G["Sync methods: read_text(), write_text(), ..."]
     D --> G
     E --> G
     F --> G
 
-    G -->|sync| H[Sync Implementation]
-    G -->|async| I[Async Implementation]
+    C --> H["Async methods: a_read_text(), a_write_text(), ..."]
+    D --> H
+    E --> H
+    F --> H
 ```
 
 ### Client Management
@@ -114,39 +117,43 @@ Path classes are registered by URI scheme:
 
 ```python
 from panpath.registry import register_path_class, get_path_class
+from panpath.s3_path import S3Path
 
 # Registration (automatic for built-in backends)
-register_path_class("s3", S3Path, AsyncS3Path)
+register_path_class("s3", S3Path)
 
 # Retrieval (used internally)
-sync_class = get_path_class("s3", mode="sync")
-async_class = get_path_class("s3", mode="async")
+path_class = get_path_class("s3")  # Returns S3Path
 ```
 
-## Path Types
+## Path Classes
 
-### PanPath vs AsyncPanPath
+### Unified Path Classes
 
 ```python
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
+from panpath.s3_path import S3Path
 
-# PanPath: mode can be specified
-sync = PanPath("s3://bucket/file.txt", mode="sync")   # Default
-async1 = PanPath("s3://bucket/file.txt", mode="async")
+# Factory pattern - PanPath returns appropriate class
+path = PanPath("s3://bucket/file.txt")
+print(type(path))  # <class 'panpath.s3_path.S3Path'>
 
-# AsyncPanPath: always async, mode parameter ignored
-async2 = AsyncPanPath("s3://bucket/file.txt")
+# All methods available on same instance
+content = path.read_text()  # Sync
+content = await path.a_read_text()  # Async
 
 # Type checking
-isinstance(sync, PanPath)    # True
-isinstance(async1, PanPath)  # True (PanPath can be async)
-isinstance(async2, AsyncPanPath)  # True
+isinstance(path, PanPath)  # True (inherits from PanPath)
+isinstance(path, S3Path)   # True (actual type)
 ```
 
-!!! note "When to use which?"
-    - Use `PanPath` when you want flexibility (can be sync or async)
-    - Use `AsyncPanPath` when you're always working in async context
-    - In type hints, use `AsyncPanPath` to guarantee async operations
+!!! note "Async Methods"
+    All async methods are prefixed with `a_` for easy identification:
+
+    - `read_text()` → `a_read_text()`
+    - `write_bytes()` → `a_write_bytes()`
+    - `exists()` → `a_exists()`
+    - `iterdir()` → `a_iterdir()`
 
 ### Type Preservation
 

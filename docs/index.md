@@ -95,20 +95,15 @@
 === "Async"
 
     ```python
-    from panpath import AsyncPanPath
+    from panpath import PanPath
 
-    # Async S3
-    async_s3 = AsyncPanPath("s3://bucket/key/file.txt")
-    content = await async_s3.read_text()
+    # Same class, async methods with a_ prefix
+    s3 = PanPath("s3://bucket/file.txt")
+    content = await s3.a_read_text()
 
-    # Async GCS
-    async_gs = AsyncPanPath("gs://bucket/path/file.txt")
-    content = await async_gs.read_text()
-
-    # Async local files
-    async_local = AsyncPanPath("/path/to/file.txt")
-    async with async_local.open("r") as f:
-        content = await f.read()
+    # Works for all storage types
+    local = PanPath("/path/to/file.txt")
+    content = await local.a_read_text()
     ```
 
 === "Cross-Storage"

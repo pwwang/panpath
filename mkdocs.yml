@@ -50,14 +50,15 @@ theme:
     repo: fontawesome/brands/github
     logo: material/cloud-upload
 
+extra_css:
+    - style.css
+
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/pwwang/panpath
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/panpath/
-  version:
-    provider: mike
 
 markdown_extensions:
   - abbr
@@ -102,23 +103,7 @@ markdown_extensions:
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [.]
-          options:
-            docstring_style: google
-            docstring_section_style: table
-            show_root_heading: true
-            show_root_full_path: false
-            show_symbol_type_heading: true
-            show_symbol_type_toc: true
-            members_order: source
-            show_signature_annotations: true
-            separate_signature: true
-            line_length: 60
-            merge_init_into_class: true
-            show_if_no_docstring: false
+  - mkapi
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
@@ -146,14 +131,7 @@ nav:
     - Custom Clients: advanced/custom-clients.md
     - Testing: advanced/testing.md
     - Performance: advanced/performance.md
-  - API Reference:
-    - PanPath: api/pan-path.md
-    - AsyncPanPath: api/async-pan-path.md
-    - Local Paths: api/local.md
-    - S3 Paths: api/s3.md
-    - GCS Paths: api/gcs.md
-    - Azure Paths: api/azure.md
-    - Exceptions: api/exceptions.md
+  - API Reference: mkapi/api/panpath
   - Migration:
     - From pathlib: migration/from-pathlib.md
     - From cloudpathlib: migration/from-cloudpathlib.md

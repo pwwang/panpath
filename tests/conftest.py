@@ -53,33 +53,27 @@ def reset_cloud_clients():
         # Registry was cleared, restore it
         if not schemes_after and schemes_before:
             # Re-register cloud paths
-            from panpath.s3_sync import S3Path
-            from panpath.s3_async import AsyncS3Path
-            from panpath.gs_sync import GSPath
-            from panpath.gs_async import AsyncGSPath
-            from panpath.azure_sync import AzureBlobPath
-            from panpath.azure_async import AsyncAzureBlobPath
+            from panpath.s3_path import S3Path
+            from panpath.gs_path import GSPath
+            from panpath.azure_path import AzurePath
 
-            registry.register_path_class("s3", S3Path, AsyncS3Path)
-            registry.register_path_class("gs", GSPath, AsyncGSPath)
-            registry.register_path_class("az", AzureBlobPath, AsyncAzureBlobPath)
-            registry.register_path_class("azure", AzureBlobPath, AsyncAzureBlobPath)
+            registry.register_path_class("s3", S3Path)
+            registry.register_path_class("gs", GSPath)
+            registry.register_path_class("az", AzurePath)
+            registry.register_path_class("azure", AzurePath)
 
     # Reset clients after test
     try:
-        from panpath.s3_sync import S3Path
-        from panpath.s3_async import AsyncS3Path
-        from panpath.gs_sync import GSPath
-        from panpath.gs_async import AsyncGSPath
-        from panpath.azure_sync import AzureBlobPath
-        from panpath.azure_async import AsyncAzureBlobPath
+        from panpath.s3_path import S3Path
+        from panpath.gs_path import GSPath
+        from panpath.azure_path import AzurePath
 
         S3Path._default_client = None
-        AsyncS3Path._default_client = None
+        S3Path._default_async_client = None
         GSPath._default_client = None
-        AsyncGSPath._default_client = None
-        AzureBlobPath._default_client = None
-        AsyncAzureBlobPath._default_client = None
+        GSPath._default_async_client = None
+        AzurePath._default_client = None
+        AzurePath._default_async_client = None
     except ImportError:
         pass
 

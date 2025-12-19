@@ -6,7 +6,7 @@ for path manipulation, file operations, and pathlib compatibility.
 import sys
 import pytest
 from pathlib import PurePosixPath, Path
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
 
 
 class TestPathManipulation:
@@ -106,18 +106,6 @@ class TestPathManipulation:
         cp = PanPath("s3://bucket/a/b/foo")
         assert cp != str(cp)
 
-    def test_sync_async_not_equal(self):
-        """Test that sync and async paths raise ValueError when compared."""
-        sync_path = PanPath("s3://bucket/key.txt", mode="sync")
-        async_path = PanPath("s3://bucket/key.txt", mode="async")
-
-        # Comparing sync and async paths should raise ValueError
-        with pytest.raises(ValueError, match="Cannot compare sync and async paths"):
-            sync_path == async_path
-
-        with pytest.raises(ValueError, match="Cannot compare sync and async paths"):
-            async_path == sync_path
-
     def test_sorting(self):
         """Test path sorting."""
         cp1 = PanPath("s3://bucket/a/b/c")
@@ -165,46 +153,13 @@ class TestPathManipulation:
 class TestPathInstantiation:
     """Test path instantiation - adapted from cloudpathlib test_cloudpath_instantiation.py"""
 
-    def test_dispatch(self):
-        """Test CloudPath(...) dispatches to correct implementation."""
-        from panpath.s3_sync import S3Path
-        from panpath.gs_sync import GSPath
-        from panpath.azure_sync import AzureBlobPath
+    def test_dispatch_returns_same_class(self):
+        """Test that all cloud URIs return their specific path class."""
+        from panpath.s3_path import S3Path
 
-        s3 = PanPath("s3://bucket/key")
-        assert isinstance(s3, S3Path)
-
-        gs = PanPath("gs://bucket/key")
-        assert isinstance(gs, GSPath)
-
-        az = PanPath("az://container/blob")
-        assert isinstance(az, AzureBlobPath)
-
-        # Test azure alias
-        azure = PanPath("azure://container/blob")
-        assert isinstance(azure, AzureBlobPath)
-
-    def test_mode_parameter(self):
-        """Test mode parameter for sync/async."""
-        from panpath.s3_sync import S3Path
-        from panpath.s3_async import AsyncS3Path
-
-        sync_path = PanPath("s3://bucket/key", mode="sync")
-        assert isinstance(sync_path, S3Path)
-
-        async_path = PanPath("s3://bucket/key", mode="async")
-        assert isinstance(async_path, AsyncS3Path)
-
-        # AsyncPanPath should always be async
-        async_path2 = AsyncPanPath("s3://bucket/key")
-        assert isinstance(async_path2, AsyncS3Path)
-
-    def test_invalid_mode(self):
-        """Test invalid mode raises error."""
-        from panpath.exceptions import InvalidModeError
-
-        with pytest.raises(InvalidModeError, match="Invalid mode"):
-            PanPath("s3://bucket/key", mode="invalid")
+        s3_path = PanPath("s3://bucket/key")
+        assert isinstance(s3_path, S3Path)
+        assert hasattr(s3_path, 'a_read_text')  # Has async methods
 
     def test_unsupported_scheme(self):
         """Test unsupported scheme raises error."""
@@ -220,14 +175,11 @@ class TestPathInstantiation:
 
     def test_local_path_dispatch(self):
         """Test local paths are dispatched correctly."""
-        from panpath.local_sync import LocalPath
-        from panpath.local_async import AsyncLocalPath
+        from panpath.local_path import LocalPath
 
         local = PanPath("/tmp/file.txt")
         assert isinstance(local, LocalPath)
-
-        local_async = PanPath("/tmp/file.txt", mode="async")
-        assert isinstance(local_async, AsyncLocalPath)
+        assert hasattr(local, 'a_read_text')  # Has async methods
 
         # Relative paths
         relative = PanPath("relative/path.txt")
@@ -239,7 +191,7 @@ class TestAzureSchemeAliases:
 
     def test_both_schemes_work(self):
         """Test both az:// and azure:// schemes work."""
-        from panpath.azure_sync import AzureBlobPath
+        from panpath.azure_path import AzureBlobPath
 
         az_path = PanPath("az://container/blob")
         azure_path = PanPath("azure://container/blob")
@@ -286,90 +238,7 @@ class TestTypePreservation:
         assert type(new_path) == type(az_path)
 
 
-class TestSyncAsyncConversion:
-    """Test conversion between sync and async paths."""
 
-    def test_to_async(self):
-        """Test converting sync path to async path."""
-        from panpath.s3_sync import S3Path
-        from panpath.s3_async import AsyncS3Path
-        from panpath.gs_sync import GSPath
-        from panpath.gs_async import AsyncGSPath
-        from panpath.azure_sync import AzureBlobPath
-        from panpath.azure_async import AsyncAzureBlobPath
-
-        # S3
-        sync_s3 = PanPath("s3://bucket/key.txt", mode="sync")
-        assert isinstance(sync_s3, S3Path)
-        async_s3 = sync_s3.to_async()
-        assert isinstance(async_s3, AsyncS3Path)
-        assert str(async_s3) == str(sync_s3)
-
-        # GS
-        sync_gs = PanPath("gs://bucket/file.txt", mode="sync")
-        assert isinstance(sync_gs, GSPath)
-        async_gs = sync_gs.to_async()
-        assert isinstance(async_gs, AsyncGSPath)
-        assert str(async_gs) == str(sync_gs)
-
-        # Azure
-        sync_az = PanPath("az://container/blob.txt", mode="sync")
-        assert isinstance(sync_az, AzureBlobPath)
-        async_az = sync_az.to_async()
-        assert isinstance(async_az, AsyncAzureBlobPath)
-        assert str(async_az) == str(sync_az)
-
-    def test_to_sync(self):
-        """Test converting async path to sync path."""
-        from panpath.s3_sync import S3Path
-        from panpath.s3_async import AsyncS3Path
-        from panpath.gs_sync import GSPath
-        from panpath.gs_async import AsyncGSPath
-        from panpath.azure_sync import AzureBlobPath
-        from panpath.azure_async import AsyncAzureBlobPath
-
-        # S3
-        async_s3 = PanPath("s3://bucket/key.txt", mode="async")
-        assert isinstance(async_s3, AsyncS3Path)
-        sync_s3 = async_s3.to_sync()
-        assert isinstance(sync_s3, S3Path)
-        assert str(sync_s3) == str(async_s3)
-
-        # GS
-        async_gs = PanPath("gs://bucket/file.txt", mode="async")
-        assert isinstance(async_gs, AsyncGSPath)
-        sync_gs = async_gs.to_sync()
-        assert isinstance(sync_gs, GSPath)
-        assert str(sync_gs) == str(async_gs)
-
-        # Azure
-        async_az = PanPath("az://container/blob.txt", mode="async")
-        assert isinstance(async_az, AsyncAzureBlobPath)
-        sync_az = async_az.to_sync()
-        assert isinstance(sync_az, AzureBlobPath)
-        assert str(sync_az) == str(async_az)
-
-    def test_roundtrip_conversion(self):
-        """Test that converting sync->async->sync preserves path."""
-        original = PanPath("s3://bucket/path/file.txt", mode="sync")
-        async_version = original.to_async()
-        back_to_sync = async_version.to_sync()
-
-        assert str(original) == str(back_to_sync)
-        assert type(original) == type(back_to_sync)
-
-    def test_conversion_with_comparison(self):
-        """Test that converted paths can be compared after conversion."""
-        sync_path = PanPath("s3://bucket/key.txt", mode="sync")
-        async_path = PanPath("s3://bucket/key.txt", mode="async")
-
-        # Direct comparison should raise ValueError
-        with pytest.raises(ValueError):
-            sync_path == async_path
-
-        # But after conversion, comparison works
-        assert sync_path == async_path.to_sync()
-        assert sync_path.to_async() == async_path
 
 
 class TestStringOperations:

@@ -9,8 +9,8 @@ class TestSymlinkMethods:
 
     def test_s3_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_boto3 = sys.modules["boto3"]
@@ -46,8 +46,8 @@ class TestSymlinkMethods:
 
     def test_gs_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on GCS."""
-        from panpath.router import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
         # Configure the conftest mock
         mock_storage = sys.modules["google.cloud.storage"]
@@ -82,8 +82,8 @@ class TestSymlinkMethods:
 
     def test_azure_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on Azure."""
-        from panpath.router import PanPath
-        from panpath.azure_sync import AzureBlobPath
+        from panpath import PanPath
+        from panpath.azure_path import AzureBlobPath
 
         # Configure the conftest mock
         mock_azure = sys.modules["azure.storage.blob"]
@@ -123,8 +123,8 @@ class TestGlobMethods:
 
     def test_s3_glob_simple_pattern(self):
         """Test simple glob pattern on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_boto3 = sys.modules["boto3"]
@@ -152,8 +152,8 @@ class TestGlobMethods:
 
     def test_gs_rglob_recursive(self):
         """Test recursive glob on GCS."""
-        from panpath.router import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
         # Configure the conftest mock
         mock_storage = sys.modules["google.cloud.storage"]
@@ -188,8 +188,8 @@ class TestTouchMethod:
 
     def test_s3_touch_creates_empty_file(self):
         """Test touch creates empty file on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_boto3 = sys.modules["boto3"]
@@ -214,8 +214,8 @@ class TestTouchMethod:
 
     def test_gs_touch_with_exist_ok_false(self):
         """Test touch with exist_ok=False on GCS."""
-        from panpath.router import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
         # Configure the conftest mock
         mock_storage = sys.modules["google.cloud.storage"]
@@ -243,8 +243,8 @@ class TestRenameMethod:
 
     def test_s3_rename_moves_file(self):
         """Test rename moves file on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_boto3 = sys.modules["boto3"]
@@ -279,8 +279,8 @@ class TestWalkMethod:
 
     def test_s3_walk_directory_tree(self):
         """Test walk returns directory structure on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_sync import S3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_boto3 = sys.modules["boto3"]
@@ -321,8 +321,8 @@ class TestRmdirMethod:
 
     def test_gs_rmdir_removes_directory_marker(self):
         """Test rmdir removes directory marker on GCS."""
-        from panpath.router import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
         # Configure the conftest mock
         mock_storage = sys.modules["google.cloud.storage"]
@@ -351,7 +351,7 @@ class TestResolveAndSamefile:
 
     def test_resolve_returns_self(self):
         """Test resolve returns self for cloud paths."""
-        from panpath.router import PanPath
+        from panpath import PanPath
 
         path = PanPath("s3://bucket/file.txt")
         resolved = path.resolve()
@@ -361,7 +361,7 @@ class TestResolveAndSamefile:
 
     def test_samefile_compares_paths(self):
         """Test samefile compares path strings."""
-        from panpath.router import PanPath
+        from panpath import PanPath
 
         path1 = PanPath("s3://bucket/file.txt")
         path2 = PanPath("s3://bucket/file.txt")
@@ -380,8 +380,8 @@ class TestAsyncSymlinkMethods:
 
     async def test_async_s3_symlink(self):
         """Test async symlink creation on S3."""
-        from panpath.router import PanPath
-        from panpath.s3_async import AsyncS3Path
+        from panpath import PanPath
+        from panpath.s3_path import S3Path
 
         # Configure the conftest mock
         mock_aioboto3 = sys.modules["aioboto3"]
@@ -397,12 +397,12 @@ class TestAsyncSymlinkMethods:
         mock_session.client.return_value = MockContext()
         mock_aioboto3.Session.return_value = mock_session
 
-        # Clear default client to force new client creation
-        AsyncS3Path._default_client = None
+        # Clear default async client to force new client creation
+        S3Path._default_async_client = None
 
         # Create async symlink
-        link_path = PanPath("s3://bucket/link", mode="async")
-        await link_path.symlink_to("s3://bucket/target")
+        link_path = PanPath("s3://bucket/link")
+        await link_path.a_symlink_to("s3://bucket/target")
 
         # Verify put_object was called
         mock_s3_client.put_object.assert_called_once()
@@ -414,8 +414,8 @@ class TestAsyncGlobMethods:
 
     async def test_async_gs_glob(self):
         """Test async glob on GCS."""
-        from panpath.router import PanPath
-        from panpath.gs_async import AsyncGSPath
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
         # Configure the conftest mock
         mock_gcloud = sys.modules["gcloud.aio.storage"]
@@ -431,12 +431,12 @@ class TestAsyncGlobMethods:
         # Configure the existing Storage class mock to return our storage instance
         mock_gcloud.Storage.return_value = mock_storage
 
-        # Clear default client to force new client creation
-        AsyncGSPath._default_client = None
+        # Clear default async client to force new client creation
+        GSPath._default_async_client = None
 
         # Glob for files
-        path = PanPath("gs://bucket/prefix", mode="async")
-        results = await path.glob("*.txt")
+        path = PanPath("gs://bucket/prefix")
+        results = await path.a_glob("*.txt")
 
         # Should return results
         assert isinstance(results, list)

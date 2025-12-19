@@ -11,29 +11,24 @@ from panpath.registry import (
 
 def test_register_and_get_path_class():
     """Test registering and retrieving path classes."""
-    from panpath.cloud import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath
 
-    # Create mock classes
-    class MockSyncPath(CloudPath):
+    # Create mock class
+    class MockPath(CloudPath):
         @classmethod
         def _create_default_client(cls):
             pass
 
-    class MockAsyncPath(AsyncCloudPath):
         @classmethod
-        def _create_default_client(cls):
+        def _create_default_async_client(cls):
             pass
 
     # Register
-    register_path_class("test", MockSyncPath, MockAsyncPath)
+    register_path_class("test", MockPath)
 
-    # Retrieve sync
-    sync_class = get_path_class("test", is_async=False)
-    assert sync_class == MockSyncPath
-
-    # Retrieve async
-    async_class = get_path_class("test", is_async=True)
-    assert async_class == MockAsyncPath
+    # Retrieve
+    path_class = get_path_class("test")
+    assert path_class == MockPath
 
     # Cleanup
     clear_registry()
@@ -42,12 +37,9 @@ def test_register_and_get_path_class():
 def test_get_registered_schemes():
     """Test getting list of registered schemes."""
     from panpath import registry
-    from panpath.s3_sync import S3Path
-    from panpath.s3_async import AsyncS3Path
-    from panpath.gs_sync import GSPath
-    from panpath.gs_async import AsyncGSPath
-    from panpath.azure_sync import AzureBlobPath
-    from panpath.azure_async import AsyncAzureBlobPath
+    from panpath.s3_path import S3Path
+    from panpath.gs_path import GSPath
+    from panpath.azure_path import AzurePath
 
     # Save current registry
     old_registry = registry._REGISTRY.copy()
@@ -60,10 +52,10 @@ def test_get_registered_schemes():
     assert len(schemes) == 0
 
     # Re-register cloud paths
-    register_path_class("s3", S3Path, AsyncS3Path)
-    register_path_class("gs", GSPath, AsyncGSPath)
-    register_path_class("az", AzureBlobPath, AsyncAzureBlobPath)
-    register_path_class("azure", AzureBlobPath, AsyncAzureBlobPath)
+    register_path_class("s3", S3Path)
+    register_path_class("gs", GSPath)
+    register_path_class("az", AzurePath)
+    register_path_class("azure", AzurePath)
 
     # Should have schemes now
     schemes = get_registered_schemes()
@@ -79,44 +71,40 @@ def test_get_registered_schemes():
 def test_swap_implementation():
     """Test swapping implementations (for testing)."""
     from panpath import registry
-    from panpath.cloud import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath
 
     # Save current registry
     old_registry = registry._REGISTRY.copy()
 
-    class OriginalSync(CloudPath):
+    class OriginalPath(CloudPath):
         @classmethod
         def _create_default_client(cls):
             pass
 
-    class OriginalAsync(AsyncCloudPath):
+        @classmethod
+        def _create_default_async_client(cls):
+            pass
+
+    class NewPath(CloudPath):
         @classmethod
         def _create_default_client(cls):
             pass
 
-    class NewSync(CloudPath):
         @classmethod
-        def _create_default_client(cls):
-            pass
-
-    class NewAsync(AsyncCloudPath):
-        @classmethod
-        def _create_default_client(cls):
+        def _create_default_async_client(cls):
             pass
 
     # Register original
-    register_path_class("swap-test", OriginalSync, OriginalAsync)
+    register_path_class("swap-test", OriginalPath)
 
     # Swap
-    old_sync, old_async = swap_implementation("swap-test", NewSync, NewAsync)
+    old_class = swap_implementation("swap-test", NewPath)
 
-    # Check old classes returned
-    assert old_sync == OriginalSync
-    assert old_async == OriginalAsync
+    # Check old class returned
+    assert old_class == OriginalPath
 
-    # Check new classes are registered
-    assert get_path_class("swap-test", is_async=False) == NewSync
-    assert get_path_class("swap-test", is_async=True) == NewAsync
+    # Check new class is registered
+    assert get_path_class("swap-test") == NewPath
 
     # Restore registry
     registry._REGISTRY = old_registry
@@ -141,22 +129,21 @@ def test_get_path_class_unknown_scheme():
 def test_clear_registry():
     """Test clearing the registry."""
     from panpath import registry
-    from panpath.cloud import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath
 
     # Save current registry
     old_registry = registry._REGISTRY.copy()
 
-    class TestSync(CloudPath):
+    class TestPath(CloudPath):
         @classmethod
         def _create_default_client(cls):
             pass
 
-    class TestAsync(AsyncCloudPath):
         @classmethod
-        def _create_default_client(cls):
+        def _create_default_async_client(cls):
             pass
 
-    register_path_class("clear-test", TestSync, TestAsync)
+    register_path_class("clear-test", TestPath)
     assert "clear-test" in get_registered_schemes()
 
     clear_registry()

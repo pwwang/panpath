@@ -5,11 +5,11 @@ from panpath.cloud import CloudPath
 from panpath.gs_client import GSClient
 
 if TYPE_CHECKING:
-    from panpath.clients import Client
+    from panpath.clients import Client, AsyncClient
 
 
 class GSPath(CloudPath):
-    """Synchronous Google Cloud Storage path implementation."""
+    """Google Cloud Storage path implementation (sync and async methods)."""
 
     _client: Optional[GSClient] = None
     _default_client: Optional[GSClient] = None
@@ -18,3 +18,9 @@ class GSPath(CloudPath):
     def _create_default_client(cls) -> "Client":
         """Create default GCS client."""
         return GSClient()
+
+    @classmethod
+    def _create_default_async_client(cls) -> "AsyncClient":
+        """Create default async GCS client."""
+        from panpath.gs_async_client import AsyncGSClient
+        return AsyncGSClient()

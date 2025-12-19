@@ -339,7 +339,7 @@ class AsyncS3Client(AsyncClient):
             List of matching AsyncCloudPath objects
         """
         from fnmatch import fnmatch
-        from panpath.router import PanPath
+        from panpath.base import PanPath
 
         bucket, prefix = self._parse_s3_path(path)
 

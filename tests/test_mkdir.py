@@ -1,6 +1,6 @@
 """Test mkdir functionality for cloud paths."""
 import pytest
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
 
 
 class TestMkdir:
@@ -52,29 +52,29 @@ class TestAsyncMkdir:
 
     async def test_async_s3_mkdir(self):
         """Test async mkdir for S3."""
-        path = AsyncPanPath("s3://test-bucket/new-dir")
+        path = PanPath("s3://test-bucket/new-dir")
 
-        # Should have mkdir method
-        assert hasattr(path, 'mkdir')
+        # Should have a_mkdir method
+        assert hasattr(path, 'a_mkdir')
 
     async def test_async_gs_mkdir(self):
         """Test async mkdir for GCS."""
-        path = AsyncPanPath("gs://test-bucket/new-dir")
+        path = PanPath("gs://test-bucket/new-dir")
 
-        # Should have mkdir method
-        assert hasattr(path, 'mkdir')
+        # Should have a_mkdir method
+        assert hasattr(path, 'a_mkdir')
 
     async def test_async_azure_mkdir(self):
         """Test async mkdir for Azure."""
-        path = AsyncPanPath("az://test-container/new-dir")
+        path = PanPath("az://test-container/new-dir")
 
-        # Should have mkdir method
-        assert hasattr(path, 'mkdir')
+        # Should have a_mkdir method
+        assert hasattr(path, 'a_mkdir')
 
 
 def test_mkdir_signature():
     """Test that mkdir has the correct signature."""
-    from panpath.s3_sync import S3Path
+    from panpath.s3_path import S3Path
     import inspect
 
     # Check mkdir signature matches pathlib

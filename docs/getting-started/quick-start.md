@@ -73,80 +73,56 @@ The same API works for cloud storage:
     ```python
     from panpath import PanPath
 
-    # Create Azure path (both schemes work)
+    # Create Azure path
     azure_path = PanPath("az://my-container/data/file.txt")
-    # or
-    azure_path = PanPath("azure://my-container/data/file.txt")
 
-    # Write to Azure
-    azure_path.write_text("Upload to Azure")
-
-    # Read from Azure
-    content = azure_path.read_text()
-
-    # Get file info
-    stats = azure_path.stat()
-    print(f"Size: {stats.st_size} bytes")
+    # Async operations
+    await azure_path.a_write_bytes(b"Binary data")
+    data = await azure_path.a_read_bytes()
+    is_file = await azure_path.a_is_file()
     ```
 
 ## Async Operations
 
-For better performance with I/O operations, use async mode:
+All path classes support asynchronous methods with the `a_` prefix:
 
-=== "Using mode parameter"
-    ```python
-    import asyncio
-    from panpath import PanPath
+```python
+import asyncio
+from panpath import PanPath
 
-    async def main():
-        # Create async path with mode parameter
-        path = PanPath("s3://bucket/file.txt", mode="async")
+async def main():
+    # Any path supports both sync and async methods
+    path = PanPath("s3://bucket/file.txt")
 
-        # Use async operations
-        await path.write_text("Async upload")
-        content = await path.read_text()
+    # Async methods use a_ prefix
+    await path.a_write_text("Async upload")
+    content = await path.a_read_text()
+    print(content)
+
+asyncio.run(main())
+```
+
+### Async Context Manager
+
+```python
+import asyncio
+from panpath import PanPath
+
+async def main():
+    path = PanPath("gs://bucket/file.txt")
+
+    # Use async context manager
+    async with path.a_open("w") as f:
+        await f.write("Line 1\n")
+        await f.write("Line 2\n")
+
+    # Read back
+    async with path.a_open("r") as f:
+        content = await f.read()
         print(content)
 
-    asyncio.run(main())
-    ```
-
-=== "Using AsyncPanPath"
-    ```python
-    import asyncio
-    from panpath import AsyncPanPath
-
-    async def main():
-        # AsyncPanPath is always async
-        path = AsyncPanPath("s3://bucket/file.txt")
-
-        # Use async operations
-        await path.write_text("Async upload")
-        content = await path.read_text()
-        print(content)
-
-    asyncio.run(main())
-    ```
-
-=== "Async Context Manager"
-    ```python
-    import asyncio
-    from panpath import AsyncPanPath
-
-    async def main():
-        path = AsyncPanPath("gs://bucket/file.txt")
-
-        # Use async context manager
-        async with path.open("w") as f:
-            await f.write("Line 1\n")
-            await f.write("Line 2\n")
-
-        # Read back
-        async with path.open("r") as f:
-            content = await f.read()
-            print(content)
-
-    asyncio.run(main())
-    ```
+asyncio.run(main())
+```
 
 ## Common Operations
 

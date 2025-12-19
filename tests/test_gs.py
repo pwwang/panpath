@@ -10,7 +10,7 @@ class TestGSPath:
     def test_create_gs_path(self):
         """Test creating GCS path."""
         from panpath import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath.gs_path import GSPath
 
         path = PanPath("gs://test-bucket/blob/file.txt")
         assert isinstance(path, GSPath)
@@ -77,7 +77,7 @@ class TestGSPath:
     def test_gs_parent_preserves_type(self):
         """Test that parent preserves GSPath type."""
         from panpath import PanPath
-        from panpath.gs_sync import GSPath
+        from panpath.gs_path import GSPath
 
         path = PanPath("gs://test-bucket/dir/subdir/file.txt")
         parent = path.parent
@@ -113,54 +113,60 @@ class TestGSPath:
 
 
 class TestAsyncGSPath:
-    """Tests for asynchronous AsyncGSPath."""
+    """Tests for asynchronous GSPath methods (with a_ prefix)."""
 
-    def test_create_async_gs_path(self):
-        """Test creating async GCS path."""
-        from panpath import AsyncPanPath
-        from panpath.gs_async import AsyncGSPath
+    def test_gs_has_async_methods(self):
+        """Test that GSPath has async methods with a_ prefix."""
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
-        path = AsyncPanPath("gs://test-bucket/blob.txt")
-        assert isinstance(path, AsyncGSPath)
+        path = PanPath("gs://test-bucket/key.txt")
+        assert isinstance(path, GSPath)
+
+        # Check async methods exist
+        assert hasattr(path, 'a_read_text')
+        assert hasattr(path, 'a_write_text')
+        assert hasattr(path, 'a_exists')
 
     @pytest.mark.asyncio
     async def test_async_gs_read_text(self):
         """Test reading text from GCS asynchronously."""
-        from panpath import AsyncPanPath
+        from panpath import PanPath
         from panpath import gs_async_client
 
         mock_storage = AsyncMock()
         mock_storage.download = AsyncMock(return_value=b'async gcs content')
         gs_async_client.Storage.return_value = mock_storage
 
-        path = AsyncPanPath("gs://test-bucket/blob.txt")
-        content = await path.read_text()
+        path = PanPath("gs://test-bucket/blob.txt")
+        content = await path.a_read_text()
 
         assert content == "async gcs content"
 
     @pytest.mark.asyncio
     async def test_async_gs_write_text(self):
         """Test writing text to GCS asynchronously."""
-        from panpath import AsyncPanPath
+        from panpath import PanPath
         from panpath import gs_async_client
 
         mock_storage = AsyncMock()
         gs_async_client.Storage.return_value = mock_storage
 
-        path = AsyncPanPath("gs://test-bucket/blob.txt")
-        await path.write_text("async gcs content")
+        path = PanPath("gs://test-bucket/blob.txt")
+        await path.a_write_text("async gcs content")
 
         mock_storage.upload.assert_called_once()
 
     def test_async_gs_parent_preserves_type(self):
-        """Test that parent preserves AsyncGSPath type."""
-        from panpath import AsyncPanPath
-        from panpath.gs_async import AsyncGSPath
+        """Test that parent preserves GSPath type."""
+        from panpath import PanPath
+        from panpath.gs_path import GSPath
 
-        path = AsyncPanPath("gs://test-bucket/dir/file.txt")
+        path = PanPath("gs://test-bucket/dir/file.txt")
         parent = path.parent
 
-        assert isinstance(parent, AsyncGSPath)
+        assert isinstance(parent, GSPath)
+        assert hasattr(parent, 'a_read_text')
 
 
 def test_gs_missing_dependency():

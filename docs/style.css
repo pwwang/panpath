@@ -1,0 +1,13 @@
+article.md-typeset .mkapi-object-body {
+    font-size: 100%;
+}
+article.md-typeset .mkapi-node code.mkapi-item-name {
+    font-size: 95%;
+}
+article.md-typeset .mkapi-section-body {
+    font-size: 90%;
+}
+article.md-typeset mkapi-item-type,
+article.md-typeset .mkapi-section-name-body {
+    font-size: unset;
+}

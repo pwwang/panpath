@@ -1,44 +1,40 @@
 """Registry for path class implementations."""
-from typing import TYPE_CHECKING, Any, Dict, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 if TYPE_CHECKING:
-    from panpath.cloud import CloudPath, AsyncCloudPath
+    from panpath.cloud import CloudPath
 
 
-# Registry mapping URI schemes to (sync_class, async_class) tuples
-_REGISTRY: Dict[str, Tuple[Type["CloudPath"], Type["AsyncCloudPath"]]] = {}
+# Registry mapping URI schemes to cloud path classes
+_REGISTRY: Dict[str, Type["CloudPath"]] = {}
 
 
 def register_path_class(
     scheme: str,
-    sync_class: Type["CloudPath"],
-    async_class: Type["AsyncCloudPath"],
+    path_class: Type["CloudPath"],
 ) -> None:
     """Register a path class implementation for a URI scheme.
 
     Args:
         scheme: URI scheme (e.g., 's3', 'gs', 'az')
-        sync_class: Synchronous path class
-        async_class: Asynchronous path class
+        path_class: Cloud path class (with both sync and async methods)
     """
-    _REGISTRY[scheme] = (sync_class, async_class)
+    _REGISTRY[scheme] = path_class
 
 
-def get_path_class(scheme: str, is_async: bool = False) -> Type[Any]:
-    """Get the path class for a URI scheme and mode.
+def get_path_class(scheme: str) -> Type[Any]:
+    """Get the path class for a URI scheme.
 
     Args:
         scheme: URI scheme (e.g., 's3', 'gs', 'az')
-        is_async: Whether to return async class
 
     Returns:
-        Path class for the scheme and mode
+        Path class for the scheme
 
     Raises:
         KeyError: If scheme is not registered
     """
-    sync_class, async_class = _REGISTRY[scheme]
-    return async_class if is_async else sync_class
+    return _REGISTRY[scheme]
 
 
 def get_registered_schemes() -> list[str]:
@@ -53,19 +49,18 @@ def clear_registry() -> None:
 
 def swap_implementation(
     scheme: str,
-    sync_class: Type["CloudPath"],
-    async_class: Type["AsyncCloudPath"],
-) -> Tuple[Type["CloudPath"], Type["AsyncCloudPath"]]:
+    path_class: Type["CloudPath"],
+) -> Type["CloudPath"]:
     """Swap implementation for a scheme (for testing with local mocks).
 
     Args:
         scheme: URI scheme to swap
-        sync_class: New synchronous path class
-        async_class: New asynchronous path class
+        path_class: New path class
 
     Returns:
-        Tuple of (old_sync_class, old_async_class)
+        Old path class (or None if not previously registered)
     """
-    old_classes = _REGISTRY.get(scheme, (None, None))  # type: ignore
-    _REGISTRY[scheme] = (sync_class, async_class)
-    return old_classes
+    old_class = _REGISTRY.get(scheme)  # type: ignore
+    _REGISTRY[scheme] = path_class
+    return old_class  # type: ignore
+

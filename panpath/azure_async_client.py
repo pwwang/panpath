@@ -318,7 +318,7 @@ class AsyncAzureBlobClient(AsyncClient):
             List of matching AsyncCloudPath objects
         """
         from fnmatch import fnmatch
-        from panpath.router import PanPath
+        from panpath.base import PanPath
 
         container_name, blob_prefix = self._parse_azure_path(path)
         container_client = self._client.get_container_client(container_name)

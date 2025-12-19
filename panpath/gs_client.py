@@ -307,7 +307,7 @@ class GSClient(Client):
             List of matching CloudPath objects
         """
         from fnmatch import fnmatch
-        from panpath.router import PanPath
+        from panpath.base import PanPath
 
         bucket_name, blob_prefix = self._parse_gs_path(path)
         bucket = self._client.bucket(bucket_name)

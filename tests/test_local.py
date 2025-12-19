@@ -1,7 +1,7 @@
 """Tests for local path implementations."""
 import pytest
 
-from panpath import LocalPath, AsyncLocalPath
+from panpath import LocalPath
 
 
 class TestLocalPath:
@@ -50,58 +50,62 @@ class TestLocalPath:
 
 
 class TestAsyncLocalPath:
-    """Tests for asynchronous AsyncLocalPath."""
+    """Tests for asynchronous LocalPath methods (with a_ prefix)."""
 
     @pytest.mark.asyncio
     async def test_create_and_read(self, tmp_path, sample_text_content):
         """Test creating and reading a file asynchronously."""
         test_file = tmp_path / "test.txt"
-        path = AsyncLocalPath(test_file)
+        path = LocalPath(test_file)
 
-        await path.write_text(sample_text_content)
-        content = await path.read_text()
+        await path.a_write_text(sample_text_content)
+        content = await path.a_read_text()
         assert content == sample_text_content
-        assert await path.exists()
+        assert await path.a_exists()
 
     @pytest.mark.asyncio
     async def test_binary_operations(self, tmp_path, sample_binary_content):
         """Test async binary read/write operations."""
         test_file = tmp_path / "test.bin"
-        path = AsyncLocalPath(test_file)
+        path = LocalPath(test_file)
 
-        await path.write_bytes(sample_binary_content)
-        data = await path.read_bytes()
+        await path.a_write_bytes(sample_binary_content)
+        data = await path.a_read_bytes()
         assert data == sample_binary_content
 
     @pytest.mark.asyncio
     async def test_async_context_manager(self, tmp_path):
         """Test async file context manager."""
         test_file = tmp_path / "test.txt"
-        path = AsyncLocalPath(test_file)
+        path = LocalPath(test_file)
 
-        async with path.open("w") as f:
+        async with path.a_open("w") as f:
             await f.write("async content")
 
-        async with path.open("r") as f:
+        async with path.a_open("r") as f:
             content = await f.read()
             assert content == "async content"
 
     @pytest.mark.asyncio
     async def test_parent_and_joinpath(self, tmp_path):
-        """Test parent and joinpath operations preserve async type."""
-        path = AsyncLocalPath(tmp_path / "dir" / "file.txt")
+        """Test parent and joinpath operations preserve type."""
+        path = LocalPath(tmp_path / "dir" / "file.txt")
         parent = path.parent
-        assert isinstance(parent, AsyncLocalPath)
+        assert isinstance(parent, LocalPath)
 
         joined = parent / "other.txt"
-        assert isinstance(joined, AsyncLocalPath)
+        assert isinstance(joined, LocalPath)
 
-    def test_equality_with_sync_path(self, tmp_path):
-        """Test that async and sync local paths are not equal (no ValueError for local paths)."""
-        sync_path = LocalPath(tmp_path / "test.txt")
-        async_path = AsyncLocalPath(tmp_path / "test.txt")
+    def test_has_async_methods(self, tmp_path):
+        """Test that LocalPath has async methods with a_ prefix."""
+        path = LocalPath(tmp_path / "test.txt")
 
-        # Local paths don't raise ValueError, they just return False
-        # (because they don't inherit from CloudPath/AsyncCloudPath)
-        assert sync_path != async_path
-        assert async_path != sync_path
+        # Check async methods exist
+        assert hasattr(path, 'a_read_text')
+        assert hasattr(path, 'a_write_text')
+        assert hasattr(path, 'a_read_bytes')
+        assert hasattr(path, 'a_write_bytes')
+        assert hasattr(path, 'a_exists')
+        assert hasattr(path, 'a_is_file')
+        assert hasattr(path, 'a_is_dir')
+

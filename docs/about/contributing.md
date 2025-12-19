@@ -104,13 +104,13 @@ panpath/
 │   ├── registry.py      # Path class registry
 │   ├── clients.py       # Client management
 │   ├── exceptions.py    # Custom exceptions
-│   ├── local_sync.py    # Local sync paths
+│   ├── gs_path.py    # Local sync paths
 │   ├── local_async.py   # Local async paths
-│   ├── s3_sync.py       # S3 sync paths
+│   ├── s3_path.py       # S3 sync paths
 │   ├── s3_async.py      # S3 async paths
-│   ├── gs_sync.py       # GCS sync paths
+│   ├── gs_path.py       # GCS sync paths
 │   ├── gs_async.py      # GCS async paths
-│   ├── azure_sync.py    # Azure sync paths
+│   ├── azure_path.py    # Azure sync paths
 │   └── azure_async.py   # Azure async paths
 ├── tests/               # Test suite
 ├── docs/                # Documentation
@@ -130,7 +130,7 @@ panpath/
            raise NotImplementedError
    ```
 
-2. **Implement in each backend** (e.g., `s3_sync.py`):
+2. **Implement in each backend** (e.g., `s3_path.py`):
    ```python
    class S3Path(CloudPath):
        def new_method(self, arg: str) -> str:

@@ -329,7 +329,7 @@ class S3Client(Client):
             List of matching CloudPath objects
         """
         from fnmatch import fnmatch
-        from panpath.router import PanPath
+        from panpath.base import PanPath
 
         bucket, prefix = self._parse_s3_path(path)
 

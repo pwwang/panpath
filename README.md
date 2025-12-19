@@ -62,19 +62,19 @@ content = azure_file.read_text()
 ### Asynchronous Usage
 
 ```python
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
 
-# Option 1: Using mode parameter
-async_s3 = PanPath("s3://bucket/key/file.txt", mode="async")
-content = await async_s3.read_text()
+# All path classes support async methods with a_ prefix
+s3_path = PanPath("s3://bucket/key/file.txt")
+content = await s3_path.a_read_text()
 
-# Option 2: Using AsyncPanPath (always async)
-async_gs = AsyncPanPath("gs://bucket/path/file.txt")
-content = await async_gs.read_text()
+# Works for all cloud storage providers
+gs_path = PanPath("gs://bucket/path/file.txt")
+content = await gs_path.a_read_text()
 
 # Async local files
-async_local = AsyncPanPath("/path/to/file.txt")
-async with async_local.open("r") as f:
+local_path = PanPath("/path/to/file.txt")
+async with local_path.a_open("r") as f:
     content = await f.read()
 ```
 
@@ -83,15 +83,14 @@ async with async_local.open("r") as f:
 ```python
 from panpath import PanPath
 
-# Path operations preserve type and mode
+# Path operations preserve type
 s3_path = PanPath("s3://bucket/data/file.txt")
-parent = s3_path.parent  # Returns S3Path (sync)
-sibling = s3_path.parent / "other.txt"  # Returns S3Path (sync)
+parent = s3_path.parent  # Returns S3Path
+sibling = s3_path.parent / "other.txt"  # Returns S3Path
 
-# Async paths preserve async mode
-async_path = PanPath("s3://bucket/data/file.txt", mode="async")
-async_parent = async_path.parent  # Returns AsyncS3Path
-async_sibling = async_parent / "other.txt"  # Returns AsyncS3Path
+# Each path supports both sync and async methods
+content = s3_path.read_text()  # Synchronous
+content = await s3_path.a_read_text()  # Asynchronous
 ```
 
 ### Bulk Operations and Cross-Storage Transfers
@@ -131,23 +130,25 @@ See [bulk-operations.md](docs/guide/bulk-operations.md) for detailed documentati
 
 ## Architecture
 
-PanPath uses a metaclass factory pattern to dispatch path creation based on URI scheme and mode parameter:
+PanPath uses a factory pattern to dispatch path creation based on URI scheme:
 
-- **Sync Mode**: Returns `LocalPath`, `S3Path`, `GSPath`, or `AzureBlobPath`
-- **Async Mode**: Returns `AsyncLocalPath`, `AsyncS3Path`, `AsyncGSPath`, or `AsyncAzureBlobPath`
+- `PanPath(pathlib.Path)` - Root factory and base class
+- `LocalPath(PanPath)` - Local filesystem paths
+- `CloudPath(PanPath)` - Base for all cloud storage paths
+- `GSPath(CloudPath)`, `S3Path(CloudPath)`, `AzurePath(CloudPath)` - Cloud-specific implementations
 
-Cloud paths use lazy client instantiation - SDK clients are only created on first I/O operation.
+Each path class provides both synchronous methods and asynchronous methods (prefixed with `a_`). Cloud paths use lazy client instantiation - SDK clients are only created on first I/O operation.
 
 ## Type Hints
 
-PanPath provides comprehensive type hints with `@overload` decorators:
+PanPath provides comprehensive type hints:
 
 ```python
 from panpath import PanPath
-from typing import Literal
+from panpath.s3_path import S3Path
 
-# Type checker knows return type based on mode
-sync_path: S3Path = PanPath("s3://bucket/key")
+# Type checker knows return type based on URI scheme
+path: S3Path = PanPath("s3://bucket/key")
 async_path: AsyncS3Path = PanPath("s3://bucket/key", mode="async")
 ```
 
