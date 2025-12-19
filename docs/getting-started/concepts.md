@@ -155,40 +155,6 @@ isinstance(path, S3Path)   # True (actual type)
     - `exists()` → `a_exists()`
     - `iterdir()` → `a_iterdir()`
 
-### Type Preservation
-
-Path operations preserve the type and mode:
-
-```python
-from panpath import PanPath
-
-# Sync S3 path
-sync_path = PanPath("s3://bucket/data/file.txt")
-sync_parent = sync_path.parent  # Still sync S3Path
-sync_sibling = sync_parent / "other.txt"  # Still sync S3Path
-
-# Async S3 path
-async_path = PanPath("s3://bucket/data/file.txt", mode="async")
-async_parent = async_path.parent  # Async S3Path
-async_sibling = async_parent / "other.txt"  # Async S3Path
-```
-
-This means you can chain operations without worrying about type changes:
-
-```python
-path = PanPath("s3://bucket/deep/nested/file.txt", mode="async")
-
-# All these preserve async mode
-new_path = (path
-    .parent           # async
-    .parent           # async
-    / "other"         # async
-    / "file.txt")     # async
-
-# Still async!
-await new_path.write_text("content")
-```
-
 ## Storage Concepts
 
 ### Local Paths
@@ -273,17 +239,17 @@ items = list(path.iterdir())
 Return coroutines that can be awaited:
 
 ```python
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def main():
-    path = AsyncPanPath("s3://bucket/file.txt")
+    path = PanPath("s3://bucket/file.txt")
 
     # These are non-blocking
-    content = await path.read_text()
-    await path.write_text("new content")
-    exists = await path.exists()
-    items = await path.iterdir()
+    content = await path.a_read_text()
+    await path.a_write_text("new content")
+    exists = await path.a_exists()
+    items = await path.a_iterdir()
 
 asyncio.run(main())
 ```
@@ -301,14 +267,14 @@ Async mode enables concurrent operations:
 
 ```python
 import asyncio
-from panpath import AsyncPanPath
+from panpath import PanPath
 
 async def download_all(urls):
     # Create async paths
-    paths = [AsyncPanPath(url) for url in urls]
+    paths = [PanPath(url) for url in urls]
 
     # Download all concurrently
-    contents = await asyncio.gather(*[p.read_text() for p in paths])
+    contents = await asyncio.gather(*[p.a_read_text() for p in paths])
 
     return contents
 
@@ -367,22 +333,22 @@ except botocore.exceptions.ClientError as e:
 ### 1. Use Type Hints
 
 ```python
-from panpath import PanPath, AsyncPanPath
+from panpath import PanPath
 from pathlib import Path
 
 def process_file(path: PanPath) -> str:
     """Can be sync or async path."""
     return path.read_text()
 
-async def process_async(path: AsyncPanPath) -> str:
+async def process_async(path: PanPath) -> str:
     """Must be async path."""
-    return await path.read_text()
+    return await path.a_read_text()
 
 def process_local(path: Path | PanPath) -> str:
     """Accept pathlib.Path or PanPath."""
     if isinstance(path, Path):
         path = PanPath(str(path))
-    return path.read_text()
+    return path.a_read_text()
 ```
 
 ### 2. Handle Optional Dependencies
@@ -411,11 +377,11 @@ with PanPath("s3://bucket/file.txt").open("r") as f:
     content = f.read()
 
 # Also good for async
-from panpath import AsyncPanPath
+from panpath import PanPath
 
 async def read_file():
-    async with AsyncPanPath("s3://bucket/file.txt").open("r") as f:
-        content = await f.read()
+    async with PanPath("s3://bucket/file.txt").a_open("r") as f:
+        content = await f.a_read()
 ```
 
 ### 4. Prefer Bulk Operations

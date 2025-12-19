@@ -149,7 +149,6 @@ from panpath.s3_path import S3Path
 
 # Type checker knows return type based on URI scheme
 path: S3Path = PanPath("s3://bucket/key")
-async_path: AsyncS3Path = PanPath("s3://bucket/key", mode="async")
 ```
 
 ## Testing
@@ -199,10 +198,12 @@ path = PanPath("s3://bucket/key")
 # Before
 from aiopath import AsyncPath
 path = AsyncPath("/local/file.txt")
+# await path.read_text()
 
 # After
-from panpath import AsyncPanPath
-path = AsyncPanPath("/local/file.txt")
+from panpath import PanPath
+path = PanPath("/local/file.txt")
+# await path.a_read_text()
 ```
 
 ## License

@@ -342,7 +342,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     # Determine scheme from original path
                     scheme = "az" if path.startswith("az://") else "azure"
-                    results.append(PanPath(f"{scheme}://{container_name}/{blob.name}", mode="async"))
+                    results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
             return results
         else:
             # Non-recursive - list blobs with prefix
@@ -357,7 +357,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 rel_name = blob.name[len(prefix_with_slash):]
                 if "/" not in rel_name and fnmatch(blob.name, f"{prefix_with_slash}{pattern}"):
                     scheme = "az" if path.startswith("az://") else "azure"
-                    results.append(PanPath(f"{scheme}://{container_name}/{blob.name}", mode="async"))
+                    results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
             return results
 
     async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:

@@ -1,1 +1,0 @@
-# ![mkapi](panpath.azure_client|code|)

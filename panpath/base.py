@@ -3,7 +3,6 @@ import re
 from pathlib import Path as PathlibPath, PurePosixPath
 from typing import Any, Union
 
-from panpath.exceptions import InvalidModeError
 from panpath.registry import get_path_class
 
 

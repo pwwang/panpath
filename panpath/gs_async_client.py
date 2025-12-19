@@ -341,7 +341,7 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"*{file_pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}", mode="async"))
+                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
             return results
         else:
             # Non-recursive - list blobs with delimiter
@@ -356,7 +356,7 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"{prefix}{pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}", mode="async"))
+                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
             return results
 
     async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:

@@ -47,22 +47,22 @@ assert pathlib_path.parent == PanPath(str(pathlib_path.parent))
 
 ```python
 import asyncio
-from panpath import AsyncPanPath
+from panpath import PanPath
 
 async def main():
-    path = AsyncPanPath("/tmp/file.txt")
+    path = PanPath("/tmp/file.txt")
 
     # Async write
-    await path.write_text("Async content")
+    await path.a_write_text("Async content")
 
     # Async read
-    content = await path.read_text()
+    content = await path.a_read_text()
     print(content)
 
     # Async context manager
-    async with path.open("w") as f:
-        await f.write("Line 1\n")
-        await f.write("Line 2\n")
+    async with path.a_open("w") as f:
+        await f.a_write("Line 1\n")
+        await f.a_write("Line 2\n")
 
 asyncio.run(main())
 ```

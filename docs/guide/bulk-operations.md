@@ -43,17 +43,17 @@ Remove a directory and all its contents:
 
 === "Async"
     ```python
-    from panpath import AsyncPanPath
+    from panpath import PanPath
     import asyncio
 
     async def cleanup():
         # Remove Azure directory
-        azure_dir = AsyncPanPath("az://container/temp/")
-        await azure_dir.rmtree()
+        azure_dir = PanPath("az://container/temp/")
+        await azure_dir.a_rmtree()
 
         # Remove S3 directory
-        s3_dir = AsyncPanPath("s3://bucket/old-data/")
-        await s3_dir.rmtree()
+        s3_dir = PanPath("s3://bucket/old-data/")
+        await s3_dir.a_rmtree()
 
     asyncio.run(cleanup())
     ```
@@ -128,13 +128,13 @@ Copy a file to a new location:
 
 === "Async"
     ```python
-    from panpath import AsyncPanPath
+    from panpath import PanPath
     import asyncio
 
     async def copy_files():
         # Async copy
-        src = AsyncPanPath("s3://bucket/file.txt")
-        await src.copy("gs://other/file.txt")
+        src = PanPath("s3://bucket/file.txt")
+        await src.a_copy("gs://other/file.txt")
 
         # Multiple concurrent copies
         files = [
@@ -144,7 +144,7 @@ Copy a file to a new location:
         ]
 
         await asyncio.gather(*[
-            AsyncPanPath(src).copy(dst)
+            PanPath(src).a_copy(dst)
             for src, dst in files
         ])
 
@@ -217,19 +217,19 @@ Copy an entire directory structure recursively:
 ### Async Copytree
 
 ```python
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def backup_datasets():
     # Async directory copy
-    src = AsyncPanPath("s3://production/data/")
-    await src.copytree("s3://backup/data/")
+    src = PanPath("s3://production/data/")
+    await src.a_copytree("s3://backup/data/")
 
     # Multiple concurrent copytree operations
     tasks = [
-        AsyncPanPath("s3://bucket/logs/").copytree("/backup/logs/"),
-        AsyncPanPath("s3://bucket/data/").copytree("/backup/data/"),
-        AsyncPanPath("s3://bucket/config/").copytree("/backup/config/"),
+        PanPath("s3://bucket/logs/").a_copytree("/backup/logs/"),
+        PanPath("s3://bucket/data/").a_copytree("/backup/data/"),
+        PanPath("s3://bucket/config/").a_copytree("/backup/config/"),
     ]
     await asyncio.gather(*tasks)
 
@@ -295,13 +295,13 @@ The `rename()` method now supports cross-storage operations by copying to the de
 
 === "Async"
     ```python
-    from panpath import AsyncPanPath
+    from panpath import PanPath
     import asyncio
 
     async def move_files():
         # Async rename/move
-        old = AsyncPanPath("s3://bucket/old.txt")
-        await old.rename("gs://other/new.txt")
+        old = PanPath("s3://bucket/old.txt")
+        await old.a_rename("gs://other/new.txt")
 
         # Move multiple files concurrently
         files = [
@@ -310,7 +310,7 @@ The `rename()` method now supports cross-storage operations by copying to the de
         ]
 
         await asyncio.gather(*[
-            AsyncPanPath(src).rename(dst)
+            PanPath(src).a_rename(dst)
             for src, dst in files
         ])
 
@@ -367,7 +367,7 @@ s3_file.copy("gs://other/large-file.bin")  # Downloads then uploads
 Use async for concurrent operations:
 
 ```python
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def parallel_copy():
@@ -375,7 +375,7 @@ async def parallel_copy():
 
     # Copy all files concurrently
     tasks = [
-        AsyncPanPath(src).copy(f"gs://backup/file{i}.txt")
+        PanPath(src).a_copy(f"gs://backup/file{i}.txt")
         for i, src in enumerate(files)
     ]
 
@@ -485,18 +485,18 @@ mirror_directories("s3://production/data/", "s3://backup/data/", clean_dst=True)
 ### Async Batch Operations
 
 ```python
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def batch_process(files: list[str], operation: str):
     """Process multiple files concurrently."""
-    paths = [AsyncPanPath(f) for f in files]
+    paths = [PanPath(f) for f in files]
 
     if operation == "delete":
-        await asyncio.gather(*[p.unlink() for p in paths])
+        await asyncio.gather(*[p.a_unlink() for p in paths])
     elif operation == "backup":
         await asyncio.gather(*[
-            p.copy(f"s3://backup/{p.name}")
+            p.a_copy(f"s3://backup/{p.name}")
             for p in paths
         ])
 
@@ -544,12 +544,12 @@ for i in range(1000):
     PanPath(f"s3://bucket/file{i}.txt").copy(f"gs://other/file{i}.txt")
 
 # Fast: Concurrent
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def fast_copy():
     await asyncio.gather(*[
-        AsyncPanPath(f"s3://bucket/file{i}.txt").copy(f"gs://other/file{i}.txt")
+        PanPath(f"s3://bucket/file{i}.txt").a_copy(f"gs://other/file{i}.txt")
         for i in range(1000)
     ])
 

@@ -2,7 +2,6 @@
 import pytest
 from panpath.exceptions import (
     PanPathError,
-    InvalidModeError,
     MissingDependencyError,
     CloudPathError,
     NoSuchFileError,
@@ -14,14 +13,6 @@ def test_panpath_error_base():
     error = PanPathError("test error")
     assert str(error) == "test error"
     assert isinstance(error, Exception)
-
-
-def test_invalid_mode_error():
-    """Test InvalidModeError exception."""
-    error = InvalidModeError("Invalid mode: test")
-    assert "Invalid mode: test" in str(error)
-    assert isinstance(error, PanPathError)
-    assert isinstance(error, ValueError)
 
 
 def test_missing_dependency_error():
@@ -68,12 +59,10 @@ def test_missing_dependency_error_message_format():
 def test_exception_inheritance():
     """Test exception inheritance hierarchy."""
     # All custom exceptions inherit from PanPathError
-    assert issubclass(InvalidModeError, PanPathError)
     assert issubclass(MissingDependencyError, PanPathError)
     assert issubclass(CloudPathError, PanPathError)
     assert issubclass(NoSuchFileError, CloudPathError)
 
     # Also inherit from standard exceptions
-    assert issubclass(InvalidModeError, ValueError)
     assert issubclass(MissingDependencyError, ImportError)
     assert issubclass(NoSuchFileError, FileNotFoundError)

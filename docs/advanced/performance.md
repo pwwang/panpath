@@ -13,12 +13,12 @@ for i in range(100):
     content = path.read_text()
 
 # Fast: Concurrent
-from panpath import AsyncPanPath
+from panpath import PanPath
 import asyncio
 
 async def read_all():
-    paths = [AsyncPanPath(f"s3://bucket/file{i}.txt") for i in range(100)]
-    contents = await asyncio.gather(*[p.read_text() for p in paths])
+    paths = [PanPath(f"s3://bucket/file{i}.txt") for i in range(100)]
+    contents = await asyncio.gather(*[p.a_read_text() for p in paths])
     return contents
 
 asyncio.run(read_all())

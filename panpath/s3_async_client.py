@@ -362,7 +362,7 @@ class AsyncS3Client(AsyncClient):
                     for obj in page.get("Contents", []):
                         key = obj["Key"]
                         if fnmatch(key, f"*{file_pattern}"):
-                            results.append(PanPath(f"s3://{bucket}/{key}", mode="async"))
+                            results.append(PanPath(f"s3://{bucket}/{key}"))
                 return results
             else:
                 # Non-recursive - list objects with delimiter
@@ -377,7 +377,7 @@ class AsyncS3Client(AsyncClient):
                 for obj in response.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"{prefix_with_slash}{pattern}"):
-                        results.append(PanPath(f"s3://{bucket}/{key}", mode="async"))
+                        results.append(PanPath(f"s3://{bucket}/{key}"))
                 return results
 
     async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:

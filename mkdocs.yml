@@ -137,5 +137,4 @@ nav:
     - From cloudpathlib: migration/from-cloudpathlib.md
   - About:
     - Changelog: about/changelog.md
-    - Contributing: about/contributing.md
     - License: about/license.md

@@ -1,1 +1,0 @@
-# ![mkapi](panpath.registry|code|)

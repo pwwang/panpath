@@ -109,8 +109,8 @@ Use tabs for alternative content:
 
 === "Async"
     ```python
-    path = AsyncPanPath("s3://bucket/file.txt")
-    content = await path.read_text()
+    path = PanPath("s3://bucket/file.txt")
+    content = await path.a_read_text()
     ```
 ````
 

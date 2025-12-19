@@ -176,17 +176,14 @@ Most operations are identical:
 
 === "PanPath"
     ```python
-    from panpath import PanPath, AsyncPanPath
+    from panpath import PanPath
 
     # Sync (explicit)
     path = PanPath("s3://bucket/file.txt")
     content = path.read_text()
 
-    # Async (explicit)
-    async_path = PanPath("s3://bucket/file.txt", mode="async")
-    # or
-    async_path = AsyncPanPath("s3://bucket/file.txt")
-    content = await async_path.read_text()
+    # Async
+    content = await async_path.a_read_text()
     ```
 
 ### 2. Local Paths
@@ -342,10 +339,10 @@ path = CloudPath("s3://bucket/file.txt")
 # Might be async internally?
 
 # After
-from panpath import AsyncPanPath
+from panpath import PanPath
 
-async_path = AsyncPanPath("s3://bucket/file.txt")
-content = await async_path.read_text()
+async_path = PanPath("s3://bucket/file.txt")
+content = await async_path.a_read_text()
 ```
 
 ### Step 5: Remove Caching Code

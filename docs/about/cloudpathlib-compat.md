@@ -21,10 +21,9 @@ We've adapted key tests from cloudpathlib's test suite to verify compatibility:
 
 ### ✅ Path Instantiation (`TestPathInstantiation`)
 - **Dispatch**: `PanPath()` correctly routes to S3/GCS/Azure implementations
-- **Mode parameter**: `mode="sync"` vs `mode="async"`
 - **Error handling**: Invalid modes, unsupported schemes
 - **Idempotency**: `PanPath(PanPath(...))` preserves type
-- **Local paths**: Dispatches to `LocalPath`/`AsyncLocalPath`
+- **Local paths**: Dispatches to `LocalPath`
 
 ### ✅ Azure Scheme Aliases (`TestAzureSchemeAliases`)
 - Both `az://` and `azure://` schemes supported
@@ -56,10 +55,10 @@ We've adapted key tests from cloudpathlib's test suite to verify compatibility:
 | Feature | PanPath | cloudpathlib |
 |---------|-----------|-------------|
 | Routing | Metaclass (`PanPathMeta`) | Class hierarchy |
-| Sync/Async | Separate classes (`PanPath`, `AsyncPanPath`) | Single class with internal handling |
+| Sync/Async | Single class | Not supported |
 | Caching | Not implemented | `FileCacheMode` support |
 | Client management | Lazy client creation, registry-based | Client instances with providers |
-| Local paths | Explicit `LocalPath`/`AsyncLocalPath` | No local path support |
+| Local paths | Explicit `LocalPath` | No local path support |
 
 ## What's Compatible
 
@@ -121,17 +120,11 @@ key = path.key              # "key.txt"
 ### ⚠️ These need changes:
 
 ```python
-# Async operations - use AsyncPanPath or mode="async"
-# cloudpathlib: async with CloudPath(...).open() as f:
-# PanPath:
-async_path = AsyncPanPath("s3://bucket/key.txt")
-# or
-async_path = PanPath("s3://bucket/key.txt", mode="async")
 
 # Async iterdir returns list, not async generator
 # cloudpathlib: async for item in path.iterdir():
 # PanPath:
-items = await async_path.iterdir()
+items = await path.a_iterdir()
 for item in items:
     ...
 

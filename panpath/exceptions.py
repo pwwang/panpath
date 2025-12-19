@@ -7,12 +7,6 @@ class PanPathError(Exception):
     pass
 
 
-class InvalidModeError(PanPathError, ValueError):
-    """Raised when an invalid mode is specified."""
-
-    pass
-
-
 class MissingDependencyError(PanPathError, ImportError):
     """Raised when a required dependency is not installed."""
 
