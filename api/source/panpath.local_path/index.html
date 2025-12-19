@@ -2057,10 +2057,14 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Local filesystem path implementation.&quot;&quot;&quot;</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PosixPath</span><span class="p">,</span> <span class="n">WindowsPath</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
+<span class="c1"># Determine the concrete Path class for the current platform</span>
+<span class="n">_ConcretePath</span> <span class="o">=</span> <span class="n">WindowsPath</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span> <span class="k">else</span> <span class="n">PosixPath</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles</span>
@@ -2070,10 +2074,12 @@
     <span class="n">HAS_AIOFILES</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">LocalPath</span><span class="p">(</span><span class="n">PanPath</span><span class="p">):</span><span id="panpath.local_path.LocalPath"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath" href="../../panpath.local_path/#panpath.local_path.LocalPath">DOCS</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LocalPath</span><span class="p">(</span><span class="n">_ConcretePath</span><span class="p">,</span> <span class="n">PanPath</span><span class="p">):</span><span id="panpath.local_path.LocalPath"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath" href="../../panpath.local_path/#panpath.local_path.LocalPath">DOCS</a>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Local filesystem path (drop-in replacement for pathlib.Path).</span>
 
-<span class="sd">    Inherits from PanPath (which inherits from pathlib.Path) for full compatibility.</span>
+<span class="sd">    Inherits from the platform-specific concrete path class (PosixPath/WindowsPath)</span>
+<span class="sd">    and PanPath for full compatibility. The concrete class must come first in MRO</span>
+<span class="sd">    to ensure proper _flavour attribute inheritance in Python 3.10.</span>
 <span class="sd">    Includes both sync methods (from Path) and async methods with a_ prefix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -2085,7 +2091,12 @@
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_raw_paths&#39;</span><span class="p">):</span>
             <span class="c1"># Already initialized in __new__, skip</span>
             <span class="k">return</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c1"># In Python 3.10, pathlib.Path.__init__() doesn&#39;t accept arguments</span>
+        <span class="c1"># In Python 3.12+, pathlib.Path.__init__() needs the arguments</span>
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>  <span class="c1"># type: ignore</span><span id="panpath.local_path.LocalPath.__eq__"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.__eq__" href="../../panpath.local_path/#panpath.local_path.LocalPath.__eq__">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check equality.&quot;&quot;&quot;</span>

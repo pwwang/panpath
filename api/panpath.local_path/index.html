@@ -1510,6 +1510,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#panpathbasepanpathnew" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        new
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pathlibpurepathstr" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2075,17 +2086,6 @@
     <span class="md-ellipsis">
       
         expanduser
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#panpathbasepanpathnew" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        new
       
     </span>
   </a>
@@ -2869,6 +2869,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#panpathbasepanpathnew" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        new
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pathlibpurepathstr" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3441,17 +3452,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathbasepanpathnew" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        new
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#panpathlocal_pathlocalpatheq" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3761,16 +3761,22 @@
           <span class="mkapi-section-name-body bases">Bases</span> 
         </div>
       <div class="mkapi-section-body bases">
+<span class="mkapi-base">pathlib.PosixPath</span>
+
 <span class="mkapi-base"><a href="../panpath.base/#panpath.base.PanPath">panpath.base.PanPath</a></span>
 
 <span class="mkapi-base">pathlib.Path</span>
+
+<span class="mkapi-base">pathlib.PurePosixPath</span>
 
 <span class="mkapi-base">pathlib.PurePath</span>
 </div>
     </div>
   <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Local filesystem path (drop-in replacement for pathlib.Path).</p><p>Inherits from PanPath (which inherits from pathlib.Path) for full compatibility.
-Includes both sync methods (from Path) and async methods with a_ prefix.</p>
+      <div class="mkapi-section-body"><p>Local filesystem path (drop-in replacement for pathlib.Path).</p><p>Inherits from the platform-specific concrete path class (PosixPath/WindowsPath)
+and PanPath for full compatibility. The concrete class must come first in MRO
+to ensure proper <em>flavour attribute inheritance in Python 3.10.
+Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 </div>
     </div>
   <div class="mkapi-section attributes">
@@ -4135,6 +4141,28 @@ string, remove the suffix from the path.
   </div>
 
   <div class="mkapi-members">
+  
+    <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.base.PanPath.__new__">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object staticmethod code">
+    <div class="mkapi-object-kind staticmethod">staticmethod</div>
+    <h3 id="panpathbasepanpathnew" class="mkapi-object-body staticmethod"><code class="mkapi-object-name">__new__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">cls</code>, <code class="mkapi-object-signature">*args</code>, <code class="mkapi-object-signature">**kwargs</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.__new__" title="Source for panpath.base.PanPath.__new__">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Create and return the appropriate path instance.</p><p>If called on a subclass, returns instance of that subclass.
+If called on PanPath itself, routes to the appropriate concrete class.</p>
+</div>
+    </div>
+  </div>
+
+</div>
+    </div>
   
     <div class="mkapi-member">
       <div class="mkapi-node" id="pathlib.PurePath.__str__">
@@ -5214,28 +5242,6 @@ Use <code>hardlink_to()</code> instead.</p>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Return a new path with expanded ~ and ~user constructs(as returned by os.path.expanduser)</p>
-</div>
-    </div>
-  </div>
-
-</div>
-    </div>
-  
-    <div class="mkapi-member">
-      <div class="mkapi-node" id="panpath.base.PanPath.__new__">
-<div class='mkapi-object-container'>
-  <div class="mkapi-object staticmethod code">
-    <div class="mkapi-object-kind staticmethod">staticmethod</div>
-    <h3 id="panpathbasepanpathnew" class="mkapi-object-body staticmethod"><code class="mkapi-object-name">__new__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">cls</code>, <code class="mkapi-object-signature">*args</code>, <code class="mkapi-object-signature">**kwargs</code><code class="mkapi-object-parenthesis">)</code></h3>
-  </div>
-  <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.__new__" title="Source for panpath.base.PanPath.__new__">&lt;/&gt;</a>
-  </div>
-</div>
-<div class="mkapi-docstring">
-<div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Create and return the appropriate path instance.</p><p>If called on a subclass, returns instance of that subclass.
-If called on PanPath itself, routes to the appropriate concrete class.</p>
 </div>
     </div>
   </div>
