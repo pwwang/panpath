@@ -1,5 +1,7 @@
 """Async Google Cloud Storage client implementation."""
-from typing import Any, List, Optional, Union
+import asyncio
+import weakref
+from typing import Any, List, Optional, Set, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
@@ -12,6 +14,45 @@ try:
 except ImportError:
     HAS_GCLOUD_AIO = False
     Storage = None  # type: ignore
+
+
+# Track all active storage instances for cleanup
+_active_storages: Set[weakref.ref] = set()
+
+
+async def _async_cleanup_all_storages() -> None:
+    """Async cleanup of all active storage instances."""
+    # Create a copy of the set to avoid modification during iteration
+    storages_to_clean = list(_active_storages)
+
+    for storage_ref in storages_to_clean:
+        storage = storage_ref()
+        if storage is None:
+            continue
+
+        try:
+            await storage.close()
+        except Exception:
+            # Ignore errors during cleanup
+            pass
+
+    _active_storages.clear()
+
+
+def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
+    """Register cleanup to run before loop closes."""
+    # Get the original shutdown_asyncgens method
+    original_shutdown = loop.shutdown_asyncgens
+
+    async def shutdown_with_cleanup():
+        """Shutdown that includes storage cleanup."""
+        # Clean up storages first
+        await _async_cleanup_all_storages()
+        # Then run original shutdown
+        await original_shutdown()
+
+    # Replace with our version
+    loop.shutdown_asyncgens = shutdown_with_cleanup
 
 
 class AsyncGSClient(AsyncClient):
@@ -31,27 +72,41 @@ class AsyncGSClient(AsyncClient):
             )
         self._storage: Optional[Storage] = None
         self._kwargs = kwargs
-
-    def _create_storage(self) -> Storage:
-        """Create a new Storage instance.
-
-        Each file handle gets its own Storage instance to avoid
-        session conflicts when multiple files are opened.
-        """
-        return Storage(**self._kwargs)
+        self._storage_ref: Optional[weakref.ref] = None
 
     async def _get_storage(self) -> Storage:
-        """Get or create storage client for the AsyncGSClient.
-
-        This is used for operations on the client itself, not file handles.
-        """
+        """Get or create shared storage client for the AsyncGSClient."""
         if self._storage is None:
             self._storage = Storage(**self._kwargs)
+            # Track this storage instance for cleanup
+            self._storage_ref = weakref.ref(self._storage, self._on_storage_deleted)
+            _active_storages.add(self._storage_ref)
+
+            # Register cleanup with the current event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # Check if we've already patched this loop
+                if not hasattr(loop, '_panpath_cleanup_registered'):
+                    _register_loop_cleanup(loop)
+                    loop._panpath_cleanup_registered = True  # type: ignore
+            except RuntimeError:
+                # No running loop, cleanup will be handled by explicit close
+                pass
+
         return self._storage
+
+    def _on_storage_deleted(self, ref: weakref.ref) -> None:
+        """Called when storage is garbage collected."""
+        _active_storages.discard(ref)
 
     async def close(self) -> None:
         """Close the storage client and cleanup resources."""
         if self._storage is not None:
+            # Remove from active storages
+            if self._storage_ref is not None:
+                _active_storages.discard(self._storage_ref)
+                self._storage_ref = None
+            # Close the storage
             await self._storage.close()
             self._storage = None
 
@@ -195,11 +250,10 @@ class AsyncGSClient(AsyncClient):
                 return StringIO(text)
         elif "w" in mode:
             bucket_name, blob_name = self._parse_gs_path(path)
-            storage = await self._get_storage()
 
             class AsyncGSWriteBuffer:
-                def __init__(self, storage: Storage, bucket: str, blob: str, binary: bool, enc: str):
-                    self._storage = storage
+                def __init__(self, client: "AsyncGSClient", bucket: str, blob: str, binary: bool, enc: str):
+                    self._client = client
                     self._bucket = bucket
                     self._blob = blob
                     self._binary = binary
@@ -220,7 +274,8 @@ class AsyncGSClient(AsyncClient):
                     else:
                         content = "".join(self._buffer).encode(self._encoding)
 
-                    await self._storage.upload(self._bucket, self._blob, content)
+                    storage = await self._client._get_storage()
+                    await storage.upload(self._bucket, self._blob, content)
 
                 async def __aenter__(self) -> Any:
                     return self
@@ -228,7 +283,7 @@ class AsyncGSClient(AsyncClient):
                 async def __aexit__(self, *args: Any) -> None:
                     await self.close()
 
-            return AsyncGSWriteBuffer(storage, bucket_name, blob_name, "b" in mode, encoding or "utf-8")
+            return AsyncGSWriteBuffer(self, bucket_name, blob_name, "b" in mode, encoding or "utf-8")
         else:
             raise ValueError(f"Unsupported mode: {mode}")
 
@@ -246,8 +301,6 @@ class AsyncGSClient(AsyncClient):
         if blob_name and not blob_name.endswith('/'):
             blob_name += '/'
 
-        storage = await self._get_storage()
-
         # Check if it already exists
         if await self.exists(f"gs://{bucket_name}/{blob_name}"):
             if not exist_ok:
@@ -255,6 +308,7 @@ class AsyncGSClient(AsyncClient):
             return
 
         # Create empty directory marker
+        storage = await self._get_storage()
         await storage.upload(bucket_name, blob_name, b"")
 
     async def get_metadata(self, path: str) -> dict[str, str]:
@@ -326,11 +380,13 @@ class AsyncGSClient(AsyncClient):
         bucket_name, blob_name = self._parse_gs_path(path)
         storage = await self._get_storage()
 
-        # Create empty blob
-        await storage.upload(bucket_name, blob_name, b"")
-
-        # Set symlink metadata
-        await self.set_metadata(path, {"gcsfuse_symlink_target": target})
+        # Create empty blob with gcsfuse_symlink_target metadata
+        await storage.upload(
+            bucket_name,
+            blob_name,
+            b"",
+            metadata={"gcsfuse_symlink_target": target}
+        )
 
     async def glob(self, path: str, pattern: str) -> list["Any"]:
         """Glob for files matching pattern.
@@ -345,14 +401,14 @@ class AsyncGSClient(AsyncClient):
         from fnmatch import fnmatch
         from panpath.base import PanPath
 
-        bucket_name, blob_prefix = self._parse_gs_path(path)
+        bucket_name, prefix = self._parse_gs_path(path)
         storage = await self._get_storage()
 
         # Handle recursive patterns
         if "**" in pattern:
             # Recursive search - list all blobs under prefix
-            prefix = blob_prefix if blob_prefix else None
-            response = await storage.list_objects(bucket_name, params={"prefix": prefix} if prefix else {})
+            blob_prefix = prefix if prefix else None
+            response = await storage.list_objects(bucket_name, params={"prefix": blob_prefix} if blob_prefix else {})
             items = response.get("items", [])
 
             # Extract the pattern part after **
@@ -370,10 +426,10 @@ class AsyncGSClient(AsyncClient):
             return results
         else:
             # Non-recursive - list blobs with delimiter
-            prefix = f"{blob_prefix}/" if blob_prefix and not blob_prefix.endswith("/") else blob_prefix
+            blob_prefix = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
             response = await storage.list_objects(
                 bucket_name,
-                params={"prefix": prefix, "delimiter": "/"} if prefix else {"delimiter": "/"}
+                params={"prefix": blob_prefix, "delimiter": "/"} if blob_prefix else {"delimiter": "/"}
             )
             items = response.get("items", [])
 
@@ -596,7 +652,7 @@ class AsyncGSClient(AsyncClient):
         """
         bucket_name, blob_name = self._parse_gs_path(path)
         return GSAsyncFileHandle(
-            storage_factory=self._create_storage,
+            storage_factory=self._get_storage,
             bucket=bucket_name,
             blob=blob_name,
             mode=mode,
@@ -656,7 +712,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
     async def __aenter__(self) -> "GSAsyncFileHandle":
         """Initialize file handle."""
         # Create a dedicated Storage instance for this file handle
-        self._storage = self._storage_factory()
+        self._storage = await self._storage_factory()
 
         if self._is_read:
             # Get blob size
@@ -680,11 +736,10 @@ class GSAsyncFileHandle(AsyncFileHandle):
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Close file handle and cleanup Storage client."""
+        """Close file handle but keep Storage client open (managed by AsyncGSClient)."""
         await self.close()
-        if self._storage is not None:
-            await self._storage.close()
-            self._storage = None
+        # Don't close storage - it's managed by the AsyncGSClient
+        self._storage = None
 
     async def _read_chunk(self, size: int) -> bytes:
         """Read a chunk from GCS using range request.
