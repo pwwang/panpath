@@ -5,6 +5,80 @@ All notable changes to PanPath will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0]
+
+
+### Overview
+
+Version 0.2.0 represents a major refactoring and enhancement of PanPath, focusing on improved architecture, better async support, and enhanced cloud provider implementations. This release includes significant internal reorganization while maintaining API compatibility.
+
+### 🚀 New Features
+
+#### Enhanced Async File Handle Support
+- **Async file handles for all cloud providers**: Implemented native async file handle support for Azure, Google Cloud Storage, and S3 clients
+- **Dedicated storage instances**: Enhanced `AsyncGSClient` to manage dedicated Storage instances for file handles, improving resource management and performance
+
+#### Optimized Path Initialization
+- **Instance caching**: PanPath now returns existing instances when initialized with the same path, reducing memory overhead and improving performance
+- **Python version compatibility**: Enhanced `LocalPath` and `PanPath` initialization to better handle different Python versions
+
+### 🔧 Refactoring & Architecture Improvements
+
+#### Code Organization
+- **Base module restructuring**: Renamed `base` module to `cloud` for better clarity and semantic meaning
+- **New path classes**: Introduced dedicated path classes for cloud providers:
+  - `AzurePath` (renamed from `AzureBlobPath` for consistency)
+  - `GSPath` for Google Cloud Storage
+  - `S3Path` for Amazon S3
+- **Base classes consolidation**: Created `CloudPath` and `AsyncCloudPath` base classes to encapsulate common functionality for synchronous and asynchronous cloud path operations
+
+#### Import Structure Updates
+- Updated import paths from `panpath.base` to `panpath.cloud`
+- Refactored cloud path implementations (S3, GCS, Azure) to inherit from new base classes
+- Consolidated imports across test files to streamline dependencies
+
+#### Registry Improvements
+- Registered new path classes in the registry for better URI handling
+- Enhanced path routing and resolution
+
+### 📚 Documentation
+
+#### API Documentation
+- **mkapi integration**: Adopted mkapi for automated API documentation generation
+- **Updated examples**: Refreshed async file reading examples for consistency in PanPath usage
+- **Enhanced styling**: Added custom CSS for improved documentation presentation
+
+#### Documentation Updates
+- Updated documentation for new path classes and methods
+- Improved clarity in async operations guide
+- Enhanced provider-specific documentation (S3, GCS, Azure)
+
+### 🧪 Testing Improvements
+
+#### Test Suite Enhancements
+- Updated test cases to utilize PanPath for both sync and async operations
+- Removed redundant tests for invalid modes and path equality checks
+- Enhanced async method checks in tests for S3 and local paths
+- Consolidated test dependencies and improved test organization
+
+### 🔄 Breaking Changes
+
+#### Module Renames
+- ⚠️ **Import path change**: `panpath.base` → `panpath.cloud`
+  - If you were directly importing from `panpath.base`, update to `panpath.cloud`
+  - Example: `from panpath.cloud import CloudPath, AsyncCloudPath`
+
+#### Class Renames
+- ⚠️ **AzureBlobPath** → **AzurePath**
+  - For consistency with other providers (S3Path, GSPath)
+  - Direct usage of class names should be updated
+
+### 📊 Statistics
+
+- **61 files changed**: 2,899 insertions, 3,717 deletions
+- **Net reduction**: ~800 lines of code while adding significant functionality
+- **Improved code quality**: Better separation of concerns and cleaner architecture
+
 ## [0.1.0] - 2025-12-17
 
 ### Added
