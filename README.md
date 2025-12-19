@@ -75,7 +75,7 @@ content = await gs_path.a_read_text()
 # Async local files
 local_path = PanPath("/path/to/file.txt")
 async with local_path.a_open("r") as f:
-    content = await f.read()
+    content = await f.a_read()
 ```
 
 ### Path Operations
@@ -209,7 +209,3 @@ path = PanPath("/local/file.txt")
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please see CONTRIBUTING.md for guidelines.
