@@ -1,7 +1,7 @@
 """Async Azure Blob Storage client implementation."""
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
-from panpath.clients import AsyncClient
+from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
 
 try:
@@ -549,3 +549,244 @@ class AsyncAzureBlobClient(AsyncClient):
             tgt_blob_client = self._client.get_blob_client(tgt_container_name, tgt_blob_name)
             source_url = src_blob_client.url
             await tgt_blob_client.start_copy_from_url(source_url)
+
+    def a_open(
+        self,
+        path: str,
+        mode: str = "r",
+        encoding: Optional[str] = None,
+        **kwargs: Any,
+    ) -> AsyncFileHandle:
+        """Open Azure blob and return async file handle with streaming support.
+
+        Args:
+            path: Azure path (az://container/blob)
+            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments (unused for Azure)
+
+        Returns:
+            AzureAsyncFileHandle with streaming support
+        """
+        container, blob = self._parse_azure_path(path)
+        return AzureAsyncFileHandle(
+            client=self._client,
+            container=container,
+            blob=blob,
+            mode=mode,
+            encoding=encoding,
+        )
+
+
+class AzureAsyncFileHandle(AsyncFileHandle):
+    """Async file handle for Azure with chunked streaming support.
+
+    Uses Azure SDK's download_blob streaming API.
+    """
+
+    def __init__(
+        self,
+        client: Any,
+        container: str,
+        blob: str,
+        mode: str = "r",
+        encoding: Optional[str] = None,
+        chunk_size: int = 4096,
+    ):
+        """Initialize Azure file handle.
+
+        Args:
+            client: BlobServiceClient instance
+            container: Azure container name
+            blob: Azure blob name
+            mode: File mode
+            encoding: Text encoding
+            chunk_size: Size of chunks for streaming reads
+        """
+        self._client = client
+        self._container = container
+        self._blob = blob
+        self._mode = mode
+        self._encoding = encoding or "utf-8"
+        self._chunk_size = chunk_size
+        self._closed = False
+
+        # For reading
+        self._read_buffer = b"" if "b" in mode else ""
+        self._download_stream = None
+        self._chunks_iter = None
+        self._eof = False
+
+        # For writing
+        self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
+
+        # Parse mode
+        self._is_read = "r" in mode
+        self._is_write = "w" in mode or "a" in mode
+        self._is_binary = "b" in mode
+        self._is_append = "a" in mode
+
+    async def __aenter__(self) -> "AzureAsyncFileHandle":
+        """Initialize file handle."""
+        if self._is_read:
+            # Initialize streaming download
+            blob_client = self._client.get_blob_client(self._container, self._blob)
+            try:
+                self._download_stream = await blob_client.download_blob()
+                self._chunks_iter = self._download_stream.chunks()
+            except ResourceNotFoundError as e:
+                raise NoSuchFileError(f"Azure blob not found: az://{self._container}/{self._blob}") from e
+        elif self._is_append:
+            # Load existing data for append
+            blob_client = self._client.get_blob_client(self._container, self._blob)
+            try:
+                download_stream = await blob_client.download_blob()
+                existing = await download_stream.readall()
+                if self._is_binary:
+                    self._write_buffer = bytearray(existing)
+                else:
+                    self._write_buffer = [existing.decode(self._encoding)]
+            except ResourceNotFoundError:
+                # Blob doesn't exist, start with empty buffer
+                pass
+
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Close file handle."""
+        await self.close()
+
+    async def _fill_buffer(self, min_size: int = 1) -> None:
+        """Fill read buffer by reading chunks from Azure.
+
+        Args:
+            min_size: Minimum number of bytes/chars to have in buffer
+        """
+        if self._eof or self._chunks_iter is None:
+            return
+
+        while len(self._read_buffer) < min_size and not self._eof:
+            try:
+                chunk = await self._chunks_iter.__anext__()
+                if self._is_binary:
+                    self._read_buffer += chunk  # type: ignore
+                else:
+                    self._read_buffer += chunk.decode(self._encoding)  # type: ignore
+            except StopAsyncIteration:
+                self._eof = True
+                break
+
+    async def read(self, size: int = -1) -> Union[str, bytes]:
+        """Read from Azure blob with streaming."""
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if size == -1:
+            # Read all remaining
+            await self._fill_buffer(float('inf'))  # type: ignore
+            result = self._read_buffer
+            self._read_buffer = b"" if self._is_binary else ""
+            return result
+        else:
+            # Read specific size
+            await self._fill_buffer(size)
+            result = self._read_buffer[:size]
+            self._read_buffer = self._read_buffer[size:]
+            return result
+
+    async def readline(self, size: int = -1) -> Union[str, bytes]:
+        """Read one line from Azure blob."""
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        newline = b"\n" if self._is_binary else "\n"
+
+        # Fill buffer until we find a newline
+        while newline not in self._read_buffer and not self._eof:  # type: ignore
+            await self._fill_buffer(self._chunk_size)
+
+        # Find newline
+        try:
+            newline_pos = self._read_buffer.index(newline)  # type: ignore
+            end = newline_pos + 1
+        except ValueError:
+            end = len(self._read_buffer)
+
+        if size != -1 and end > size:
+            end = size
+
+        result = self._read_buffer[:end]
+        self._read_buffer = self._read_buffer[end:]
+        return result
+
+    async def readlines(self) -> List[Union[str, bytes]]:
+        """Read all lines."""
+        lines = []
+        while True:
+            line = await self.readline()
+            if not line:
+                break
+            lines.append(line)
+        return lines
+
+    async def write(self, data: Union[str, bytes]) -> int:
+        """Buffer data for writing."""
+        if not self._is_write:
+            raise ValueError("File not opened for writing")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if self._is_binary:
+            if isinstance(data, str):
+                data = data.encode(self._encoding)
+            self._write_buffer.extend(data)  # type: ignore
+        else:
+            if isinstance(data, bytes):
+                data = data.decode(self._encoding)
+            self._write_buffer.append(data)  # type: ignore
+
+        return len(data)
+
+    async def writelines(self, lines: List[Union[str, bytes]]) -> None:
+        """Write multiple lines."""
+        for line in lines:
+            await self.write(line)
+
+    async def close(self) -> None:
+        """Close and upload buffered writes."""
+        if self._closed:
+            return
+
+        if self._is_write:
+            if self._is_binary:
+                body = bytes(self._write_buffer)
+            else:
+                body = "".join(self._write_buffer).encode(self._encoding)  # type: ignore
+
+            blob_client = self._client.get_blob_client(self._container, self._blob)
+            await blob_client.upload_blob(body, overwrite=True)
+
+        self._closed = True
+
+    def __aiter__(self) -> "AzureAsyncFileHandle":
+        """Support async iteration."""
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        return self
+
+    async def __anext__(self) -> Union[str, bytes]:
+        """Get next line."""
+        line = await self.readline()
+        if not line:
+            raise StopAsyncIteration
+        return line
+
+    @property
+    def closed(self) -> bool:
+        """Check if closed."""
+        return self._closed
+

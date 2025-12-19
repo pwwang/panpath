@@ -3,9 +3,10 @@ from abc import ABC, abstractmethod
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union
 from panpath.base import PanPath
+from panpath.exceptions import NoSuchFileError
 
 if TYPE_CHECKING:
-    from panpath.clients import AsyncClient, Client
+    from panpath.clients import AsyncClient, AsyncFileHandle, Client
 
 
 class CloudPath(PanPath, PurePosixPath, ABC):
@@ -775,3 +776,21 @@ class CloudPath(PanPath, PurePosixPath, ABC):
                 else:
                     data = await src_file.a_read_bytes()
                     await dst_file.a_write_bytes(data)
+
+    def a_open(
+        self,
+        mode: str = "r",
+        encoding: Optional[str] = None,
+        **kwargs: Any,
+    ) -> "AsyncFileHandle":
+        """Open file and return async file handle.
+
+        Args:
+            mode: File mode (e.g., 'r', 'w', 'rb', 'wb')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments passed to the async client
+
+        Returns:
+            Async file handle from the async client
+        """
+        return self.async_client.a_open(str(self), mode=mode, encoding=encoding, **kwargs)

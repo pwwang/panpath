@@ -1,7 +1,8 @@
 """Async S3 client implementation."""
-from typing import Any, Optional
+from io import BytesIO, StringIO
+from typing import Any, List, Optional, Union
 
-from panpath.clients import AsyncClient
+from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
 
 try:
@@ -588,3 +589,266 @@ class AsyncS3Client(AsyncClient):
                         Key=tgt_key,
                         CopySource={"Bucket": src_bucket, "Key": src_key}
                     )
+
+    def a_open(
+        self,
+        path: str,
+        mode: str = "r",
+        encoding: Optional[str] = None,
+        **kwargs: Any,
+    ) -> AsyncFileHandle:
+        """Open S3 object and return async file handle with streaming support.
+
+        Args:
+            path: S3 path (s3://bucket/key)
+            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments (unused for S3)
+
+        Returns:
+            S3AsyncFileHandle with streaming support
+        """
+        bucket, key = self._parse_s3_path(path)
+        return S3AsyncFileHandle(
+            session=self._session,
+            bucket=bucket,
+            key=key,
+            mode=mode,
+            encoding=encoding,
+        )
+
+
+class S3AsyncFileHandle(AsyncFileHandle):
+    """Async file handle for S3 with streaming support.
+
+    Uses aioboto3's streaming API to avoid loading entire files into memory.
+    """
+
+    def __init__(
+        self,
+        session: Any,
+        bucket: str,
+        key: str,
+        mode: str = "r",
+        encoding: Optional[str] = None,
+    ):
+        """Initialize S3 file handle.
+
+        Args:
+            session: aioboto3.Session instance
+            bucket: S3 bucket name
+            key: S3 object key
+            mode: File mode
+            encoding: Text encoding
+        """
+        self._session = session
+        self._bucket = bucket
+        self._key = key
+        self._mode = mode
+        self._encoding = encoding or "utf-8"
+        self._closed = False
+
+        # For reading
+        self._s3_client = None
+        self._stream = None
+        self._read_buffer = b"" if "b" in mode else ""
+        self._eof = False
+
+        # For writing
+        self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
+
+        # Parse mode
+        self._is_read = "r" in mode
+        self._is_write = "w" in mode or "a" in mode
+        self._is_binary = "b" in mode
+        self._is_append = "a" in mode
+
+    async def __aenter__(self) -> "S3AsyncFileHandle":
+        """Open S3 object for streaming."""
+        if self._is_read:
+            # Open streaming reader
+            self._s3_client = await self._session.client("s3").__aenter__()
+            try:
+                response = await self._s3_client.get_object(
+                    Bucket=self._bucket,
+                    Key=self._key
+                )
+                self._stream = response["Body"]
+            except ClientError as e:
+                await self._s3_client.__aexit__(None, None, None)
+                self._s3_client = None
+                if e.response["Error"]["Code"] == "NoSuchKey":
+                    raise NoSuchFileError(f"S3 object not found: s3://{self._bucket}/{self._key}")
+                raise
+        elif self._is_append:
+            # Load existing data for append mode
+            try:
+                async with self._session.client("s3") as client:
+                    response = await client.get_object(Bucket=self._bucket, Key=self._key)
+                    async with response["Body"] as stream:
+                        existing = await stream.read()
+                if self._is_binary:
+                    self._write_buffer = bytearray(existing)
+                else:
+                    self._write_buffer = [existing.decode(self._encoding)]
+            except ClientError as e:
+                if e.response["Error"]["Code"] != "NoSuchKey":
+                    raise
+
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Close the file handle."""
+        await self.close()
+
+    async def _fill_buffer(self, min_size: int = 4096) -> None:
+        """Fill read buffer from stream.
+
+        Args:
+            min_size: Minimum bytes to read from stream
+        """
+        if self._eof or not self._stream:
+            return
+
+        chunk = await self._stream.read(min_size)
+        if not chunk:
+            self._eof = True
+            return
+
+        if self._is_binary:
+            self._read_buffer += chunk  # type: ignore
+        else:
+            self._read_buffer += chunk.decode(self._encoding)  # type: ignore
+
+    async def read(self, size: int = -1) -> Union[str, bytes]:
+        """Read from S3 object with streaming.
+
+        Only reads what's requested from S3, not the entire file.
+        """
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if size == -1:
+            # Read everything
+            while not self._eof:
+                await self._fill_buffer()
+            result = self._read_buffer
+            self._read_buffer = b"" if self._is_binary else ""
+            return result
+        else:
+            # Read specific size
+            while len(self._read_buffer) < size and not self._eof:
+                await self._fill_buffer()
+
+            result = self._read_buffer[:size]
+            self._read_buffer = self._read_buffer[size:]
+            return result
+
+    async def readline(self, size: int = -1) -> Union[str, bytes]:
+        """Read one line from S3 object."""
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        newline = b"\n" if self._is_binary else "\n"
+
+        # Keep reading until we find a newline or EOF
+        while newline not in self._read_buffer and not self._eof:  # type: ignore
+            await self._fill_buffer()
+
+        # Find newline position
+        try:
+            newline_pos = self._read_buffer.index(newline)  # type: ignore
+            end = newline_pos + 1
+        except ValueError:
+            # No newline, return everything
+            end = len(self._read_buffer)
+
+        # Apply size limit if specified
+        if size != -1 and end > size:
+            end = size
+
+        result = self._read_buffer[:end]
+        self._read_buffer = self._read_buffer[end:]
+        return result
+
+    async def readlines(self) -> List[Union[str, bytes]]:
+        """Read all lines from S3 object."""
+        lines = []
+        while True:
+            line = await self.readline()
+            if not line:
+                break
+            lines.append(line)
+        return lines
+
+    async def write(self, data: Union[str, bytes]) -> int:
+        """Buffer data for writing."""
+        if not self._is_write:
+            raise ValueError("File not opened for writing")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if self._is_binary:
+            if isinstance(data, str):
+                data = data.encode(self._encoding)
+            self._write_buffer.extend(data)  # type: ignore
+        else:
+            if isinstance(data, bytes):
+                data = data.decode(self._encoding)
+            self._write_buffer.append(data)  # type: ignore
+
+        return len(data)
+
+    async def writelines(self, lines: List[Union[str, bytes]]) -> None:
+        """Write multiple lines."""
+        for line in lines:
+            await self.write(line)
+
+    async def close(self) -> None:
+        """Close file and upload buffered writes."""
+        if self._closed:
+            return
+
+        # Close read stream
+        if self._stream:
+            self._stream.close()
+        if self._s3_client:
+            await self._s3_client.__aexit__(None, None, None)
+
+        # Upload write buffer
+        if self._is_write:
+            if self._is_binary:
+                body = bytes(self._write_buffer)
+            else:
+                body = "".join(self._write_buffer).encode(self._encoding)  # type: ignore
+
+            async with self._session.client("s3") as client:
+                await client.put_object(
+                    Bucket=self._bucket,
+                    Key=self._key,
+                    Body=body
+                )
+
+        self._closed = True
+
+    def __aiter__(self) -> "S3AsyncFileHandle":
+        """Support async iteration."""
+        if not self._is_read:
+            raise ValueError("File not opened for reading")
+        return self
+
+    async def __anext__(self) -> Union[str, bytes]:
+        """Get next line."""
+        line = await self.readline()
+        if not line:
+            raise StopAsyncIteration
+        return line
+
+    @property
+    def closed(self) -> bool:
+        """Check if closed."""
+        return self._closed
