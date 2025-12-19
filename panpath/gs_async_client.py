@@ -1,10 +1,13 @@
 """Async Google Cloud Storage client implementation."""
 import asyncio
 import weakref
-from typing import Any, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
+
+if TYPE_CHECKING:
+    from gcloud.aio.storage import Storage
 
 try:
     from gcloud.aio.storage import Storage
@@ -13,7 +16,6 @@ try:
     HAS_GCLOUD_AIO = True
 except ImportError:
     HAS_GCLOUD_AIO = False
-    Storage = None  # type: ignore
 
 
 # Track all active storage instances for cleanup
@@ -910,3 +912,78 @@ class GSAsyncFileHandle(AsyncFileHandle):
     def closed(self) -> bool:
         """Check if closed."""
         return self._closed
+
+    async def tell(self) -> int:
+        """Return current stream position.
+
+        Returns:
+            Current position in bytes (counting raw bytes even in text mode)
+        """
+        if not self._is_read:
+            raise ValueError("tell() not supported in write mode")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        # For GCS, _read_pos tracks the byte position in the blob
+        # The buffer may contain data that hasn't been consumed yet
+        # In text mode, the buffer is decoded, so we need to encode it to get byte size
+        if self._is_binary:
+            buffer_byte_size = len(self._read_buffer)
+        else:
+            # In text mode, encode the buffer to get its byte size
+            buffer_byte_size = len(self._read_buffer.encode(self._encoding))
+
+        # Current position = bytes read from blob - bytes still in buffer
+        return self._read_pos - buffer_byte_size
+
+    async def seek(self, offset: int, whence: int = 0) -> int:
+        """Change stream position (forward seeking only).
+
+        Args:
+            offset: Position offset
+            whence: Reference point (0=start, 1=current, 2=end)
+
+        Returns:
+            New absolute position
+
+        Raises:
+            OSError: If backward seeking is attempted
+            ValueError: If called in write mode or on closed file
+
+        Note:
+            - Only forward seeking is supported
+            - SEEK_END (whence=2) is supported since we know blob size
+            - Backward seeking would require discarding cached data and re-reading
+        """
+        if not self._is_read:
+            raise ValueError("seek() not supported in write mode")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        # Calculate target position
+        current_pos = await self.tell()
+        if whence == 0:
+            target_pos = offset
+        elif whence == 1:
+            target_pos = current_pos + offset
+        elif whence == 2:
+            if self._blob_size is None:
+                raise OSError("SEEK_END not supported when blob size is unknown")
+            target_pos = self._blob_size + offset
+        else:
+            raise ValueError(f"Invalid whence value: {whence}")
+
+        # Check for backward seeking
+        if target_pos < current_pos:
+            raise OSError("Backward seeking not supported for streaming reads")
+
+        # Forward seek: read and discard data
+        bytes_to_skip = target_pos - current_pos
+        while bytes_to_skip > 0 and not self._eof:
+            chunk_size = min(bytes_to_skip, 8192)
+            chunk = await self.read(chunk_size)
+            if not chunk:
+                break
+            bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
+
+        return await self.tell()

@@ -1,9 +1,13 @@
 """Azure Blob Storage client implementation."""
 from io import BytesIO, StringIO
-from typing import Any, BinaryIO, Iterator, Optional, TextIO, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, Optional, TextIO, Union
 
 from panpath.clients import Client
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
+
+if TYPE_CHECKING:
+    from azure.storage.blob import BlobServiceClient
+    from azure.core.exceptions import ResourceNotFoundError
 
 try:
     from azure.storage.blob import BlobServiceClient
@@ -12,7 +16,6 @@ try:
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
-    BlobServiceClient = None  # type: ignore
     ResourceNotFoundError = Exception  # type: ignore
 
 

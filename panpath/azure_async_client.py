@@ -1,8 +1,12 @@
 """Async Azure Blob Storage client implementation."""
-from typing import Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
+
+if TYPE_CHECKING:
+    from azure.storage.blob.aio import BlobServiceClient
+    from azure.core.exceptions import ResourceNotFoundError
 
 try:
     from azure.storage.blob.aio import BlobServiceClient
@@ -11,7 +15,6 @@ try:
     HAS_AZURE_AIO = True
 except ImportError:
     HAS_AZURE_AIO = False
-    BlobServiceClient = None  # type: ignore
     ResourceNotFoundError = Exception  # type: ignore
 
 
@@ -665,9 +668,14 @@ class AzureAsyncFileHandle(AsyncFileHandle):
         if self._eof or self._chunks_iter is None:
             return
 
+        # Track bytes read for tell()
+        if not hasattr(self, '_bytes_read'):
+            self._bytes_read = 0
+
         while len(self._read_buffer) < min_size and not self._eof:
             try:
                 chunk = await self._chunks_iter.__anext__()
+                self._bytes_read += len(chunk)
                 if self._is_binary:
                     self._read_buffer += chunk  # type: ignore
                 else:
@@ -789,4 +797,78 @@ class AzureAsyncFileHandle(AsyncFileHandle):
     def closed(self) -> bool:
         """Check if closed."""
         return self._closed
+
+    async def tell(self) -> int:
+        """Return current stream position.
+
+        Returns:
+            Current position in bytes (counting raw bytes even in text mode)
+        """
+        if not self._is_read:
+            raise ValueError("tell() not supported in write mode")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        # Track bytes read from stream
+        if not hasattr(self, '_bytes_read'):
+            self._bytes_read = 0
+
+        # Calculate buffer size in bytes
+        if self._is_binary:
+            buffer_byte_size = len(self._read_buffer)
+        else:
+            # In text mode, encode the buffer to get its byte size
+            buffer_byte_size = len(self._read_buffer.encode(self._encoding))
+
+        return self._bytes_read - buffer_byte_size
+
+    async def seek(self, offset: int, whence: int = 0) -> int:
+        """Change stream position (forward seeking only).
+
+        Args:
+            offset: Position offset
+            whence: Reference point (0=start, 1=current, 2=end)
+
+        Returns:
+            New absolute position
+
+        Raises:
+            OSError: If backward seeking is attempted
+            ValueError: If called in write mode or on closed file
+
+        Note:
+            - Only forward seeking is supported due to streaming limitations
+            - SEEK_END (whence=2) is not supported as blob size may be unknown
+            - Backward seeking requires re-opening the stream
+        """
+        if not self._is_read:
+            raise ValueError("seek() not supported in write mode")
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+        if whence == 2:
+            raise OSError("SEEK_END not supported for streaming reads")
+
+        # Calculate target position
+        current_pos = await self.tell()
+        if whence == 0:
+            target_pos = offset
+        elif whence == 1:
+            target_pos = current_pos + offset
+        else:
+            raise ValueError(f"Invalid whence value: {whence}")
+
+        # Check for backward seeking
+        if target_pos < current_pos:
+            raise OSError("Backward seeking not supported for streaming reads")
+
+        # Forward seek: read and discard data
+        bytes_to_skip = target_pos - current_pos
+        while bytes_to_skip > 0 and not self._eof:
+            chunk_size = min(bytes_to_skip, 8192)
+            chunk = await self.read(chunk_size)
+            if not chunk:
+                break
+            bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
+
+        return await self.tell()
 

@@ -380,6 +380,31 @@ class AsyncFileHandle(ABC):
         """Flush write buffer (optional, default implementation is no-op)."""
         pass
 
+    @abstractmethod
+    async def tell(self) -> int:
+        """Return current stream position.
+
+        Returns:
+            Current position in the file
+        """
+        ...
+
+    @abstractmethod
+    async def seek(self, offset: int, whence: int = 0) -> int:
+        """Change stream position.
+
+        Args:
+            offset: Position offset
+            whence: Reference point (0=start, 1=current, 2=end)
+
+        Returns:
+            New absolute position
+
+        Raises:
+            OSError: If backward seeking is attempted (not supported by streaming implementations)
+        """
+        ...
+
 
 class BaseAsyncFileHandle(AsyncFileHandle):
     """Base implementation of AsyncFileHandle using generic client APIs.
@@ -564,3 +589,17 @@ class BaseAsyncFileHandle(AsyncFileHandle):
     def closed(self) -> bool:
         """Check if file is closed."""
         return self._closed
+
+    async def tell(self) -> int:
+        """Return current stream position.
+
+        Not implemented for BaseAsyncFileHandle. Use provider-specific implementations.
+        """
+        raise NotImplementedError("tell() not implemented for BaseAsyncFileHandle")
+
+    async def seek(self, offset: int, whence: int = 0) -> int:
+        """Change stream position.
+
+        Not implemented for BaseAsyncFileHandle. Use provider-specific implementations.
+        """
+        raise NotImplementedError("seek() not implemented for BaseAsyncFileHandle")

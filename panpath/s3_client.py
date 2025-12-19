@@ -1,9 +1,13 @@
 """S3 client implementation."""
 from io import BytesIO, StringIO
-from typing import Any, BinaryIO, Iterator, Optional, TextIO, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, Optional, TextIO, Union
 
 from panpath.clients import Client
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
+
+if TYPE_CHECKING:
+    import boto3
+    from botocore.exceptions import ClientError
 
 try:
     import boto3
@@ -12,7 +16,6 @@ try:
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
-    boto3 = None  # type: ignore
     ClientError = Exception  # type: ignore
 
 
