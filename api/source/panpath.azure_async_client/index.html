@@ -2057,9 +2057,9 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Async Azure Blob Storage client implementation.&quot;&quot;&quot;</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncClient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncClient</span><span class="p">,</span> <span class="n">AsyncFileHandle</span><span class="p">,</span> <span class="n">BaseAsyncFileHandle</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoSuchFileError</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -2607,6 +2607,246 @@
             <span class="n">tgt_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span><span class="p">)</span>
             <span class="n">source_url</span> <span class="o">=</span> <span class="n">src_blob_client</span><span class="o">.</span><span class="n">url</span>
             <span class="k">await</span> <span class="n">tgt_blob_client</span><span class="o">.</span><span class="n">start_copy_from_url</span><span class="p">(</span><span class="n">source_url</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span><span id="panpath.azure_async_client.AsyncAzureBlobClient.a_open"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AsyncAzureBlobClient.a_open" href="../../panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.a_open">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncFileHandle</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open Azure blob and return async file handle with streaming support.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path: Azure path (az://container/blob)</span>
+<span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, &#39;a&#39;, &#39;ab&#39;)</span>
+<span class="sd">            encoding: Text encoding (for text modes)</span>
+<span class="sd">            **kwargs: Additional arguments (unused for Azure)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            AzureAsyncFileHandle with streaming support</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">container</span><span class="p">,</span> <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AzureAsyncFileHandle</span><span class="p">(</span>
+            <span class="n">client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">,</span>
+            <span class="n">container</span><span class="o">=</span><span class="n">container</span><span class="p">,</span>
+            <span class="n">blob</span><span class="o">=</span><span class="n">blob</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AzureAsyncFileHandle</span><span class="p">(</span><span class="n">AsyncFileHandle</span><span class="p">):</span><span id="panpath.azure_async_client.AzureAsyncFileHandle"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle">DOCS</a>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Async file handle for Azure with chunked streaming support.</span>
+
+<span class="sd">    Uses Azure SDK&#39;s download_blob streaming API.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">container</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">blob</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Azure file handle.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            client: BlobServiceClient instance</span>
+<span class="sd">            container: Azure container name</span>
+<span class="sd">            blob: Azure blob name</span>
+<span class="sd">            mode: File mode</span>
+<span class="sd">            encoding: Text encoding</span>
+<span class="sd">            chunk_size: Size of chunks for streaming reads</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_container</span> <span class="o">=</span> <span class="n">container</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span> <span class="o">=</span> <span class="n">blob</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># For reading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_download_stream</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chunks_iter</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># For writing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytearray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="k">else</span> <span class="p">[]</span>
+
+        <span class="c1"># Parse mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span> <span class="ow">in</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span> <span class="o">=</span> <span class="s2">&quot;w&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="ow">or</span> <span class="s2">&quot;a&quot;</span> <span class="ow">in</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="o">=</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span> <span class="o">=</span> <span class="s2">&quot;a&quot;</span> <span class="ow">in</span> <span class="n">mode</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__aenter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AzureAsyncFileHandle&quot;</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.__aenter__"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.__aenter__" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.__aenter__">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize file handle.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span><span class="p">:</span>
+            <span class="c1"># Initialize streaming download</span>
+            <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_container</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_download_stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">download_blob</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_chunks_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_download_stream</span><span class="o">.</span><span class="n">chunks</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">ResourceNotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: az://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_container</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
+            <span class="c1"># Load existing data for append</span>
+            <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_container</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">download_stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">download_blob</span><span class="p">()</span>
+                <span class="n">existing</span> <span class="o">=</span> <span class="k">await</span> <span class="n">download_stream</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">existing</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)]</span>
+            <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
+                <span class="c1"># Blob doesn&#39;t exist, start with empty buffer</span>
+                <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__aexit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.__aexit__"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.__aexit__" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.__aexit__">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close file handle.&quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_fill_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fill read buffer by reading chunks from Azure.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            min_size: Minimum number of bytes/chars to have in buffer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunks_iter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_size</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunks_iter</span><span class="o">.</span><span class="fm">__anext__</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">+=</span> <span class="n">chunk</span>  <span class="c1"># type: ignore</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">+=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="k">except</span> <span class="ne">StopAsyncIteration</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.read"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.read" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.read">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read from Azure blob with streaming.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;File not opened for reading&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Read all remaining</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_buffer</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span>  <span class="c1"># type: ignore</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Read specific size</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_buffer</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">[:</span><span class="n">size</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">[</span><span class="n">size</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.readline"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.readline" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.readline">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read one line from Azure blob.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;File not opened for reading&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
+
+        <span class="n">newline</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+        <span class="c1"># Fill buffer until we find a newline</span>
+        <span class="k">while</span> <span class="n">newline</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span><span class="p">:</span>  <span class="c1"># type: ignore</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_buffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span><span class="p">)</span>
+
+        <span class="c1"># Find newline</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newline_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">newline</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">newline_pos</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">end</span> <span class="o">&gt;</span> <span class="n">size</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">size</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">[:</span><span class="n">end</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span><span class="p">[</span><span class="n">end</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">readlines</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.readlines"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.readlines" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.readlines">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read all lines.&quot;&quot;&quot;</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lines</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.write"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.write" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.write">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Buffer data for writing.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;File not opened for writing&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">writelines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lines</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.writelines"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.writelines" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.writelines">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write multiple lines.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.close"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.close" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.close">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close and upload buffered writes.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+                <span class="n">body</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+            <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_container</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>
+            <span class="k">await</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__aiter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AzureAsyncFileHandle&quot;</span><span class="p">:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.__aiter__"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.__aiter__" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.__aiter__">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Support async iteration.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;File not opened for reading&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__anext__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.__anext__"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.__anext__" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.__anext__">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get next line.&quot;&quot;&quot;</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">StopAsyncIteration</span>
+        <span class="k">return</span> <span class="n">line</span>
+
+    <span class="nd">@property</span><span id="panpath.azure_async_client.AzureAsyncFileHandle.closed"></span><a class="mkapi-docs-link" title="panpath.azure_async_client.AzureAsyncFileHandle.closed" href="../../panpath.azure_async_client/#panpath.azure_async_client.AzureAsyncFileHandle.closed">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if closed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span>
 </code></pre></div>
 </div>
 </div>

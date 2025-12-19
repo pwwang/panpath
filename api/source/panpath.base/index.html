@@ -2150,6 +2150,10 @@
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;PanPath() missing required argument: &#39;path&#39;&quot;</span><span class="p">)</span>
 
         <span class="n">path</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">PanPath</span><span class="p">):</span>
+            <span class="c1"># If already a PanPath instance, return as is</span>
+            <span class="k">return</span> <span class="n">path</span>
+
         <span class="n">path_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Parse URI to get scheme</span>

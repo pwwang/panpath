@@ -2106,7 +2106,7 @@
 
 <span class="c1"># Register Azure Blob Storage</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.azure_path</span><span class="w"> </span><span class="kn">import</span> <span class="n">AzurePath</span><span class="p">,</span> <span class="n">AzureBlobPath</span>  <span class="c1"># AzureBlobPath for backwards compat</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.azure_path</span><span class="w"> </span><span class="kn">import</span> <span class="n">AzurePath</span>
 
     <span class="n">register_path_class</span><span class="p">(</span><span class="s2">&quot;az&quot;</span><span class="p">,</span> <span class="n">AzurePath</span><span class="p">)</span>
     <span class="n">register_path_class</span><span class="p">(</span><span class="s2">&quot;azure&quot;</span><span class="p">,</span> <span class="n">AzurePath</span><span class="p">)</span>  <span class="c1"># Support both schemes</span>
@@ -2135,7 +2135,7 @@
     <span class="k">pass</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">__all__</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;AzurePath&quot;</span><span class="p">,</span> <span class="s2">&quot;AzureBlobPath&quot;</span><span class="p">])</span>
+    <span class="n">__all__</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;AzurePath&quot;</span><span class="p">])</span>
 <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div>

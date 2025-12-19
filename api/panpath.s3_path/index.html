@@ -1815,17 +1815,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pathlibpathreplace" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        replace
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pathlibpathhardlink_to" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2222,6 +2211,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathcloudcloudpathreplace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        replace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathcloudcloudpathrmdir" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2600,6 +2600,17 @@
     <span class="md-ellipsis">
       
         a_copytree_cross_storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panpathcloudcloudpatha_open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_open
       
     </span>
   </a>
@@ -3243,17 +3254,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pathlibpathreplace" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        replace
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pathlibpathhardlink_to" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3650,6 +3650,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathcloudcloudpathreplace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        replace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathcloudcloudpathrmdir" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4034,6 +4045,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#panpathcloudcloudpatha_open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_open
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4337,6 +4359,10 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create a directory marker in cloud storage.<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_mkdir" title="Source for panpath.cloud.CloudPath.a_mkdir">&lt;/&gt;</a></span></li>
 
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_open">a_open</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">encoding</code>, <code class="mkapi-object-signature">**kwargs</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(AsyncFileHandle)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Open file and return async file handle.<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_open" title="Source for panpath.cloud.CloudPath.a_open">&lt;/&gt;</a></span></li>
+
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_read_bytes">a_read_bytes</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(bytes)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Read file as bytes.<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_read_bytes" title="Source for panpath.cloud.CloudPath.a_read_bytes">&lt;/&gt;</a></span></li>
@@ -4558,9 +4584,9 @@ a subpath of the other path), raise ValueError.
 <span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Rename/move file to target.<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.rename" title="Source for panpath.cloud.CloudPath.rename">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#pathlib.Path.replace">replace</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code>
-
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Rename this path to the target path, overwriting if that path exists.<a class="mkapi-src-link" href="../source/pathlib/#pathlib.Path.replace" title="Source for pathlib.Path.replace">&lt;/&gt;</a></span></li>
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.replace">replace</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Replace file at target (overwriting if exists).<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.replace" title="Source for panpath.cloud.CloudPath.replace">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.resolve">resolve</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
@@ -4935,30 +4961,6 @@ a subpath of the other path), raise ValueError.</p>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Like stat(), except if the path points to a symlink, the symlink'sstatus information is returned, rather than its target's.</p>
-</div>
-    </div>
-  </div>
-
-</div>
-    </div>
-  
-    <div class="mkapi-member">
-      <div class="mkapi-node" id="pathlib.Path.replace">
-<div class='mkapi-object-container'>
-  <div class="mkapi-object method code">
-    <div class="mkapi-object-kind method">method</div>
-    <h3 id="pathlibpathreplace" class="mkapi-object-body method"><code class="mkapi-object-name"><a href="#pathlibpathreplace">replace</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code></h3>
-  </div>
-  <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/pathlib/#pathlib.Path.replace" title="Source for pathlib.Path.replace">&lt;/&gt;</a>
-  </div>
-</div>
-<div class="mkapi-docstring">
-<div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Rename this path to the target path, overwriting if that path exists.</p><p>The target path may be absolute or relative. Relative paths are
-interpreted relative to the current working directory, <em>not</em> the
-directory of the Path object.</p>
-<p>Returns the new Path instance pointing to the target path.</p>
 </div>
     </div>
   </div>
@@ -5776,6 +5778,44 @@ the key portion of the path (excluding scheme and bucket).</p>
 <li><code class="mkapi-item-name">target</code>
 <span class="mkapi-item-type">(Union)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">New path (can be cloud or local)</span></li>
+
+
+</ul></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>New path instance</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.cloud.CloudPath.replace">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object method code">
+    <div class="mkapi-object-kind method">method</div>
+    <h3 id="panpathcloudcloudpathreplace" class="mkapi-object-body method"><code class="mkapi-object-name">replace</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.replace" title="Source for panpath.cloud.CloudPath.replace">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Replace file at target (overwriting if exists).</p></div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">target</code>
+<span class="mkapi-item-type">(Union)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Target path</span></li>
 
 
 </ul></div>
@@ -6788,6 +6828,52 @@ creates an empty object with a trailing slash to serve as a directory marker.</p
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Copy directory tree across storage boundaries (async).</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.cloud.CloudPath.a_open">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object method code">
+    <div class="mkapi-object-kind method">method</div>
+    <h3 id="panpathcloudcloudpatha_open" class="mkapi-object-body method"><code class="mkapi-object-name">a_open</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode=&#39;r&#39;</code>, <code class="mkapi-object-signature">encoding=None</code>, <code class="mkapi-object-signature">**kwargs</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_open" title="Source for panpath.cloud.CloudPath.a_open">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Open file and return async file handle.</p></div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">mode</code>
+<span class="mkapi-item-type">(str, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">File mode (e.g., 'r', 'w', 'rb', 'wb')</span></li>
+
+<li><code class="mkapi-item-name">encoding</code>
+<span class="mkapi-item-type">(Optional, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Text encoding (for text modes)</span></li>
+
+<li><code class="mkapi-item-name">**kwargs</code>
+<span class="mkapi-item-type">(Any)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Additional arguments passed to the async client</span></li>
+
+
+</ul></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(AsyncFileHandle)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>Async file handle from the async client</p></div>
     </div>
   </div>
 
