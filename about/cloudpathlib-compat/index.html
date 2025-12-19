@@ -51,9 +51,15 @@
       
     
     
+      <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.8.1/css/all.css">
+    
+      <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.8.1/css/v4-shims.css">
+    
+      <link rel="stylesheet" href="../../css/mkapi-common.css">
+    
       <link rel="stylesheet" href="../../css/timeago.css">
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../style.css">
     
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -88,10 +94,6 @@
     <div data-md-component="announce">
       
     </div>
-    
-      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
-        
-      </div>
     
     
       
@@ -332,8 +334,15 @@
   
     
     
+      
+  
+  
+  
+  
+    
+    
       <li class="md-tabs__item">
-        <a href="../../api/pan-path/" class="md-tabs__link">
+        <a href="../../api/panpath/" class="md-tabs__link">
           
   
   
@@ -341,6 +350,9 @@
 
         </a>
       </li>
+    
+  
+
     
   
 
@@ -1243,15 +1255,69 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    panpath
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../api/pan-path/" class="md-nav__link">
+      <a href="../../api/panpath/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    PanPath
+    panpath
   
 
     
@@ -1272,14 +1338,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/async-pan-path/" class="md-nav__link">
+      <a href="../../api/panpath.azure_async_client/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    AsyncPanPath
+    panpath.azure_async_client
   
 
     
@@ -1300,14 +1366,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/local/" class="md-nav__link">
+      <a href="../../api/panpath.cloud/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Local Paths
+    panpath.cloud
   
 
     
@@ -1328,14 +1394,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/s3/" class="md-nav__link">
+      <a href="../../api/panpath.gs_async_client/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    S3 Paths
+    panpath.gs_async_client
   
 
     
@@ -1356,14 +1422,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/gcs/" class="md-nav__link">
+      <a href="../../api/panpath.local_path/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GCS Paths
+    panpath.local_path
   
 
     
@@ -1384,14 +1450,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/azure/" class="md-nav__link">
+      <a href="../../api/panpath.gs_client/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Azure Paths
+    panpath.gs_client
   
 
     
@@ -1412,14 +1478,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/exceptions/" class="md-nav__link">
+      <a href="../../api/panpath.gs_path/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Exceptions
+    panpath.gs_path
   
 
     
@@ -1428,6 +1494,266 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.azure_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.azure_path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.s3_path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.s3_path
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.azure_client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.azure_client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.clients
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.s3_async_client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.s3_async_client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.s3_client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.s3_client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/panpath.base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    panpath.base
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1626,34 +1952,6 @@
     
   
     Changelog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
   
 
     
@@ -2054,10 +2352,9 @@
 <h3 id="path-instantiation-testpathinstantiation">✅ Path Instantiation (<code>TestPathInstantiation</code>)<a class="headerlink" href="#path-instantiation-testpathinstantiation" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Dispatch</strong>: <code>PanPath()</code> correctly routes to S3/GCS/Azure implementations</li>
-<li><strong>Mode parameter</strong>: <code>mode="sync"</code> vs <code>mode="async"</code></li>
 <li><strong>Error handling</strong>: Invalid modes, unsupported schemes</li>
 <li><strong>Idempotency</strong>: <code>PanPath(PanPath(...))</code> preserves type</li>
-<li><strong>Local paths</strong>: Dispatches to <code>LocalPath</code>/<code>AsyncLocalPath</code></li>
+<li><strong>Local paths</strong>: Dispatches to <code>LocalPath</code></li>
 </ul>
 <h3 id="azure-scheme-aliases-testazureschemealiases">✅ Azure Scheme Aliases (<code>TestAzureSchemeAliases</code>)<a class="headerlink" href="#azure-scheme-aliases-testazureschemealiases" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2105,8 +2402,8 @@
 </tr>
 <tr>
 <td>Sync/Async</td>
-<td>Separate classes (<code>PanPath</code>, <code>AsyncPanPath</code>)</td>
-<td>Single class with internal handling</td>
+<td>Single class</td>
+<td>Not supported</td>
 </tr>
 <tr>
 <td>Caching</td>
@@ -2120,7 +2417,7 @@
 </tr>
 <tr>
 <td>Local paths</td>
-<td>Explicit <code>LocalPath</code>/<code>AsyncLocalPath</code></td>
+<td>Explicit <code>LocalPath</code></td>
 <td>No local path support</td>
 </tr>
 </tbody>
@@ -2171,23 +2468,16 @@
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">key</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">key</span>              <span class="c1"># &quot;key.txt&quot;</span>
 </span></code></pre></div>
 <h3 id="these-need-changes">⚠️ These need changes:<a class="headerlink" href="#these-need-changes" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Async operations - use AsyncPanPath or mode=&quot;async&quot;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># cloudpathlib: async with CloudPath(...).open() as f:</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Async iterdir returns list, not async generator</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># cloudpathlib: async for item in path.iterdir():</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># PanPath:</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">async_path</span> <span class="o">=</span> <span class="n">AsyncPanPath</span><span class="p">(</span><span class="s2">&quot;s3://bucket/key.txt&quot;</span><span class="p">)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># or</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">async_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="s2">&quot;s3://bucket/key.txt&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;async&quot;</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">items</span> <span class="o">=</span> <span class="k">await</span> <span class="n">path</span><span class="o">.</span><span class="n">a_iterdir</span><span class="p">()</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="o">...</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Async iterdir returns list, not async generator</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># cloudpathlib: async for item in path.iterdir():</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># PanPath:</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">items</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="o">...</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># No caching support</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># cloudpathlib: path.fspath  # Returns local cached path</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c1"># PanPath: Not supported - use read_bytes()/write_bytes() directly</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># No caching support</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># cloudpathlib: path.fspath  # Returns local cached path</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># PanPath: Not supported - use read_bytes()/write_bytes() directly</span>
 </span></code></pre></div>
 <h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
 <h3 id="methods-added-for-compatibility">Methods Added for Compatibility<a class="headerlink" href="#methods-added-for-compatibility" title="Permanent link">&para;</a></h3>
@@ -2213,7 +2503,7 @@
 <p>Adding cloudpathlib compatibility tests increased:
 - Total tests: 70 → 101 tests (+44%)
 - Code coverage: 52% → 53%
-- <code>base.py</code> coverage: 72% → 73%</p>
+- <code>cloud.py</code> coverage: 72% → 73%</p>
 <h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
 <p>Potential areas for further cloudpathlib compatibility:</p>
 <ol>
@@ -2250,7 +2540,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="December 18, 2025 17:56:50 UTC"><span class="timeago" datetime="2025-12-18T17:56:50+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="December 18, 2025 17:56:50 UTC">2025-12-18</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="December 19, 2025 05:13:42 UTC"><span class="timeago" datetime="2025-12-19T05:13:42+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="December 19, 2025 05:13:42 UTC">2025-12-19</span>
   </span>
 
     
@@ -2350,10 +2640,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../js/mkapi.js"></script>
       
         <script src="../../js/timeago.min.js"></script>
       
