@@ -92,6 +92,10 @@ class PanPath(PathlibPath):
             raise TypeError("PanPath() missing required argument: 'path'")
 
         path = args[0]
+        if isinstance(path, PanPath):
+            # If already a PanPath instance, return as is
+            return path
+
         path_str = str(path)
 
         # Parse URI to get scheme

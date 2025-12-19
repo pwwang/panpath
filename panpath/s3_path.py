@@ -24,6 +24,3 @@ class S3Path(CloudPath):
         """Create default async S3 client."""
         from panpath.s3_async_client import AsyncS3Client
         return AsyncS3Client()
-
-
-# Register S3 path in registry (will be done in __init__.py to avoid circular imports)

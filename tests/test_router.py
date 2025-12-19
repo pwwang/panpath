@@ -4,6 +4,15 @@ import pytest
 from panpath import PanPath, LocalPath
 
 
+def test_pan_path_retuns_same_instance():
+    """Test that PanPath returns the same instance if given a PanPath."""
+    original_path = PanPath("/some/local/path.txt")
+    new_path = PanPath(original_path)
+
+    assert original_path is new_path
+    assert isinstance(new_path, LocalPath)
+
+
 def test_pan_path_local_sync(tmp_path):
     """Test PanPath with local file in sync mode."""
     test_file = tmp_path / "test.txt"

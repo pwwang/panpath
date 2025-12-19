@@ -305,8 +305,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native rename
             self.client.rename(str(self), target_str)
-        from panpath.base import PanPath
-        return PanPath(target_str)  # type: ignore    def replace(self, target: Union[str, "CloudPath"]) -> "CloudPath":
+
+        return PanPath(target_str)  # type: ignore
+
+    def replace(self, target: Union[str, "CloudPath"]) -> "CloudPath":
         """Replace file at target (overwriting if exists).
 
         Args:
@@ -773,4 +775,3 @@ class CloudPath(PanPath, PurePosixPath, ABC):
                 else:
                     data = await src_file.a_read_bytes()
                     await dst_file.a_write_bytes(data)
-
