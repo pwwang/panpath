@@ -191,13 +191,13 @@ class TestAzureSchemeAliases:
 
     def test_both_schemes_work(self):
         """Test both az:// and azure:// schemes work."""
-        from panpath.azure_path import AzureBlobPath
+        from panpath.azure_path import AzurePath
 
         az_path = PanPath("az://container/blob")
         azure_path = PanPath("azure://container/blob")
 
-        assert isinstance(az_path, AzureBlobPath)
-        assert isinstance(azure_path, AzureBlobPath)
+        assert isinstance(az_path, AzurePath)
+        assert isinstance(azure_path, AzurePath)
 
     def test_scheme_preserved(self):
         """Test that the original scheme is preserved in string representation."""

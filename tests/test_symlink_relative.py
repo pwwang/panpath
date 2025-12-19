@@ -108,7 +108,7 @@ def test_symlink_gcs_relative():
 def test_symlink_azure_absolute():
     """Test Azure symlink with absolute target."""
     from panpath import PanPath
-    from panpath.azure_path import AzureBlobPath
+    from panpath.azure_path import AzurePath
 
     # Configure the conftest mock
     mock_azure = sys.modules["azure.storage.blob"]
@@ -118,7 +118,7 @@ def test_symlink_azure_absolute():
     mock_azure.BlobServiceClient.return_value = mock_service_client
 
     # Clear default client to force new client creation
-    AzureBlobPath._default_client = None
+    AzurePath._default_client = None
 
     # Create symlink with absolute target
     link = PanPath("az://container/dir/link")

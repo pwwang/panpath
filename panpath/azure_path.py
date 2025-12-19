@@ -24,7 +24,3 @@ class AzurePath(CloudPath):
         """Create default async Azure Blob client."""
         from panpath.azure_async_client import AsyncAzureBlobClient
         return AsyncAzureBlobClient()
-
-
-# For backwards compatibility
-AzureBlobPath = AzurePath

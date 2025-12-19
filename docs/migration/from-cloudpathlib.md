@@ -34,7 +34,7 @@ pip install panpath[all]
 
 === "cloudpathlib"
     ```python
-    from cloudpathlib import CloudPath, S3Path, GSPath, AzureBlobPath
+    from cloudpathlib import CloudPath, S3Path, GSPath, AzurePath
 
     # Generic (auto-dispatch)
     path = CloudPath("s3://bucket/key")
@@ -42,7 +42,7 @@ pip install panpath[all]
     # Specific backends
     s3 = S3Path("s3://bucket/key")
     gs = GSPath("gs://bucket/path")
-    az = AzureBlobPath("az://container/blob")
+    az = AzurePath("az://container/blob")
     ```
 
 === "PanPath"

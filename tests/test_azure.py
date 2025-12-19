@@ -4,28 +4,28 @@ import pytest
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
 
-class TestAzureBlobPath:
-    """Tests for synchronous AzureBlobPath."""
+class TestAzurePath:
+    """Tests for synchronous AzurePath."""
 
     def test_create_azure_path(self):
         """Test creating Azure path."""
         from panpath import PanPath
-        from panpath.azure_path import AzureBlobPath
+        from panpath.azure_path import AzurePath
 
         path = PanPath("az://test-container/blob/file.txt")
-        assert isinstance(path, AzureBlobPath)
+        assert isinstance(path, AzurePath)
         assert str(path) == "az://test-container/blob/file.txt"
 
     def test_azure_scheme_aliases(self):
         """Test that both az:// and azure:// schemes work."""
         from panpath import PanPath
-        from panpath.azure_path import AzureBlobPath
+        from panpath.azure_path import AzurePath
 
         path1 = PanPath("az://container/blob.txt")
         path2 = PanPath("azure://container/blob.txt")
 
-        assert isinstance(path1, AzureBlobPath)
-        assert isinstance(path2, AzureBlobPath)
+        assert isinstance(path1, AzurePath)
+        assert isinstance(path2, AzurePath)
 
     def test_azure_read_text(self):
         """Test reading text from Azure."""
@@ -83,14 +83,14 @@ class TestAzureBlobPath:
         assert path.exists()
 
     def test_azure_parent_preserves_type(self):
-        """Test that parent preserves AzureBlobPath type."""
+        """Test that parent preserves AzurePath type."""
         from panpath import PanPath
-        from panpath.azure_path import AzureBlobPath
+        from panpath.azure_path import AzurePath
 
         path = PanPath("az://container/dir/subdir/file.txt")
         parent = path.parent
 
-        assert isinstance(parent, AzureBlobPath)
+        assert isinstance(parent, AzurePath)
         assert str(parent) == "az://container/dir/subdir"
 
     def test_azure_cloud_prefix_and_key(self):

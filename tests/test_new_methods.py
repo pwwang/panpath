@@ -83,7 +83,7 @@ class TestSymlinkMethods:
     def test_azure_symlink_creation_and_reading(self):
         """Test creating and reading symlinks on Azure."""
         from panpath import PanPath
-        from panpath.azure_path import AzureBlobPath
+        from panpath.azure_path import AzurePath
 
         # Configure the conftest mock
         mock_azure = sys.modules["azure.storage.blob"]
@@ -93,7 +93,7 @@ class TestSymlinkMethods:
         mock_azure.BlobServiceClient.return_value = mock_service_client
 
         # Clear default client to force new client creation
-        AzureBlobPath._default_client = None
+        AzurePath._default_client = None
 
         # Create symlink
         link_path = PanPath("az://container/link")

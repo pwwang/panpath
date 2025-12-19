@@ -48,7 +48,7 @@ except ImportError:
 
 # Register Azure Blob Storage
 try:
-    from panpath.azure_path import AzurePath, AzureBlobPath  # AzureBlobPath for backwards compat
+    from panpath.azure_path import AzurePath
 
     register_path_class("az", AzurePath)
     register_path_class("azure", AzurePath)  # Support both schemes
@@ -77,6 +77,6 @@ except NameError:
     pass
 
 try:
-    __all__.extend(["AzurePath", "AzureBlobPath"])
+    __all__.extend(["AzurePath"])
 except NameError:
     pass
