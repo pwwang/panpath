@@ -1,5 +1,6 @@
 """Base class for all PanPath path implementations."""
 import re
+import sys
 from pathlib import Path as PathlibPath, PurePosixPath
 from typing import Any, Union
 
@@ -101,8 +102,14 @@ class PanPath(PathlibPath):
             # This will be passed to LocalPath.__new__ and __init__
             from panpath.local_path import LocalPath
             new_args = (clean_path,) + args[1:]
-            instance = object.__new__(LocalPath)
-            LocalPath.__init__(instance, *new_args, **kwargs)
+            # Use PathlibPath.__new__() to properly initialize the path object
+            instance = PathlibPath.__new__(LocalPath, *new_args)
+            # In Python 3.10, __init__ doesn't accept arguments
+            # In Python 3.12+, __init__ needs the arguments
+            if sys.version_info >= (3, 12):
+                LocalPath.__init__(instance, *new_args, **kwargs)
+            else:
+                LocalPath.__init__(instance)
             return instance
 
         # Cloud path - look up in registry and instantiate

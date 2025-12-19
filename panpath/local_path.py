@@ -1,8 +1,12 @@
 """Local filesystem path implementation."""
-from pathlib import Path
+from pathlib import Path, PosixPath, WindowsPath
 import os
+import sys
 from typing import Any, Optional
 from panpath.base import PanPath
+
+# Determine the concrete Path class for the current platform
+_ConcretePath = WindowsPath if os.name == 'nt' else PosixPath
 
 try:
     import aiofiles
@@ -12,10 +16,12 @@ except ImportError:
     HAS_AIOFILES = False
 
 
-class LocalPath(PanPath):
+class LocalPath(_ConcretePath, PanPath):
     """Local filesystem path (drop-in replacement for pathlib.Path).
 
-    Inherits from PanPath (which inherits from pathlib.Path) for full compatibility.
+    Inherits from the platform-specific concrete path class (PosixPath/WindowsPath)
+    and PanPath for full compatibility. The concrete class must come first in MRO
+    to ensure proper _flavour attribute inheritance in Python 3.10.
     Includes both sync methods (from Path) and async methods with a_ prefix.
     """
 
@@ -27,7 +33,12 @@ class LocalPath(PanPath):
         if hasattr(self, '_raw_paths'):
             # Already initialized in __new__, skip
             return
-        super().__init__(*args, **kwargs)
+        # In Python 3.10, pathlib.Path.__init__() doesn't accept arguments
+        # In Python 3.12+, pathlib.Path.__init__() needs the arguments
+        if sys.version_info >= (3, 12):
+            super().__init__(*args, **kwargs)
+        else:
+            super().__init__()
 
     def __eq__(self, other):  # type: ignore
         """Check equality."""
