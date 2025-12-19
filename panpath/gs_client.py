@@ -1,4 +1,5 @@
 """Google Cloud Storage client implementation."""
+import warnings
 from io import BytesIO, StringIO
 from typing import Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union
 
@@ -6,7 +7,9 @@ from panpath.clients import Client
 from panpath.exceptions import MissingDependencyError, NoSuchFileError
 
 try:
-    from google.cloud import storage
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        from google.cloud import storage
     from google.api_core.exceptions import NotFound
 
     HAS_GCS = True
