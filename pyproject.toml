@@ -57,6 +57,7 @@ all = ["boto3", "google-cloud-storage", "azure-storage-blob", "aioboto3", "gclou
 pytest = ">=7.0.0"
 pytest-asyncio = ">=0.21.0"
 pytest-cov = ">=4.0.0"
+python-dotenv = "^1"
 mypy = ">=1.0.0"
 black = ">=23.0.0"
 moto = {version = ">=4.0.0", extras = ["s3"]}
@@ -73,6 +74,7 @@ asyncio_mode = "auto"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = "-v --cov=panpath --cov-report=term-missing"
 
 [tool.mypy]
 python_version = "3.9"

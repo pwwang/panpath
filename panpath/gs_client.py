@@ -1,10 +1,12 @@
 """Google Cloud Storage client implementation."""
 import warnings
+import os
+import datetime
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union
 
 from panpath.clients import Client
-from panpath.exceptions import MissingDependencyError, NoSuchFileError
+from panpath.exceptions import MissingDependencyError, NoSuchFileError, NoStatError
 
 if TYPE_CHECKING:
     from google.cloud import storage
@@ -150,13 +152,28 @@ class GSClient(Client):
     def stat(self, path: str) -> Any:
         """Get GCS blob metadata."""
         bucket_name, blob_name = self._parse_gs_path(path)
-        bucket = self._client.bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-        try:
-            blob.reload()
-            return blob
-        except NotFound:
-            raise NoSuchFileError(f"GCS blob not found: {path}")
+        bucket = self._client.get_bucket(bucket_name)
+        blob = bucket.get_blob(blob_name)
+        if blob is None:
+            blob = bucket.get_blob(f"{blob_name}/")
+
+        if blob is None:
+            raise NoStatError(f"No stats available for {path}")
+
+        return os.stat_result(
+            (  # type: ignore[arg-type]
+                None,  # mode
+                None,  # ino
+                "gs://",  # dev,
+                None,  # nlink,
+                None,  # uid,
+                None,  # gid,
+                blob.size,  # size,
+                blob.updated,  # atime,
+                blob.updated,  # mtime,
+                blob.time_created,  # ctime,
+            )
+        )
 
     def open(
         self,

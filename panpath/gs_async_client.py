@@ -1,20 +1,30 @@
 """Async Google Cloud Storage client implementation."""
+
 import asyncio
+import datetime
 import weakref
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Union
+import os
+from typing import TYPE_CHECKING, Any, AsyncGenerator, List, Optional, Set, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle, BaseAsyncFileHandle
-from panpath.exceptions import MissingDependencyError, NoSuchFileError
+from panpath.exceptions import MissingDependencyError, NoSuchFileError, NoStatError
 
 if TYPE_CHECKING:
     from gcloud.aio.storage import Storage
 
 try:
+    # Monkey-patch SCOPES before importing Storage
+    # Must patch the actual storage module, not the package __init__
+    import gcloud.aio.storage.storage as _storage_module
+    _storage_module.SCOPES = [
+        # We need full control to update metadata
+        'https://www.googleapis.com/auth/devstorage.full_control',
+    ]
+
     from gcloud.aio.storage import Storage
-    import aiofiles
 
     HAS_GCLOUD_AIO = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_GCLOUD_AIO = False
 
 
@@ -29,12 +39,12 @@ async def _async_cleanup_all_storages() -> None:
 
     for storage_ref in storages_to_clean:
         storage = storage_ref()
-        if storage is None:
+        if storage is None:  # pragma: no cover
             continue
 
         try:
             await storage.close()
-        except Exception:
+        except Exception:  # pragma: no cover
             # Ignore errors during cleanup
             pass
 
@@ -66,7 +76,7 @@ class AsyncGSClient(AsyncClient):
         Args:
             **kwargs: Additional arguments
         """
-        if not HAS_GCLOUD_AIO:
+        if not HAS_GCLOUD_AIO:  # pragma: no cover
             raise MissingDependencyError(
                 backend="async Google Cloud Storage",
                 package="gcloud-aio-storage",
@@ -78,7 +88,26 @@ class AsyncGSClient(AsyncClient):
 
     async def _get_storage(self) -> Storage:
         """Get or create shared storage client for the AsyncGSClient."""
+        # Check if storage needs to be recreated (closed or never created)
+        needs_recreation = False
         if self._storage is None:
+            needs_recreation = True
+        else:
+            # Check if the underlying aiohttp session is closed
+            try:
+                if self._storage.session.session.closed:
+                    needs_recreation = True
+                    # Clean up the old storage reference
+                    if self._storage_ref is not None:
+                        _active_storages.discard(self._storage_ref)
+                        self._storage_ref = None
+                    self._storage = None
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                # If we can't check the session state, recreate to be safe
+                needs_recreation = True
+                self._storage = None
+
+        if needs_recreation:
             self._storage = Storage(**self._kwargs)
             # Track this storage instance for cleanup
             self._storage_ref = weakref.ref(self._storage, self._on_storage_deleted)
@@ -88,16 +117,16 @@ class AsyncGSClient(AsyncClient):
             try:
                 loop = asyncio.get_running_loop()
                 # Check if we've already patched this loop
-                if not hasattr(loop, '_panpath_cleanup_registered'):
+                if not hasattr(loop, "_panpath_cleanup_registered"):
                     _register_loop_cleanup(loop)
                     loop._panpath_cleanup_registered = True  # type: ignore
-            except RuntimeError:
+            except RuntimeError:  # pragma: no cover
                 # No running loop, cleanup will be handled by explicit close
                 pass
 
         return self._storage
 
-    def _on_storage_deleted(self, ref: weakref.ref) -> None:
+    def _on_storage_deleted(self, ref: weakref.ref) -> None:  # pragma: no cover
         """Called when storage is garbage collected."""
         _active_storages.discard(ref)
 
@@ -133,16 +162,25 @@ class AsyncGSClient(AsyncClient):
         """Check if GCS blob exists."""
         storage = await self._get_storage()
         bucket_name, blob_name = self._parse_gs_path(path)
-
         if not blob_name:
-            # Check bucket existence is complex with gcloud-aio, simplify
-            return True
+            # check if the bucket exists
+            try:
+                await storage.get_bucket_metadata(bucket_name + '/')
+                return True
+            except Exception:  # pragma: no cover
+                return False
 
         try:
-            await storage.download(bucket_name, blob_name, timeout=5)
+            await storage.download_metadata(bucket_name, blob_name)
             return True
         except Exception:
-            return False
+            if blob_name.endswith("/"):
+                return False
+            try:
+                await storage.download_metadata(bucket_name, f"{blob_name}/")
+                return True
+            except Exception:
+                return False
 
     async def read_bytes(self, path: str) -> bytes:
         """Read GCS blob as bytes."""
@@ -175,6 +213,9 @@ class AsyncGSClient(AsyncClient):
         storage = await self._get_storage()
         bucket_name, blob_name = self._parse_gs_path(path)
 
+        if await self.is_dir(path):
+            raise IsADirectoryError(f"Path is a directory: {path}")
+
         try:
             await storage.delete(bucket_name, blob_name)
         except Exception as e:
@@ -188,9 +229,11 @@ class AsyncGSClient(AsyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        results = []
         try:
-            blobs = await storage.list_objects(bucket_name, params={"prefix": prefix, "delimiter": "/"})
-            results = []
+            blobs = await storage.list_objects(
+                bucket_name, params={"prefix": prefix, "delimiter": "/"}
+            )
 
             # Add prefixes (directories)
             for prefix_item in blobs.get("prefixes", []):
@@ -202,112 +245,147 @@ class AsyncGSClient(AsyncClient):
                 if name != prefix:
                     results.append(f"gs://{bucket_name}/{name}")
 
-            return results
-        except Exception:
-            return []
+        except Exception:  # pragma: no cover
+            pass
+
+        return results
 
     async def is_dir(self, path: str) -> bool:
         """Check if GCS path is a directory."""
+        storage = await self._get_storage()
         bucket_name, blob_name = self._parse_gs_path(path)
-        if not blob_name:
+        if not blob_name and await self.exists(path):
             return True
 
-        prefix = blob_name if blob_name.endswith("/") else blob_name + "/"
-        items = await self.list_dir(path)
-        return len(items) > 0
+        blob_name = blob_name if blob_name.endswith("/") else blob_name + "/"
+        try:
+            # First check if directory marker exists
+            await storage.download_metadata(bucket_name, blob_name)
+            return True
+        except Exception:
+            # If no marker, check if any objects exist with this prefix
+            try:
+                response = await storage.list_objects(
+                    bucket_name, params={"prefix": blob_name, "maxResults": 1}
+                )
+                return len(response.get("items", [])) > 0
+            except Exception:  # pragma: no cover
+                return False
 
     async def is_file(self, path: str) -> bool:
         """Check if GCS path is a file."""
-        return await self.exists(path)
+        return not await self.is_dir(path) and await self.exists(path)
 
-    async def stat(self, path: str) -> Any:
+    async def stat(self, path: str) -> os.stat_result:
         """Get GCS blob metadata."""
         storage = await self._get_storage()
         bucket_name, blob_name = self._parse_gs_path(path)
 
+        metadata = None
         try:
             metadata = await storage.download_metadata(bucket_name, blob_name)
-            return metadata
         except Exception as e:
-            raise NoSuchFileError(f"GCS blob not found: {path}") from e
+            if blob_name.endswith("/"):  # pragma: no cover
+                raise NoStatError(str(path)) from e
+            try:
+                metadata = await storage.download_metadata(bucket_name, f"{blob_name}/")
+            except Exception:
+                raise NoStatError(str(path)) from e
 
-    async def open(
+        if not metadata:  # pragma: no cover
+            raise NoStatError(str(path))
+
+        ctime = (
+            None
+            if "timeCreated" not in metadata
+            else datetime.datetime.fromisoformat(metadata["timeCreated"].replace("Z", "+00:00"))
+        )
+        mtime = (
+            None
+            if "updated" not in metadata
+            else datetime.datetime.fromisoformat(metadata["updated"].replace("Z", "+00:00"))
+        )
+        return os.stat_result(
+            (  # type: ignore[arg-type]
+                None,  # mode
+                None,  # ino
+                "gs://",  # dev,
+                None,  # nlink,
+                None,  # uid,
+                None,  # gid,
+                int(metadata.get("size", 0)),  # size,
+                # atime
+                mtime,
+                # mtime
+                mtime,
+                # ctime
+                ctime,
+            )
+        )
+
+    def open(
         self,
         path: str,
         mode: str = "r",
         encoding: Optional[str] = None,
         **kwargs: Any,
-    ) -> Any:
-        """Open GCS blob for reading/writing."""
-        if "r" in mode:
-            data = await self.read_bytes(path)
-            if "b" in mode:
-                from io import BytesIO
+    ) -> "GSAsyncFileHandle":
+        """Open GCS blob and return async file handle with streaming support.
 
-                return BytesIO(data)
-            else:
-                from io import StringIO
+        Args:
+            path: GCS path (gs://bucket/blob)
+            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments (unused for GCS)
 
-                text = data.decode(encoding or "utf-8")
-                return StringIO(text)
-        elif "w" in mode:
-            bucket_name, blob_name = self._parse_gs_path(path)
+        Returns:
+            GSAsyncFileHandle with streaming support
+        """
+        if mode not in ("r", "rb", "w", "wb", "a", "ab"):
+            raise ValueError(
+                f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'."
+            )
 
-            class AsyncGSWriteBuffer:
-                def __init__(self, client: "AsyncGSClient", bucket: str, blob: str, binary: bool, enc: str):
-                    self._client = client
-                    self._bucket = bucket
-                    self._blob = blob
-                    self._binary = binary
-                    self._encoding = enc
-                    self._buffer = bytearray() if binary else []
-
-                async def write(self, data: Any) -> int:
-                    if self._binary:
-                        self._buffer.extend(data)
-                        return len(data)
-                    else:
-                        self._buffer.append(data)
-                        return len(data)
-
-                async def close(self) -> None:
-                    if self._binary:
-                        content = bytes(self._buffer)
-                    else:
-                        content = "".join(self._buffer).encode(self._encoding)
-
-                    storage = await self._client._get_storage()
-                    await storage.upload(self._bucket, self._blob, content)
-
-                async def __aenter__(self) -> Any:
-                    return self
-
-                async def __aexit__(self, *args: Any) -> None:
-                    await self.close()
-
-            return AsyncGSWriteBuffer(self, bucket_name, blob_name, "b" in mode, encoding or "utf-8")
-        else:
-            raise ValueError(f"Unsupported mode: {mode}")
+        bucket_name, blob_name = self._parse_gs_path(path)
+        return GSAsyncFileHandle(
+            storage_factory=self._get_storage,
+            bucket=bucket_name,
+            blob=blob_name,
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )
 
     async def mkdir(self, path: str, parents: bool = False, exist_ok: bool = False) -> None:
         """Create a directory marker (empty blob with trailing slash).
 
         Args:
             path: GCS path (gs://bucket/path)
-            parents: If True, create parent directories as needed (ignored for GCS)
+            parents: If True, create parent directories as needed
             exist_ok: If True, don't raise error if directory already exists
         """
         bucket_name, blob_name = self._parse_gs_path(path)
 
         # Ensure path ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
 
         # Check if it already exists
         if await self.exists(f"gs://{bucket_name}/{blob_name}"):
             if not exist_ok:
                 raise FileExistsError(f"Directory already exists: {path}")
             return
+
+        # check parents
+        if blob_name:  # not bucket root
+            parent_path = '/'.join(blob_name.rstrip('/').split('/')[:-1])
+            if parent_path:
+                parent_exists = await self.exists(f"gs://{bucket_name}/{parent_path}/")
+                if not parent_exists:
+                    if not parents:
+                        raise FileNotFoundError(f"Parent directory does not exist: {path}")
+                    # Create parent directories recursively
+                    await self.mkdir(f"gs://{bucket_name}/{parent_path}/", parents=True, exist_ok=True)
 
         # Create empty directory marker
         storage = await self._get_storage()
@@ -326,8 +404,7 @@ class AsyncGSClient(AsyncClient):
         storage = await self._get_storage()
 
         # Get object metadata
-        metadata_obj = await storage.download_metadata(bucket_name, blob_name)
-        return metadata_obj.get("metadata", {})
+        return await storage.download_metadata(bucket_name, blob_name)
 
     async def set_metadata(self, path: str, metadata: dict[str, str]) -> None:
         """Set blob metadata.
@@ -340,7 +417,8 @@ class AsyncGSClient(AsyncClient):
         storage = await self._get_storage()
 
         # Update metadata using patch
-        await storage.patch_metadata(bucket_name, blob_name, {"metadata": metadata})
+        metadata = {"metadata": metadata}
+        await storage.patch_metadata(bucket_name, blob_name, metadata=metadata)
 
     async def is_symlink(self, path: str) -> bool:
         """Check if blob is a symlink (has gcsfuse_symlink_target metadata).
@@ -353,7 +431,7 @@ class AsyncGSClient(AsyncClient):
         """
         try:
             metadata = await self.get_metadata(path)
-            return "gcsfuse_symlink_target" in metadata
+            return "gcsfuse_symlink_target" in metadata.get("metadata", {})
         except Exception:
             return False
 
@@ -367,7 +445,7 @@ class AsyncGSClient(AsyncClient):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("gcsfuse_symlink_target")
+        target = metadata.get("metadata", {}).get("gcsfuse_symlink_target", None)
         if not target:
             raise ValueError(f"Not a symlink: {path}")
         return target
@@ -382,23 +460,22 @@ class AsyncGSClient(AsyncClient):
         bucket_name, blob_name = self._parse_gs_path(path)
         storage = await self._get_storage()
 
-        # Create empty blob with gcsfuse_symlink_target metadata
-        await storage.upload(
-            bucket_name,
-            blob_name,
-            b"",
-            metadata={"gcsfuse_symlink_target": target}
-        )
+        # Create empty blob first
+        await storage.upload(bucket_name, blob_name, b"")
 
-    async def glob(self, path: str, pattern: str) -> list["Any"]:
+        # Then set the symlink metadata
+        await self.set_metadata(path, {"gcsfuse_symlink_target": target})
+
+    async def glob(self, path: str, pattern: str, _return_panpath: bool = True) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:
             path: Base GCS path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
+            _return_panpath: If True, return PanPath objects; otherwise return strings
 
         Returns:
-            List of matching AsyncCloudPath objects
+            List of matching PanPath objects or strings
         """
         from fnmatch import fnmatch
         from panpath.base import PanPath
@@ -410,7 +487,9 @@ class AsyncGSClient(AsyncClient):
         if "**" in pattern:
             # Recursive search - list all blobs under prefix
             blob_prefix = prefix if prefix else None
-            response = await storage.list_objects(bucket_name, params={"prefix": blob_prefix} if blob_prefix else {})
+            response = await storage.list_objects(
+                bucket_name, params={"prefix": blob_prefix} if blob_prefix else {}
+            )
             items = response.get("items", [])
 
             # Extract the pattern part after **
@@ -424,14 +503,19 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"*{file_pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
+                    if not _return_panpath:
+                        results.append(f"gs://{bucket_name}/{blob_name}")
+                    else:
+                        results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
             return results
         else:
             # Non-recursive - list blobs with delimiter
             blob_prefix = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
             response = await storage.list_objects(
                 bucket_name,
-                params={"prefix": blob_prefix, "delimiter": "/"} if blob_prefix else {"delimiter": "/"}
+                params=(
+                    {"prefix": blob_prefix, "delimiter": "/"} if blob_prefix else {"delimiter": "/"}
+                ),
             )
             items = response.get("items", [])
 
@@ -439,17 +523,20 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"{prefix}{pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
+                    if not _return_panpath:
+                        results.append(f"gs://{bucket_name}/{blob_name}")
+                    else:
+                        results.append(PanPath(f"gs://{bucket_name}/{blob_name}"))
             return results
 
-    async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
+    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
             path: Base GCS path
 
-        Returns:
-            List of (dirpath, dirnames, filenames) tuples
+        Yields:
+            Tuples of (dirpath, dirnames, filenames)
         """
         bucket_name, blob_prefix = self._parse_gs_path(path)
         storage = await self._get_storage()
@@ -459,7 +546,9 @@ class AsyncGSClient(AsyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
-        response = await storage.list_objects(bucket_name, params={"prefix": prefix} if prefix else {})
+        response = await storage.list_objects(
+            bucket_name, params={"prefix": prefix} if prefix else {}
+        )
         items = response.get("items", [])
 
         # Organize into directory structure
@@ -468,7 +557,7 @@ class AsyncGSClient(AsyncClient):
         for item in items:
             blob_name = item["name"]
             # Get relative path from prefix
-            rel_path = blob_name[len(prefix):] if prefix else blob_name
+            rel_path = blob_name[len(prefix) :] if prefix else blob_name
 
             # Split into directory and filename
             parts = rel_path.split("/")
@@ -476,34 +565,50 @@ class AsyncGSClient(AsyncClient):
                 # File in root
                 if path not in dirs:
                     dirs[path] = (set(), set())
-                dirs[path][1].add(parts[0])
+                if parts[0]:  # Skip empty strings
+                    dirs[path][1].add(parts[0])
             else:
                 # File in subdirectory
+                # First, ensure root directory exists and add the first subdir to it
+                if path not in dirs:  # pragma: no cover
+                    dirs[path] = (set(), set())
+                if parts[0]:  # Add first-level subdirectory to root
+                    dirs[path][0].add(parts[0])
+
+                # Process all intermediate directories
                 for i in range(len(parts) - 1):
-                    dir_path = f"{path}/" + "/".join(parts[:i+1]) if path else "/".join(parts[:i+1])
+                    dir_path = (
+                        f"{path}/" + "/".join(parts[: i + 1]) if path else "/".join(parts[: i + 1])
+                    )
                     if dir_path not in dirs:
                         dirs[dir_path] = (set(), set())
 
                     # Add subdirectory if not last part
                     if i < len(parts) - 2:
-                        dirs[dir_path][0].add(parts[i+1])
+                        dirs[dir_path][0].add(parts[i + 1])
 
                 # Add file to its parent directory
                 parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
-                if parent_dir not in dirs:
+                if parent_dir not in dirs:  # pragma: no cover
                     dirs[parent_dir] = (set(), set())
-                dirs[parent_dir][1].add(parts[-1])
+                if parts[-1]:  # Skip empty strings
+                    dirs[parent_dir][1].add(parts[-1])
 
-        # Convert to list of tuples
-        return [(d, sorted(subdirs), sorted(files)) for d, (subdirs, files) in sorted(dirs.items())]
+        # Yield each directory tuple
+        for d, (subdirs, files) in sorted(dirs.items()):
+            yield (d, sorted(subdirs), sorted(files))
 
-    async def touch(self, path: str, exist_ok: bool = True) -> None:
+    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:
         """Create empty file.
 
         Args:
             path: GCS path
+            mode: Mode setting (not supported for GCS, will raise ValueError if provided)
             exist_ok: If False, raise error if file exists
         """
+        if mode is not None:
+            raise ValueError("Mode setting is not supported for Google Cloud Storage.")
+
         if not exist_ok and await self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
 
@@ -518,6 +623,9 @@ class AsyncGSClient(AsyncClient):
             source: Source GCS path
             target: Target GCS path
         """
+        if not await self.exists(source):
+            raise NoSuchFileError(f"Source not found: {source}")
+
         # Copy to new location
         src_bucket_name, src_blob_name = self._parse_gs_path(source)
         tgt_bucket_name, tgt_blob_name = self._parse_gs_path(target)
@@ -540,8 +648,12 @@ class AsyncGSClient(AsyncClient):
         bucket_name, blob_name = self._parse_gs_path(path)
 
         # Ensure path ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
+
+        # Check if it is empty
+        if await self.is_dir(path) and await self.list_dir(path):
+            raise OSError(f"Directory not empty: {path}")
 
         storage = await self._get_storage()
 
@@ -550,7 +662,9 @@ class AsyncGSClient(AsyncClient):
         except Exception:
             raise NoSuchFileError(f"Directory not found: {path}")
 
-    async def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
+    async def rmtree(
+        self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
+    ) -> None:
         """Remove directory and all its contents recursively.
 
         Args:
@@ -558,11 +672,23 @@ class AsyncGSClient(AsyncClient):
             ignore_errors: If True, errors are ignored
             onerror: Callable that accepts (function, path, excinfo)
         """
+        if not await self.exists(path):
+            if ignore_errors:
+                return
+            else:
+                raise NoSuchFileError(f"Path not found: {path}")
+
+        if not await self.is_dir(path):
+            if ignore_errors:
+                return
+            else:
+                raise NotADirectoryError(f"Path is not a directory: {path}")
+
         bucket_name, prefix = self._parse_gs_path(path)
 
         # Ensure prefix ends with / for directory listing
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
 
         try:
             storage = await self._get_storage()
@@ -574,11 +700,12 @@ class AsyncGSClient(AsyncClient):
             # Delete all blobs
             for blob_name in blob_names:
                 await storage.delete(bucket_name, blob_name)
-        except Exception as e:
+        except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
+
                 onerror(storage.delete, path, sys.exc_info())
             else:
                 raise
@@ -591,6 +718,15 @@ class AsyncGSClient(AsyncClient):
             target: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
+        if not await self.exists(source):
+            raise NoSuchFileError(f"Source not found: {source}")
+
+        if follow_symlinks and await self.is_symlink(source):
+            source = await self.readlink(source)
+
+        if await self.is_dir(source):
+            raise IsADirectoryError(f"Source is a directory: {source}")
+
         src_bucket_name, src_blob_name = self._parse_gs_path(source)
         tgt_bucket_name, tgt_blob_name = self._parse_gs_path(target)
 
@@ -610,14 +746,23 @@ class AsyncGSClient(AsyncClient):
             target: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
+        if not await self.exists(source):
+            raise NoSuchFileError(f"Source not found: {source}")
+
+        if follow_symlinks and await self.is_symlink(source):
+            source = await self.readlink(source)
+
+        if not await self.is_dir(source):
+            raise NotADirectoryError(f"Source is not a directory: {source}")
+
         src_bucket_name, src_prefix = self._parse_gs_path(source)
         tgt_bucket_name, tgt_prefix = self._parse_gs_path(target)
 
         # Ensure prefixes end with / for directory operations
-        if src_prefix and not src_prefix.endswith('/'):
-            src_prefix += '/'
-        if tgt_prefix and not tgt_prefix.endswith('/'):
-            tgt_prefix += '/'
+        if src_prefix and not src_prefix.endswith("/"):
+            src_prefix += "/"
+        if tgt_prefix and not tgt_prefix.endswith("/"):
+            tgt_prefix += "/"
 
         storage = await self._get_storage()
 
@@ -627,42 +772,15 @@ class AsyncGSClient(AsyncClient):
         for item in blobs.get("items", []):
             src_blob_name = item["name"]
             # Calculate relative path and target blob name
-            rel_path = src_blob_name[len(src_prefix):]
+            rel_path = src_blob_name[len(src_prefix) :]
             tgt_blob_name = tgt_prefix + rel_path
 
             # Copy blob (read and write)
             data = await storage.download(src_bucket_name, src_blob_name)
             await storage.upload(tgt_bucket_name, tgt_blob_name, data)
 
-    def a_open(
-        self,
-        path: str,
-        mode: str = "r",
-        encoding: Optional[str] = None,
-        **kwargs: Any,
-    ) -> AsyncFileHandle:
-        """Open GCS blob and return async file handle with streaming support.
 
-        Args:
-            path: GCS path (gs://bucket/blob)
-            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
-            encoding: Text encoding (for text modes)
-            **kwargs: Additional arguments (unused for GCS)
-
-        Returns:
-            GSAsyncFileHandle with streaming support
-        """
-        bucket_name, blob_name = self._parse_gs_path(path)
-        return GSAsyncFileHandle(
-            storage_factory=self._get_storage,
-            bucket=bucket_name,
-            blob=blob_name,
-            mode=mode,
-            encoding=encoding,
-        )
-
-
-class GSAsyncFileHandle(AsyncFileHandle):
+class GSAsyncFileHandle(BaseAsyncFileHandle):
     """Async file handle for GCS with chunked streaming support.
 
     Uses range requests for reading to avoid loading entire blobs.
@@ -701,6 +819,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
         self._read_buffer = b"" if "b" in mode else ""
         self._blob_size: Optional[int] = None
         self._eof = False
+        self._stream_response = None  # StreamResponse for streaming reads
 
         # For writing
         self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
@@ -717,12 +836,16 @@ class GSAsyncFileHandle(AsyncFileHandle):
         self._storage = await self._storage_factory()
 
         if self._is_read:
-            # Get blob size
+            # Get blob size and initialize streaming download
             try:
                 metadata = await self._storage.download_metadata(self._bucket, self._blob)
                 self._blob_size = int(metadata.get("size", 0))
+                # Initialize streaming download
+                self._stream_response = await self._storage.download_stream(self._bucket, self._blob)
             except Exception as e:
-                raise NoSuchFileError(f"GCS blob not found: gs://{self._bucket}/{self._blob}") from e
+                raise NoSuchFileError(
+                    f"GCS blob not found: gs://{self._bucket}/{self._blob}"
+                ) from e
         elif self._is_append:
             # Load existing data for append
             try:
@@ -744,7 +867,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
         self._storage = None
 
     async def _read_chunk(self, size: int) -> bytes:
-        """Read a chunk from GCS using range request.
+        """Read a chunk from GCS using streaming download.
 
         Args:
             size: Number of bytes to read
@@ -752,33 +875,28 @@ class GSAsyncFileHandle(AsyncFileHandle):
         Returns:
             Bytes read from blob
         """
-        if self._blob_size is None or self._read_pos >= self._blob_size:
+        if self._eof or self._stream_response is None:  # pragma: no cover
+            return b""
+
+        if self._blob_size is not None and self._read_pos >= self._blob_size:  # pragma: no cover
             self._eof = True
             return b""
 
-        end_pos = min(self._read_pos + size - 1, self._blob_size - 1)
-
-        # Note: gcloud-aio-storage doesn't directly support range requests
-        # For now, we'll fall back to downloading chunks
-        # In production, you might want to use google-cloud-storage instead
-        if self._read_pos == 0 and size >= self._blob_size:
-            # First read and it's the whole file
-            data = await self._storage.download(self._bucket, self._blob)
-            self._read_pos = len(data)
-            if self._read_pos >= self._blob_size:
+        # Read chunk from stream
+        try:
+            chunk = await self._stream_response.read(size)
+            if not chunk:  # pragma: no cover
                 self._eof = True
-            return data
-        else:
-            # For partial reads, download whole file and slice
-            # This is a limitation of gcloud-aio-storage
-            if not hasattr(self, '_full_data'):
-                self._full_data = await self._storage.download(self._bucket, self._blob)
+                return b""
 
-            chunk = self._full_data[self._read_pos:self._read_pos + size]
             self._read_pos += len(chunk)
-            if self._read_pos >= self._blob_size:
+            if self._blob_size is not None and self._read_pos >= self._blob_size:
                 self._eof = True
+
             return chunk
+        except Exception:  # pragma: no cover
+            self._eof = True
+            return b""
 
     async def read(self, size: int = -1) -> Union[str, bytes]:
         """Read from GCS blob with streaming."""
@@ -789,24 +907,17 @@ class GSAsyncFileHandle(AsyncFileHandle):
 
         if size == -1:
             # Read all remaining
-            if self._read_pos == 0:
-                # Haven't read anything yet, download whole file
-                data = await self._storage.download(self._bucket, self._blob)
-                self._eof = True
-                self._read_pos = len(data)
-                if self._is_binary:
-                    return data
-                return data.decode(self._encoding)
-            else:
-                # Continue from current position
-                if hasattr(self, '_full_data'):
-                    remaining = self._full_data[self._read_pos:]
-                    self._read_pos = len(self._full_data)
-                    self._eof = True
-                    if self._is_binary:
-                        return remaining
-                    return remaining.decode(self._encoding)
-                return b"" if self._is_binary else ""
+            chunks = []
+            while not self._eof:
+                chunk = await self._read_chunk(8192)  # Read in 8KB chunks
+                if not chunk:  # pragma: no cover
+                    break
+                chunks.append(chunk)
+
+            data = b"".join(chunks)
+            if self._is_binary:
+                return data
+            return data.decode(self._encoding)
         else:
             # Read specific size
             chunk = await self._read_chunk(size)
@@ -826,9 +937,9 @@ class GSAsyncFileHandle(AsyncFileHandle):
         # Read chunks until we find a newline
         while newline not in self._read_buffer and not self._eof:  # type: ignore
             chunk = await self._read_chunk(self._chunk_size)
-            if not chunk:
+            if not chunk:  # pragma: no cover
                 break
-            if self._is_binary:
+            if self._is_binary:  # pragma: no cover
                 self._read_buffer += chunk  # type: ignore
             else:
                 self._read_buffer += chunk.decode(self._encoding)  # type: ignore
@@ -967,11 +1078,22 @@ class GSAsyncFileHandle(AsyncFileHandle):
         elif whence == 1:
             target_pos = current_pos + offset
         elif whence == 2:
-            if self._blob_size is None:
+            if self._blob_size is None:  # pragma: no cover
                 raise OSError("SEEK_END not supported when blob size is unknown")
             target_pos = self._blob_size + offset
         else:
             raise ValueError(f"Invalid whence value: {whence}")
+
+        # Special case: seeking to 0 resets the read state
+        if target_pos == 0:
+            self._read_pos = 0
+            self._read_buffer = b"" if self._is_binary else ""
+            self._eof = False
+            # Recreate the stream
+            if self._stream_response is not None:
+                await self._stream_response.__aexit__(None, None, None)  # type: ignore
+                self._stream_response = await self._storage.download_stream(self._bucket, self._blob)
+            return 0
 
         # Check for backward seeking
         if target_pos < current_pos:
@@ -982,7 +1104,7 @@ class GSAsyncFileHandle(AsyncFileHandle):
         while bytes_to_skip > 0 and not self._eof:
             chunk_size = min(bytes_to_skip, 8192)
             chunk = await self.read(chunk_size)
-            if not chunk:
+            if not chunk:  # pragma: no cover
                 break
             bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
 

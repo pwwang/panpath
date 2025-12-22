@@ -30,3 +30,9 @@ class NoSuchFileError(CloudPathError, FileNotFoundError):
     """Raised when a cloud file does not exist."""
 
     pass
+
+
+class NoStatError(CloudPathError):
+    """Raised when stat information cannot be retrieved."""
+
+    pass

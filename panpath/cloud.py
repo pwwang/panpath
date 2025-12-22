@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union
 from panpath.base import PanPath
-from panpath.exceptions import NoSuchFileError
 
 if TYPE_CHECKING:
     from panpath.clients import AsyncClient, AsyncFileHandle, Client
@@ -359,7 +358,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             Path that this symlink points to
         """
         target = self.client.readlink(str(self))
-        from panpath.base import PanPath
+
         return PanPath(target)  # type: ignore
 
     def symlink_to(self, target: Union[str, "CloudPath"]) -> None:
@@ -402,7 +401,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native copy
             self.client.copy(str(self), target_str)
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
     def copytree(self, target: Union[str, "CloudPath"], follow_symlinks: bool = True) -> "CloudPath":
@@ -424,7 +423,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native copytree
             self.client.copytree(str(self), target_str, follow_symlinks=follow_symlinks)
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
     @staticmethod
@@ -437,7 +436,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
     @staticmethod
     def _copy_cross_storage(src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file across storage boundaries."""
-        from panpath.base import PanPath
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
@@ -454,7 +452,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
     @staticmethod
     def _copytree_cross_storage(src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree across storage boundaries."""
-        from panpath.base import PanPath
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
@@ -616,7 +613,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native rename
             await self.async_client.rename(str(self), target_str)
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
 
@@ -654,7 +651,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             Path that this symlink points to
         """
         target = await self.async_client.readlink(str(self))
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
 
@@ -682,7 +679,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         await self.async_client.rmtree(str(self), ignore_errors=ignore_errors, onerror=onerror)
 
 
-    async def a_copy(self, target: Union[str, "CloudPath"], follow_symlinks: bool = True) -> "CloudPath":
+    async def a_copy(self, target: Union[str, "CloudPath"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
 
         Can copy between cloud and local paths.
@@ -700,7 +697,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native copy
             await self.async_client.copy(str(self), target_str, follow_symlinks=follow_symlinks)
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
 
@@ -723,13 +720,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         else:
             # Same storage, use native copytree
             await self.async_client.copytree(str(self), target_str, follow_symlinks=follow_symlinks)
-        from panpath.base import PanPath
+
         return PanPath(target_str)  # type: ignore
 
     @staticmethod
     async def a_copy_cross_storage(src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file across storage boundaries (async)."""
-        from panpath.base import PanPath
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
@@ -747,7 +743,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
     @staticmethod
     async def a_copytree_cross_storage(src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree across storage boundaries (async)."""
-        from panpath.base import PanPath
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 

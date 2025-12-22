@@ -262,7 +262,7 @@ class AsyncClient(ABC):
         ...
 
     @abstractmethod
-    def a_open(
+    def open(
         self,
         path: str,
         mode: str = "r",

@@ -2,8 +2,9 @@
 from pathlib import Path, PosixPath, WindowsPath
 import os
 import sys
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from panpath.base import PanPath
+from panpath.cloud import CloudPath
 
 # Determine the concrete Path class for the current platform
 _ConcretePath = WindowsPath if os.name == 'nt' else PosixPath
@@ -47,6 +48,53 @@ class LocalPath(_ConcretePath, PanPath):
     def __hash__(self) -> int:
         """Return hash of path."""
         return super().__hash__()
+
+    def touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
+        """Create the file if it does not exist or update the modification time."""
+        return super().touch(mode=mode, exist_ok=exist_ok)
+
+    async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
+        """Create the file if it does not exist or update the modification time (async)."""
+        if not HAS_AIOFILES:
+            from panpath.exceptions import MissingDependencyError
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+        try:
+            async with aiofiles.open(str(self), mode='a'):
+                pass
+            os.chmod(str(self), mode)
+        except FileExistsError:
+            if not exist_ok:
+                raise
+
+    async def a_copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
+        """Copy file to target.
+
+        Can copy between cloud and local paths.
+
+        Args:
+            target: Destination path (can be cloud or local)
+
+        Returns:
+            Target path instance
+        """
+        target_str = str(target)
+        # Check if cross-storage operation
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            await CloudPath.a_copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
+        else:
+            async with aiofiles.open(str(self), mode='rb') as sf:
+                async with aiofiles.open(target_str, mode='wb') as df:
+                    while True:
+                        chunk = await sf.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        await df.write(chunk)
+
+        return PanPath(target_str)
 
     # Async I/O operations (prefixed with a_)
     async def a_exists(self) -> bool:
