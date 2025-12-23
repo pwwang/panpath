@@ -1,7 +1,5 @@
 import pytest
 import sys
-import os
-from panpath.exceptions import NoSuchFileError, NoStatError
 from panpath.s3_async_client import AsyncS3Client, ClientError
 
 
@@ -60,7 +58,7 @@ async def test_asyncs3client_get_client():
 def test_asyncs3client_parse_s3_path(path, results):
     """Test parsing S3 paths."""
     client = AsyncS3Client()
-    bucket, key = client._parse_s3_path(path)
+    bucket, key = client._parse_path(path)
     assert (bucket, key) == results
 
 
@@ -95,7 +93,7 @@ async def test_asyncs3client_read_bytes():
     client = AsyncS3Client()
     with pytest.raises(ClientError):
         await client.read_bytes("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_bytes(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
 
     content = await client.read_bytes(f"s3://{S3_BUCKET}/readonly.txt")
@@ -108,7 +106,7 @@ async def test_asyncs3client_read_text():
     client = AsyncS3Client()
     with pytest.raises(ClientError):
         await client.read_text("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_text(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
 
     content = await client.read_text(f"s3://{S3_BUCKET}/readonly.txt", encoding="utf-8")
@@ -144,7 +142,7 @@ async def test_asyncs3client_get_set_metadata(testdir):
     path = f"{testdir}/metadata_blob.txt"
     await client.write_bytes(path, data)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.get_metadata(f"{testdir}/nonexistent_blob.txt")
 
     metadata = await client.get_metadata(path)
@@ -297,7 +295,7 @@ async def test_asyncs3client_rename(testdir):
     assert content == data
 
     # Rename non-existent object
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
@@ -323,7 +321,7 @@ async def test_asyncs3client_rmdir(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rmdir(path)
 
 
@@ -375,7 +373,7 @@ async def test_asyncs3client_copy(testdir):
     with pytest.raises(IsADirectoryError):
         await client.copy(dirpath, f"{testdir}/copy_of_dir")
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copy(f"{testdir}/nonexistent_copy.txt", f"{testdir}/new_copy.txt")
 
     # symlink test
@@ -410,7 +408,7 @@ async def test_asyncs3client_copytree(testdir):
         assert content == "data"
 
     # Copy non-existent directory
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copytree(f"{testdir}/nonexistent_tree", f"{testdir}/new_tree")
 
     # symlink test
@@ -472,7 +470,7 @@ async def test_asyncs3client_delete(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.delete(path)
 
     dirpath = f"{testdir}/subdir"
@@ -532,7 +530,7 @@ async def test_asyncs3client_stat(testdir):
     stat_result = await client.stat(file_path)
     assert stat_result.st_size == len(data)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.stat(f"{testdir}/nonexistent.txt")
 
 
@@ -572,7 +570,7 @@ async def test_asyncs3client_open_write(testdir):
 
     assert await client.read_bytes(file_path) == b"Open read data"
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
             pass
 
@@ -675,7 +673,7 @@ async def test_asyncs3client_open_read(testdir):
     with pytest.raises(ValueError):
         await f.write(b"more data")
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
             pass
 

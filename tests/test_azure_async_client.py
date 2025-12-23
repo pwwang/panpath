@@ -1,7 +1,6 @@
 import pytest
 import sys
 from azure.storage.blob.aio import BlobServiceClient
-from panpath.exceptions import NoSuchFileError
 from panpath.azure_async_client import AsyncAzureBlobClient
 
 
@@ -56,7 +55,7 @@ async def test_asyncazureblobclient_get_clients():
 def test_asyncazureblobclient_parse_azure_path(path, results):
     """Test parsing Azure Blob Storage paths."""
     client = AsyncAzureBlobClient()
-    container, blob_path = client._parse_azure_path(path)
+    container, blob_path = client._parse_path(path)
     assert (container, blob_path) == results
 
 
@@ -90,7 +89,7 @@ async def test_asyncazureblobclient_read_bytes():
     client = AsyncAzureBlobClient()
     # Note: This test assumes that the blob does not exist.
     # In a real test, you would mock the Azure SDK calls.
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_bytes("az://nonexistent-container/nonexistent-blob.txt")
 
     content = await client.read_bytes("az://panpath-test/readonly.txt")
@@ -103,7 +102,7 @@ async def test_asyncazureblobclient_read_text():
     client = AsyncAzureBlobClient()
     # Note: This test assumes that the blob does not exist.
     # In a real test, you would mock the Azure SDK calls.
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_text("az://nonexistent-container/nonexistent-blob.txt")
 
     content = await client.read_text("az://panpath-test/readonly.txt", encoding="utf-8")
@@ -146,7 +145,7 @@ async def test_asyncazureblobclient_get_set_metadata(testdir):
     path = f"{testdir}/metadata_blob.txt"
     await client.write_bytes(path, data)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.get_metadata(f"{testdir}/nonexistent_blob.txt")
 
     metadata = await client.get_metadata(path)
@@ -299,7 +298,7 @@ async def test_asyncazureblobclient_rename(testdir):
     assert content == data
 
     # Rename non-existent blob
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
@@ -319,7 +318,7 @@ async def test_asyncazureblobclient_rmdir(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rmdir(path)
 
     await client.mkdir(path, exist_ok=True, parents=True)
@@ -334,7 +333,7 @@ async def test_asyncazureblobclient_rmtree(testdir):
     client = AsyncAzureBlobClient()
     dirpath = f"{testdir}/tree_to_remove"
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rmtree(dirpath)
 
     await client.rmtree(dirpath, ignore_errors=True)
@@ -386,7 +385,7 @@ async def test_asyncazureblobclient_copy(testdir):
     assert content == data
 
     # Copy non-existent blob
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copy(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
     # follow_symlinks test
@@ -425,7 +424,7 @@ async def test_asyncazureblobclient_copytree(testdir):
         assert content == "data"
 
     # Copy non-existent directory
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copytree(f"{testdir}/nonexistent_tree", f"{testdir}/new_tree")
 
     # symlink test
@@ -487,7 +486,7 @@ async def test_asyncazureblobclient_delete(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.delete(path)
 
     dirpath = f"{testdir}/subdir"
@@ -547,7 +546,7 @@ async def test_asyncazureblobclient_stat(testdir):
     stat_result = await client.stat(file_path)
     assert stat_result.st_size == len(data)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.stat(f"{testdir}/nonexistent.txt")
 
 
@@ -587,9 +586,10 @@ async def test_asyncazureblobclient_open_write(testdir):
 
     assert await client.read_bytes(file_path) == b"Open read data"
 
-    with pytest.raises(NoSuchFileError):
-        async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
-            pass
+    with pytest.raises(FileNotFoundError):
+        await client.open(f"{testdir}/nonexistent.txt", mode="rb").__aenter__()
+        # async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
+        #     pass
 
 
 @pytest.mark.asyncio
@@ -634,6 +634,8 @@ async def test_asyncazureblobclient_open_read(testdir):
         assert content == data
         with pytest.raises(ValueError):
             await f.write(b"more data")
+
+        assert await f.read() == b""
 
     # chunked read
     async with client.open(file_path, mode="rb") as f:
@@ -689,7 +691,7 @@ async def test_asyncazureblobclient_open_read(testdir):
     with pytest.raises(ValueError):
         await f.write(b"more data")
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
             pass
 

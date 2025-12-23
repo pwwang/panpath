@@ -1,7 +1,7 @@
 import pytest
 import sys
 from gcloud.aio.storage import Storage
-from panpath.exceptions import NoSuchFileError, NoStatError
+from panpath.exceptions import NoStatError
 from panpath.gs_async_client import AsyncGSClient
 
 
@@ -25,22 +25,22 @@ def test_asyncgsclient_init():
 
 
 @pytest.mark.asyncio
-async def test_asyncgsclient_get_storage():
+async def test_asyncgsclient_get_client():
     """Test getting async storage client."""
     client = AsyncGSClient()
-    storage = await client._get_storage()
+    storage = await client._get_client()
     assert isinstance(storage, Storage)
 
-    storage2 = await client._get_storage()
+    storage2 = await client._get_client()
     assert storage is storage2  # Should return cached storage
 
     await storage.close()  # Simulate closed session
-    storage3 = await client._get_storage()
+    storage3 = await client._get_client()
 
     assert storage is not storage3  # Should create new storage after close
 
     await client.close()
-    assert client._storage is None
+    assert client._client is None
 
 
 @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ async def test_asyncgsclient_get_storage():
 def test_asyncgsclient_parse_gs_path(path, results):
     """Test parsing GCS paths."""
     client = AsyncGSClient()
-    bucket, blob_path = client._parse_gs_path(path)
+    bucket, blob_path = client._parse_path(path)
     assert (bucket, blob_path) == results
 
 
@@ -84,7 +84,7 @@ async def test_asyncgsclient_exists():
 async def test_asyncgsclient_read_bytes():
     """Test reading bytes from a blob using AsyncGSClient."""
     client = AsyncGSClient()
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_bytes("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
 
     content = await client.read_bytes("gs://handy-buffer-287000.appspot.com/readonly.txt")
@@ -95,7 +95,7 @@ async def test_asyncgsclient_read_bytes():
 async def test_asyncgsclient_read_text():
     """Test reading text from a blob using AsyncGSClient."""
     client = AsyncGSClient()
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.read_text("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
 
     content = await client.read_text("gs://handy-buffer-287000.appspot.com/readonly.txt", encoding="utf-8")
@@ -287,7 +287,7 @@ async def test_asyncgsclient_rename(testdir):
     assert content == data
 
     # Rename non-existent blob
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
@@ -307,7 +307,7 @@ async def test_asyncgsclient_rmdir(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rmdir(path)
 
     await client.mkdir(path, exist_ok=True, parents=True)
@@ -322,7 +322,7 @@ async def test_asyncgsclient_rmtree(testdir):
     client = AsyncGSClient()
     dirpath = f"{testdir}/tree_to_remove"
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.rmtree(dirpath)
 
     await client.rmtree(dirpath, ignore_errors=True)
@@ -374,7 +374,7 @@ async def test_asyncgsclient_copy(testdir):
     assert content == data
 
     # Copy non-existent blob
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copy(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
     # follow_symlinks test
@@ -413,7 +413,7 @@ async def test_asyncgsclient_copytree(testdir):
         assert content == "data"
 
     # Copy non-existent directory
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.copytree(f"{testdir}/nonexistent_tree", f"{testdir}/new_tree")
 
     # symlink test
@@ -475,7 +475,7 @@ async def test_asyncgsclient_delete(testdir):
     # Verify it no longer exists
     assert not await client.exists(path)
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         await client.delete(path)
 
     dirpath = f"{testdir}/subdir"
@@ -575,7 +575,7 @@ async def test_asyncgsclient_open_write(testdir):
 
     assert await client.read_bytes(file_path) == b"Open read data"
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
             pass
 
@@ -678,7 +678,7 @@ async def test_asyncgsclient_open_read(testdir):
     with pytest.raises(ValueError):
         await f.write(b"more data")
 
-    with pytest.raises(NoSuchFileError):
+    with pytest.raises(FileNotFoundError):
         async with client.open(f"{testdir}/nonexistent.txt", mode="rb") as f:
             pass
 

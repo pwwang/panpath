@@ -3,10 +3,10 @@ import asyncio
 import os
 import re
 import weakref
-from typing import TYPE_CHECKING, Any, AsyncGenerator, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Set, Union
 
-from panpath.clients import AsyncClient, BaseAsyncFileHandle
-from panpath.exceptions import MissingDependencyError, NoSuchFileError, NoStatError
+from panpath.clients import AsyncClient, AsyncFileHandle
+from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
     import aioboto3
@@ -65,6 +65,8 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
 
 class AsyncS3Client(AsyncClient):
     """Asynchronous S3 client implementation using aioboto3."""
+
+    prefix = ("s3",)
 
     def __init__(self, **kwargs: Any):
         """Initialize async S3 client.
@@ -133,26 +135,9 @@ class AsyncS3Client(AsyncClient):
             await self._client.close()
             self._client = None
 
-    async def __aenter__(self) -> "AsyncS3Client":
-        """Enter async context."""
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exit async context and cleanup."""
-        await self.close()
-
-    def _parse_s3_path(self, path: str) -> tuple[str, str]:
-        """Parse S3 path into bucket and key."""
-        if path.startswith("s3://"):
-            path = path[5:]
-        parts = path.split("/", 1)
-        bucket = parts[0]
-        key = parts[1] if len(parts) > 1 else ""
-        return bucket, key
-
     async def exists(self, path: str) -> bool:
         """Check if S3 object exists."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         if not key:
             try:
@@ -183,7 +168,7 @@ class AsyncS3Client(AsyncClient):
 
     async def read_bytes(self, path: str) -> bytes:
         """Read S3 object as bytes."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
             response = await client.get_object(Bucket=bucket, Key=key)
@@ -192,34 +177,25 @@ class AsyncS3Client(AsyncClient):
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             if error_code in ("NoSuchKey", "NoSuchBucket", "404"):
-                raise NoSuchFileError(f"S3 object not found: {path}")
+                raise FileNotFoundError(f"S3 object not found: {path}")
             raise
-
-    async def read_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read S3 object as text."""
-        data = await self.read_bytes(path)
-        return data.decode(encoding)
 
     async def write_bytes(self, path: str, data: bytes) -> None:
         """Write bytes to S3 object."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         await client.put_object(Bucket=bucket, Key=key, Body=data)
 
-    async def write_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to S3 object."""
-        await self.write_bytes(path, data.encode(encoding))
-
     async def delete(self, path: str) -> None:
         """Delete S3 object."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
 
         if await self.is_dir(path):
             raise IsADirectoryError(f"Path is a directory: {path}")
 
         if not await self.exists(path):
-            raise NoSuchFileError(f"S3 object not found: {path}")
+            raise FileNotFoundError(f"S3 object not found: {path}")
 
         try:
             await client.delete_object(Bucket=bucket, Key=key)
@@ -228,7 +204,7 @@ class AsyncS3Client(AsyncClient):
 
     async def list_dir(self, path: str) -> list[str]:
         """List S3 objects with prefix."""
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
@@ -248,7 +224,7 @@ class AsyncS3Client(AsyncClient):
 
     async def is_dir(self, path: str) -> bool:
         """Check if S3 path is a directory."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         if not key:
             return True
 
@@ -259,7 +235,7 @@ class AsyncS3Client(AsyncClient):
 
     async def is_file(self, path: str) -> bool:
         """Check if S3 path is a file."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         if not key:
             return False
 
@@ -272,13 +248,13 @@ class AsyncS3Client(AsyncClient):
 
     async def stat(self, path: str) -> os.stat_result:
         """Get S3 object metadata."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
             response = await client.head_object(Bucket=bucket, Key=key)
         except ClientError as e:  # pragma: no cover
             if e.response["Error"]["Code"] == "404":
-                raise NoSuchFileError(f"S3 object not found: {path}")
+                raise FileNotFoundError(f"S3 object not found: {path}")
             raise
         except Exception:  # pragma: no cover
             raise NoStatError(f"Cannot retrieve stat for: {path}")
@@ -320,11 +296,12 @@ class AsyncS3Client(AsyncClient):
         if mode not in ('r', 'w', 'rb', 'wb', 'a', 'ab'):
             raise ValueError(f"Unsupported mode: {mode}")
 
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         return S3AsyncFileHandle(
             client_factory=self._get_client,
             bucket=bucket,
-            key=key,
+            blob=key,
+            prefix=self.prefix[0],
             mode=mode,
             encoding=encoding,
             **kwargs,
@@ -338,7 +315,7 @@ class AsyncS3Client(AsyncClient):
             parents: If True, create parent directories as needed
             exist_ok: If True, don't raise error if directory already exists
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
         if key and not key.endswith('/'):
@@ -383,14 +360,14 @@ class AsyncS3Client(AsyncClient):
         Returns:
             Dictionary containing response metadata including 'Metadata' key with user metadata
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
             response = await client.head_object(Bucket=bucket, Key=key)
             return response
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                raise NoSuchFileError(f"S3 object not found: {path}")
+                raise FileNotFoundError(f"S3 object not found: {path}")
             raise  # pragma: no cover
 
     async def set_metadata(self, path: str, metadata: dict[str, str]) -> None:
@@ -400,7 +377,7 @@ class AsyncS3Client(AsyncClient):
             path: S3 path
             metadata: Dictionary of metadata key-value pairs
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         # S3 requires copying object to itself to update metadata
         await client.copy_object(
@@ -422,8 +399,8 @@ class AsyncS3Client(AsyncClient):
         """
         try:
             metadata = await self.get_metadata(path)
-            return "symlink-target" in metadata.get("Metadata", {})
-        except NoSuchFileError:
+            return self.__class__.symlink_target_metaname in metadata.get("Metadata", {})
+        except FileNotFoundError:
             return False
 
     async def readlink(self, path: str) -> str:
@@ -436,7 +413,7 @@ class AsyncS3Client(AsyncClient):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("Metadata", {}).get("symlink-target")
+        target = metadata.get("Metadata", {}).get(self.__class__.symlink_target_metaname)
         if not target:
             raise ValueError(f"Not a symlink: {path}")
         return target
@@ -448,7 +425,7 @@ class AsyncS3Client(AsyncClient):
             path: S3 path for the symlink
             target: Target path the symlink should point to
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         client = await self._get_client()
         # Create empty object with symlink metadata
@@ -456,7 +433,7 @@ class AsyncS3Client(AsyncClient):
             Bucket=bucket,
             Key=key,
             Body=b"",
-            Metadata={"symlink-target": target}
+            Metadata={self.__class__.symlink_target_metaname: target}
         )
 
     async def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list[Any]:
@@ -472,7 +449,7 @@ class AsyncS3Client(AsyncClient):
         """
         from fnmatch import fnmatch
 
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         client = await self._get_client()
         # Handle recursive patterns
@@ -530,7 +507,7 @@ class AsyncS3Client(AsyncClient):
         Yields:
             Tuples of (dirpath, dirnames, filenames)
         """
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         # List all objects under prefix
         if prefix and not prefix.endswith("/"):
@@ -599,7 +576,7 @@ class AsyncS3Client(AsyncClient):
         if not exist_ok and await self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
 
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         await client.put_object(Bucket=bucket, Key=key, Body=b"")
 
@@ -612,11 +589,11 @@ class AsyncS3Client(AsyncClient):
         """
         # Check if source exists
         if not await self.exists(source):
-            raise NoSuchFileError(f"Source not found: {source}")
+            raise FileNotFoundError(f"Source not found: {source}")
 
         # Copy to new location
-        src_bucket, src_key = self._parse_s3_path(source)
-        tgt_bucket, tgt_key = self._parse_s3_path(target)
+        src_bucket, src_key = self.__class__._parse_path(source)
+        tgt_bucket, tgt_key = self.__class__._parse_path(target)
 
         client = await self._get_client()
         # Copy object
@@ -635,7 +612,7 @@ class AsyncS3Client(AsyncClient):
         Args:
             path: S3 path
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
         if key and not key.endswith('/'):
@@ -644,7 +621,7 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         # client.delete_object will not raise error if object doesn't exist
         if not await self.exists(path):
-            raise NoSuchFileError(f"Directory not found: {path}")
+            raise FileNotFoundError(f"Directory not found: {path}")
 
         # Check if it is empty
         if await self.is_dir(path) and await self.list_dir(path):
@@ -660,7 +637,7 @@ class AsyncS3Client(AsyncClient):
             ignore_errors: If True, errors are ignored
             onerror: Callable that accepts (function, path, excinfo)
         """
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         # Ensure prefix ends with / for directory listing
         if prefix and not prefix.endswith('/'):
@@ -701,7 +678,7 @@ class AsyncS3Client(AsyncClient):
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
         if not await self.exists(source):
-            raise NoSuchFileError(f"Source not found: {source}")
+            raise FileNotFoundError(f"Source not found: {source}")
 
         if follow_symlinks and await self.is_symlink(source):
             source = await self.readlink(source)
@@ -710,8 +687,8 @@ class AsyncS3Client(AsyncClient):
         if await self.is_dir(source):
             raise IsADirectoryError(f"Source is a directory: {source}")
 
-        src_bucket, src_key = self._parse_s3_path(source)
-        tgt_bucket, tgt_key = self._parse_s3_path(target)
+        src_bucket, src_key = self.__class__._parse_path(source)
+        tgt_bucket, tgt_key = self.__class__._parse_path(target)
 
         client = await self._get_client()
         # Use S3's native copy operation
@@ -731,7 +708,7 @@ class AsyncS3Client(AsyncClient):
         """
         # Check if source exists
         if not await self.exists(source):
-            raise NoSuchFileError(f"Source not found: {source}")
+            raise FileNotFoundError(f"Source not found: {source}")
 
         if follow_symlinks and await self.is_symlink(source):
             source = await self.readlink(source)
@@ -740,8 +717,8 @@ class AsyncS3Client(AsyncClient):
         if not await self.is_dir(source):
             raise NotADirectoryError(f"Source is not a directory: {source}")
 
-        src_bucket, src_prefix = self._parse_s3_path(source)
-        tgt_bucket, tgt_prefix = self._parse_s3_path(target)
+        src_bucket, src_prefix = self.__class__._parse_path(source)
+        tgt_bucket, tgt_prefix = self.__class__._parse_path(target)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith('/'):
@@ -770,203 +747,45 @@ class AsyncS3Client(AsyncClient):
                 )
 
 
-class S3AsyncFileHandle(BaseAsyncFileHandle):
+class S3AsyncFileHandle(AsyncFileHandle):
     """Async file handle for S3 with streaming support.
 
     Uses aioboto3's streaming API to avoid loading entire files into memory.
     """
 
-    def __init__(
-        self,
-        client_factory: Any,
-        bucket: str,
-        key: str,
-        mode: str = "r",
-        encoding: Optional[str] = None,
-    ):
-        """Initialize S3 file handle.
+    async def _create_stream(self) -> None:
+        """Create the underlying stream for reading or writing."""
+        client = await self._client_factory()
+        response = await client.get_object(Bucket=self._bucket, Key=self._blob)
+        return response["Body"]
 
-        Args:
-            session: aioboto3.Session instance
-            bucket: S3 bucket name
-            key: S3 object key
-            mode: File mode
-            encoding: Text encoding
-        """
-        self._client_factory = client_factory
-        self._bucket = bucket
-        self._key = key
-        self._mode = mode
-        self._encoding = encoding or "utf-8"
-        self._closed = False
+    @classmethod
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+        """Check if exception indicates blob does not exist."""
+        return isinstance(exception, ClientError) and exception.response.get("Error", {}).get("Code") in (
+            "NoSuchKey",
+            "NoSuchBucket",
+            "404",
+        )
 
-        # For reading
-        self._client = None
-        self._stream = None
-        self._read_buffer = b"" if "b" in mode else ""
-        self._eof = False
-
-        # For writing
-        self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
-
-        # Parse mode
-        self._is_read = "r" in mode
-        self._is_write = "w" in mode or "a" in mode
-        self._is_binary = "b" in mode
-        self._is_append = "a" in mode
-
-    async def __aenter__(self) -> "S3AsyncFileHandle":
-        """Open S3 object for streaming."""
-        self._client = await self._client_factory()
-
-        if self._is_read:
-            # Open streaming reader
-            try:
-                response = await self._client.get_object(
-                    Bucket=self._bucket,
-                    Key=self._key
-                )
-                self._stream = response["Body"]
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "NoSuchKey":
-                    raise NoSuchFileError(f"S3 object not found: s3://{self._bucket}/{self._key}")
-                raise  # pragma: no cover
-        elif self._is_append:
-            # Load existing data for append mode
-            try:
-                response = await self._client.get_object(Bucket=self._bucket, Key=self._key)
-                async with response["Body"] as stream:
-                    existing = await stream.read()
-                if self._is_binary:
-                    self._write_buffer = bytearray(existing)
-                else:
-                    self._write_buffer = [existing.decode(self._encoding)]
-            except ClientError as e:  # pragma: no cover
-                if e.response["Error"]["Code"] != "NoSuchKey":
-                    raise
-
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Close the file handle."""
-        await self.close()
-
-    async def _fill_buffer(self, min_size: int = 4096) -> None:
-        """Fill read buffer from stream.
-
-        Args:
-            min_size: Minimum bytes to read from stream
-        """
-        if self._eof or not self._stream:  # pragma: no cover
-            return
-
-        chunk = await self._stream.read(min_size)
-        if not chunk:
-            self._eof = True
-            return
-
-        # Track bytes read for tell()
-        if not hasattr(self, '_bytes_read'):
-            self._bytes_read = 0
-        self._bytes_read += len(chunk)
-
+    async def _stream_read(self, size: int = -1) -> Union[str, bytes]:
+        """Read from stream (used internally)."""
+        chunk = await self._stream.read(size)
         if self._is_binary:
-            self._read_buffer += chunk  # type: ignore
+            return chunk  # type: ignore
         else:
-            self._read_buffer += chunk.decode(self._encoding)  # type: ignore
+            return chunk.decode(self._encoding)  # type: ignore
 
-    async def read(self, size: int = -1) -> Union[str, bytes]:
-        """Read from S3 object with streaming.
-
-        Only reads what's requested from S3, not the entire file.
-        """
-        if not self._is_read:
-            raise ValueError("File not opened for reading")
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-
-        if size == -1:
-            # Read everything
-            while not self._eof:
-                await self._fill_buffer()
-            result = self._read_buffer
-            self._read_buffer = b"" if self._is_binary else ""
-            return result
-        else:
-            # Read specific size
-            while len(self._read_buffer) < size and not self._eof:
-                await self._fill_buffer()
-
-            result = self._read_buffer[:size]
-            self._read_buffer = self._read_buffer[size:]
-            return result
-
-    async def readline(self, size: int = -1) -> Union[str, bytes]:
-        """Read one line from S3 object."""
-        if not self._is_read:
-            raise ValueError("File not opened for reading")
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-
-        newline = b"\n" if self._is_binary else "\n"
-
-        # Keep reading until we find a newline or EOF
-        while newline not in self._read_buffer and not self._eof:  # type: ignore
-            await self._fill_buffer()
-
-        # Find newline position
-        try:
-            newline_pos = self._read_buffer.index(newline)  # type: ignore
-            end = newline_pos + 1
-        except ValueError:
-            # No newline, return everything
-            end = len(self._read_buffer)
-
-        # Apply size limit if specified
-        if size != -1 and end > size:
-            end = size
-
-        result = self._read_buffer[:end]
-        self._read_buffer = self._read_buffer[end:]
-        return result
-
-    async def readlines(self) -> List[Union[str, bytes]]:
-        """Read all lines from S3 object."""
-        lines = []
-        while True:
-            line = await self.readline()
-            if not line:
-                break
-            lines.append(line)
-        return lines
-
-    async def write(self, data: Union[str, bytes]) -> int:
-        """Buffer data for writing."""
-        if not self._is_write:
-            raise ValueError("File not opened for writing")
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-
+    async def _stream_read_all(self) -> Union[str, bytes]:
+        """Read all data from stream (used internally)."""
+        chunk = await self._stream.read()
         if self._is_binary:
-            if isinstance(data, str):
-                data = data.encode(self._encoding)
-            self._write_buffer.extend(data)  # type: ignore
+            return chunk  # type: ignore
         else:
-            if isinstance(data, bytes):
-                data = data.decode(self._encoding)
-            self._write_buffer.append(data)  # type: ignore
+            return chunk.decode(self._encoding)  # type: ignore
 
-        return len(data)
-
-    async def writelines(self, lines: List[Union[str, bytes]]) -> None:
-        """Write multiple lines."""
-        for line in lines:
-            await self.write(line)
-
-    async def close(self) -> None:
-        """Close file and upload buffered writes."""
-        if self._closed:
-            return
+    async def flush(self) -> None:
+        """Flush write buffer to S3 (no-op for S3)."""
 
         if self._is_write and self._client is not None:
             if self._is_binary:
@@ -976,113 +795,6 @@ class S3AsyncFileHandle(BaseAsyncFileHandle):
 
             await self._client.put_object(
                 Bucket=self._bucket,
-                Key=self._key,
+                Key=self._blob,
                 Body=body
             )
-
-        self._closed = True
-
-    def __aiter__(self) -> "S3AsyncFileHandle":
-        """Support async iteration."""
-        if not self._is_read:
-            raise ValueError("File not opened for reading")
-        return self
-
-    async def __anext__(self) -> Union[str, bytes]:
-        """Get next line."""
-        line = await self.readline()
-        if not line:
-            raise StopAsyncIteration
-        return line
-
-    @property
-    def closed(self) -> bool:
-        """Check if closed."""
-        return self._closed
-
-    async def tell(self) -> int:
-        """Return current stream position.
-
-        Returns:
-            Current position in bytes (counting raw bytes even in text mode)
-        """
-        if not self._is_read:
-            raise ValueError("tell() not supported in write mode")
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-
-        # Calculate position: bytes read from stream - bytes still in buffer
-        if not hasattr(self, '_bytes_read'):
-            self._bytes_read = 0
-
-        # Calculate buffer size in bytes
-        if self._is_binary:
-            buffer_byte_size = len(self._read_buffer)
-        else:
-            # In text mode, encode the buffer to get its byte size
-            buffer_byte_size = len(self._read_buffer.encode(self._encoding))
-
-        return self._bytes_read - buffer_byte_size
-
-    async def seek(self, offset: int, whence: int = 0) -> int:
-        """Change stream position (forward seeking only).
-
-        Args:
-            offset: Position offset
-            whence: Reference point (0=start, 1=current, 2=end)
-
-        Returns:
-            New absolute position
-
-        Raises:
-            OSError: If backward seeking is attempted
-            ValueError: If called in write mode or on closed file
-
-        Note:
-            - Only forward seeking is supported due to streaming limitations
-            - SEEK_END (whence=2) is not supported as file size may be unknown
-            - Backward seeking requires re-opening the stream
-        """
-        if not self._is_read:
-            raise ValueError("seek() not supported in write mode")
-        if self._closed:
-            raise ValueError("I/O operation on closed file")
-        if whence == 2:
-            raise OSError("SEEK_END not supported for streaming reads")
-
-        # Calculate target position
-        current_pos = await self.tell()
-        if whence == 0:
-            target_pos = offset
-        elif whence == 1:
-            target_pos = current_pos + offset
-        else:
-            raise ValueError(f"Invalid whence value: {whence}")
-
-        if target_pos == 0:
-            # Re-open stream for seeking to start
-            self._stream.close()
-            response = await self._client.get_object(
-                Bucket=self._bucket,
-                Key=self._key
-            )
-            self._stream = response["Body"]
-            self._read_buffer = b"" if self._is_binary else ""
-            self._eof = False
-            self._bytes_read = 0
-            return 0
-
-        # Check for backward seeking
-        if target_pos < current_pos:
-            raise OSError("Backward seeking not supported for streaming reads")
-
-        # Forward seek: read and discard data
-        bytes_to_skip = target_pos - current_pos
-        while bytes_to_skip > 0 and not self._eof:
-            chunk_size = min(bytes_to_skip, 8192)
-            chunk = await self.read(chunk_size)
-            if not chunk:  # pragma: no cover
-                break
-            bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
-
-        return await self.tell()

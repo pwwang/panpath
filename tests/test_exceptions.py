@@ -4,7 +4,7 @@ from panpath.exceptions import (
     PanPathError,
     MissingDependencyError,
     CloudPathError,
-    NoSuchFileError,
+    FileNotFoundError,
 )
 
 
@@ -39,8 +39,8 @@ def test_cloud_path_error():
 
 
 def test_no_such_file_error():
-    """Test NoSuchFileError exception."""
-    error = NoSuchFileError("File not found: s3://bucket/key")
+    """Test FileNotFoundError exception."""
+    error = FileNotFoundError("File not found: s3://bucket/key")
     assert "File not found" in str(error)
     assert isinstance(error, CloudPathError)
     assert isinstance(error, FileNotFoundError)
@@ -61,8 +61,8 @@ def test_exception_inheritance():
     # All custom exceptions inherit from PanPathError
     assert issubclass(MissingDependencyError, PanPathError)
     assert issubclass(CloudPathError, PanPathError)
-    assert issubclass(NoSuchFileError, CloudPathError)
+    assert issubclass(FileNotFoundError, CloudPathError)
 
     # Also inherit from standard exceptions
     assert issubclass(MissingDependencyError, ImportError)
-    assert issubclass(NoSuchFileError, FileNotFoundError)
+    assert issubclass(FileNotFoundError, FileNotFoundError)
