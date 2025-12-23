@@ -177,7 +177,7 @@ def test_azureblobclient_glob(testdir):
 
     # Test globbing
     txt_files = client.glob(dirpath, "**/*.txt", _return_panpath=False)
-    txt_file_names = sorted([path.rstrip('/').split('/')[-1] for path in txt_files])
+    txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
     txt_paths = client.glob(dirpath, "**/*.txt", _return_panpath=True)
@@ -185,11 +185,11 @@ def test_azureblobclient_glob(testdir):
     assert txt_path_names == sorted(["file1.txt", "file3.txt"])
 
     txt_files2 = client.glob(dirpath, "*.txt", _return_panpath=False)
-    txt_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in txt_files2])
+    txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
     log_files = client.glob(dirpath, "**/*.log", _return_panpath=False)
-    log_file_names = sorted([path.rstrip('/').split('/')[-1] for path in log_files])
+    log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
     log_paths = client.glob(dirpath, "*.log", _return_panpath=True)
@@ -197,7 +197,7 @@ def test_azureblobclient_glob(testdir):
     assert log_path_names == sorted(["file2.log"])
 
     log_files2 = client.glob(dirpath, "*.log", _return_panpath=False)
-    log_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in log_files2])
+    log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
     files = client.glob(dirpath, "**", _return_panpath=False)
@@ -477,7 +477,7 @@ def test_azureblobclient_list_dir(testdir):
 
     # List directory
     items = client.list_dir(dirpath)
-    item_names = sorted([item.rstrip('/').split('/')[-1] for item in items])
+    item_names = sorted([item.rstrip("/").split("/")[-1] for item in items])
     expected_names = sorted(["file1.txt", "file2.txt", "subdir"])
     assert item_names == expected_names
 

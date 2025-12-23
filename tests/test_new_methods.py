@@ -1,4 +1,5 @@
 """Tests for newly implemented pathlib methods."""
+
 import sys
 from unittest.mock import MagicMock, Mock, AsyncMock, patch
 import pytest
@@ -374,7 +375,6 @@ class TestResolveAndSamefile:
         assert not path1.samefile(path3)
 
 
-@pytest.mark.asyncio
 class TestAsyncSymlinkMethods:
     """Test async symlink-related methods."""
 
@@ -391,6 +391,7 @@ class TestAsyncSymlinkMethods:
         class MockContext:
             async def __aenter__(self):
                 return mock_s3_client
+
             async def __aexit__(self, *args):
                 pass
 
@@ -408,7 +409,6 @@ class TestAsyncSymlinkMethods:
         mock_s3_client.put_object.assert_called_once()
 
 
-@pytest.mark.asyncio
 class TestAsyncGlobMethods:
     """Test async glob methods."""
 
@@ -421,12 +421,14 @@ class TestAsyncGlobMethods:
         mock_gcloud = sys.modules["gcloud.aio.storage"]
         mock_storage = MagicMock()
         # Make list_objects an AsyncMock that returns the data
-        mock_storage.list_objects = AsyncMock(return_value={
-            "items": [
-                {"name": "prefix/file1.txt"},
-                {"name": "prefix/file2.log"},
-            ]
-        })
+        mock_storage.list_objects = AsyncMock(
+            return_value={
+                "items": [
+                    {"name": "prefix/file1.txt"},
+                    {"name": "prefix/file2.log"},
+                ]
+            }
+        )
 
         # Configure the existing Storage class mock to return our storage instance
         mock_gcloud.Storage.return_value = mock_storage

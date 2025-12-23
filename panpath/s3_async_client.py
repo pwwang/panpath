@@ -1,4 +1,5 @@
 """Async S3 client implementation."""
+
 import asyncio
 import os
 import re
@@ -154,10 +155,10 @@ class AsyncS3Client(AsyncClient):
             # Common error codes for "not found"
             if error_code in ("404", "NoSuchKey", "NoSuchBucket", "AccessDenied", "Forbidden"):
                 # Check if it's a directory (with trailing slash)
-                if key.endswith('/'):
+                if key.endswith("/"):
                     return False
                 try:
-                    await client.head_object(Bucket=bucket, Key=key + '/')
+                    await client.head_object(Bucket=bucket, Key=key + "/")
                     return True
                 except ClientError:
                     return False
@@ -214,12 +215,12 @@ class AsyncS3Client(AsyncClient):
         async for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter="/"):
             # List "subdirectories"
             for common_prefix in page.get("CommonPrefixes", []):
-                results.append(f"s3://{bucket}/{common_prefix['Prefix'].rstrip('/')}")
+                results.append(f"{self.prefix[0]}://{bucket}/{common_prefix['Prefix'].rstrip('/')}")
             # List files
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 if key != prefix:
-                    results.append(f"s3://{bucket}/{key}")
+                    results.append(f"{self.prefix[0]}://{bucket}/{key}")
         return results
 
     async def is_dir(self, path: str) -> bool:
@@ -263,13 +264,17 @@ class AsyncS3Client(AsyncClient):
                 (  # type: ignore[arg-type]
                     None,  # mode
                     None,  # ino
-                    "s3://",  # dev
+                    f"{self.prefix[0]}://",  # dev
                     None,  # nlink
                     None,  # uid
                     None,  # gid
                     response.get("ContentLength", 0),  # size
                     None,  # atime
-                    response.get("LastModified").timestamp() if response.get("LastModified") else None,  # mtime
+                    (
+                        response.get("LastModified").timestamp()
+                        if response.get("LastModified")
+                        else None
+                    ),  # mtime
                     None,  # ctime
                 )
             )
@@ -293,7 +298,7 @@ class AsyncS3Client(AsyncClient):
             S3AsyncFileHandle with streaming support
         """
         # Validate mode
-        if mode not in ('r', 'w', 'rb', 'wb', 'a', 'ab'):
+        if mode not in ("r", "w", "rb", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode: {mode}")
 
         bucket, key = self.__class__._parse_path(path)
@@ -318,20 +323,20 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
-        if key and not key.endswith('/'):
-            key += '/'
+        if key and not key.endswith("/"):
+            key += "/"
 
         # Clean up any double slashes in the key
         # while '//' in key:
         #     key = key.replace('//', '/')
-        key = re.sub(r'/+', '/', key)
+        key = re.sub(r"/+", "/", key)
 
         # Check parent directories if parents=False
         if not parents and key:
-            parent_key = '/'.join(key.rstrip('/').split('/')[:-1])
+            parent_key = "/".join(key.rstrip("/").split("/")[:-1])
             if parent_key:
-                parent_key += '/'
-                parent_path = f"s3://{bucket}/{parent_key}"
+                parent_key += "/"
+                parent_path = f"{self.prefix[0]}://{bucket}/{parent_key}"
                 if not await self.exists(parent_path):
                     raise FileNotFoundError(f"Parent directory does not exist: {parent_path}")
 
@@ -385,7 +390,7 @@ class AsyncS3Client(AsyncClient):
             Key=key,
             CopySource={"Bucket": bucket, "Key": key},
             Metadata=metadata,
-            MetadataDirective="REPLACE"
+            MetadataDirective="REPLACE",
         )
 
     async def is_symlink(self, path: str) -> bool:
@@ -433,7 +438,7 @@ class AsyncS3Client(AsyncClient):
             Bucket=bucket,
             Key=key,
             Body=b"",
-            Metadata={self.__class__.symlink_target_metaname: target}
+            Metadata={self.__class__.symlink_target_metaname: target},
         )
 
     async def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list[Any]:
@@ -470,9 +475,10 @@ class AsyncS3Client(AsyncClient):
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
-                        path_str = f"s3://{bucket}/{key}"
+                        path_str = f"{self.prefix[0]}://{bucket}/{key}"
                         if _return_panpath:
                             from panpath.base import PanPath
+
                             results.append(PanPath(path_str))
                         else:
                             results.append(path_str)
@@ -481,18 +487,17 @@ class AsyncS3Client(AsyncClient):
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
             response = await client.list_objects_v2(
-                Bucket=bucket,
-                Prefix=prefix_with_slash,
-                Delimiter="/"
+                Bucket=bucket, Prefix=prefix_with_slash, Delimiter="/"
             )
 
             results = []
             for obj in response.get("Contents", []):
                 key = obj["Key"]
                 if fnmatch(key, f"{prefix_with_slash}{pattern}"):
-                    path_str = f"s3://{bucket}/{key}"
+                    path_str = f"{self.prefix[0]}://{bucket}/{key}"
                     if _return_panpath:
                         from panpath.base import PanPath
+
                         results.append(PanPath(path_str))
                     else:
                         results.append(path_str)
@@ -524,7 +529,7 @@ class AsyncS3Client(AsyncClient):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 # Get relative path from prefix
-                rel_path = key[len(prefix):] if prefix else key
+                rel_path = key[len(prefix) :] if prefix else key
 
                 # Split into directory and filename
                 parts = rel_path.split("/")
@@ -543,13 +548,17 @@ class AsyncS3Client(AsyncClient):
                         dirs[path][0].add(parts[0])
 
                     for i in range(len(parts) - 1):
-                        dir_path = f"{path}/" + "/".join(parts[:i+1]) if path else "/".join(parts[:i+1])
+                        dir_path = (
+                            f"{path}/" + "/".join(parts[: i + 1])
+                            if path
+                            else "/".join(parts[: i + 1])
+                        )
                         if dir_path not in dirs:
                             dirs[dir_path] = (set(), set())
 
                         # Add subdirectory if not last part
                         if i < len(parts) - 2:
-                            dirs[dir_path][0].add(parts[i+1])
+                            dirs[dir_path][0].add(parts[i + 1])
 
                     # Add file to its parent directory
                     parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
@@ -598,9 +607,7 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         # Copy object
         await client.copy_object(
-            Bucket=tgt_bucket,
-            Key=tgt_key,
-            CopySource={"Bucket": src_bucket, "Key": src_key}
+            Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
         # Delete source
@@ -615,8 +622,8 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
-        if key and not key.endswith('/'):
-            key += '/'
+        if key and not key.endswith("/"):
+            key += "/"
 
         client = await self._get_client()
         # client.delete_object will not raise error if object doesn't exist
@@ -629,7 +636,9 @@ class AsyncS3Client(AsyncClient):
 
         await client.delete_object(Bucket=bucket, Key=key)
 
-    async def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
+    async def rmtree(
+        self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
+    ) -> None:
         """Remove directory and all its contents recursively.
 
         Args:
@@ -640,31 +649,29 @@ class AsyncS3Client(AsyncClient):
         bucket, prefix = self.__class__._parse_path(path)
 
         # Ensure prefix ends with / for directory listing
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
 
         try:
             client = await self._get_client()
             # List all objects with this prefix
             objects_to_delete = []
-            paginator = client.get_paginator('list_objects_v2')
+            paginator = client.get_paginator("list_objects_v2")
             async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-                if 'Contents' in page:
-                    objects_to_delete.extend([{'Key': obj['Key']} for obj in page['Contents']])
+                if "Contents" in page:
+                    objects_to_delete.extend([{"Key": obj["Key"]} for obj in page["Contents"]])
 
             # Delete in batches (max 1000 per request)
             if objects_to_delete:
                 for i in range(0, len(objects_to_delete), 1000):
-                    batch = objects_to_delete[i:i+1000]
-                    await client.delete_objects(
-                        Bucket=bucket,
-                        Delete={'Objects': batch}
-                    )
+                    batch = objects_to_delete[i : i + 1000]
+                    await client.delete_objects(Bucket=bucket, Delete={"Objects": batch})
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
+
                 onerror(client.delete_objects, path, sys.exc_info())
             else:
                 raise
@@ -693,9 +700,7 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         # Use S3's native copy operation
         await client.copy_object(
-            Bucket=tgt_bucket,
-            Key=tgt_key,
-            CopySource={"Bucket": src_bucket, "Key": src_key}
+            Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
     async def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
@@ -721,29 +726,29 @@ class AsyncS3Client(AsyncClient):
         tgt_bucket, tgt_prefix = self.__class__._parse_path(target)
 
         # Ensure prefixes end with / for directory operations
-        if src_prefix and not src_prefix.endswith('/'):
-            src_prefix += '/'
-        if tgt_prefix and not tgt_prefix.endswith('/'):
-            tgt_prefix += '/'
+        if src_prefix and not src_prefix.endswith("/"):
+            src_prefix += "/"
+        if tgt_prefix and not tgt_prefix.endswith("/"):
+            tgt_prefix += "/"
 
         client = await self._get_client()
         # List all objects with source prefix
-        paginator = client.get_paginator('list_objects_v2')
+        paginator = client.get_paginator("list_objects_v2")
         async for page in paginator.paginate(Bucket=src_bucket, Prefix=src_prefix):
-            if 'Contents' not in page:  # pragma: no cover
+            if "Contents" not in page:  # pragma: no cover
                 continue
 
-            for obj in page['Contents']:
-                src_key = obj['Key']
+            for obj in page["Contents"]:
+                src_key = obj["Key"]
                 # Calculate relative path and target key
-                rel_path = src_key[len(src_prefix):]
+                rel_path = src_key[len(src_prefix) :]
                 tgt_key = tgt_prefix + rel_path
 
                 # Copy object
                 await client.copy_object(
                     Bucket=tgt_bucket,
                     Key=tgt_key,
-                    CopySource={"Bucket": src_bucket, "Key": src_key}
+                    CopySource={"Bucket": src_bucket, "Key": src_key},
                 )
 
 
@@ -762,39 +767,14 @@ class S3AsyncFileHandle(AsyncFileHandle):
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
-        return isinstance(exception, ClientError) and exception.response.get("Error", {}).get("Code") in (
+        return isinstance(exception, ClientError) and exception.response.get("Error", {}).get(
+            "Code"
+        ) in (
             "NoSuchKey",
             "NoSuchBucket",
             "404",
         )
 
-    async def _stream_read(self, size: int = -1) -> Union[str, bytes]:
-        """Read from stream (used internally)."""
-        chunk = await self._stream.read(size)
-        if self._is_binary:
-            return chunk  # type: ignore
-        else:
-            return chunk.decode(self._encoding)  # type: ignore
-
-    async def _stream_read_all(self) -> Union[str, bytes]:
-        """Read all data from stream (used internally)."""
-        chunk = await self._stream.read()
-        if self._is_binary:
-            return chunk  # type: ignore
-        else:
-            return chunk.decode(self._encoding)  # type: ignore
-
-    async def flush(self) -> None:
+    async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to S3 (no-op for S3)."""
-
-        if self._is_write and self._client is not None:
-            if self._is_binary:
-                body = bytes(self._write_buffer)
-            else:
-                body = "".join(self._write_buffer).encode(self._encoding)  # type: ignore
-
-            await self._client.put_object(
-                Bucket=self._bucket,
-                Key=self._blob,
-                Body=body
-            )
+        await self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)

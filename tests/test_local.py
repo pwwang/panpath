@@ -1,4 +1,5 @@
 """Tests for local path implementations."""
+
 import pytest
 
 from panpath import LocalPath
@@ -52,7 +53,6 @@ class TestLocalPath:
 class TestAsyncLocalPath:
     """Tests for asynchronous LocalPath methods (with a_ prefix)."""
 
-    @pytest.mark.asyncio
     async def test_create_and_read(self, tmp_path, sample_text_content):
         """Test creating and reading a file asynchronously."""
         test_file = tmp_path / "test.txt"
@@ -63,7 +63,6 @@ class TestAsyncLocalPath:
         assert content == sample_text_content
         assert await path.a_exists()
 
-    @pytest.mark.asyncio
     async def test_binary_operations(self, tmp_path, sample_binary_content):
         """Test async binary read/write operations."""
         test_file = tmp_path / "test.bin"
@@ -73,7 +72,6 @@ class TestAsyncLocalPath:
         data = await path.a_read_bytes()
         assert data == sample_binary_content
 
-    @pytest.mark.asyncio
     async def test_async_context_manager(self, tmp_path):
         """Test async file context manager."""
         test_file = tmp_path / "test.txt"
@@ -86,7 +84,6 @@ class TestAsyncLocalPath:
             content = await f.read()
             assert content == "async content"
 
-    @pytest.mark.asyncio
     async def test_parent_and_joinpath(self, tmp_path):
         """Test parent and joinpath operations preserve type."""
         path = LocalPath(tmp_path / "dir" / "file.txt")
@@ -101,11 +98,10 @@ class TestAsyncLocalPath:
         path = LocalPath(tmp_path / "test.txt")
 
         # Check async methods exist
-        assert hasattr(path, 'a_read_text')
-        assert hasattr(path, 'a_write_text')
-        assert hasattr(path, 'a_read_bytes')
-        assert hasattr(path, 'a_write_bytes')
-        assert hasattr(path, 'a_exists')
-        assert hasattr(path, 'a_is_file')
-        assert hasattr(path, 'a_is_dir')
-
+        assert hasattr(path, "a_read_text")
+        assert hasattr(path, "a_write_text")
+        assert hasattr(path, "a_read_bytes")
+        assert hasattr(path, "a_write_bytes")
+        assert hasattr(path, "a_exists")
+        assert hasattr(path, "a_is_file")
+        assert hasattr(path, "a_is_dir")

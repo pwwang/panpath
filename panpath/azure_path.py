@@ -1,4 +1,5 @@
 """Azure Blob Storage path implementation."""
+
 from typing import TYPE_CHECKING, Optional
 
 from panpath.cloud import CloudPath
@@ -23,4 +24,5 @@ class AzurePath(CloudPath):
     def _create_default_async_client(cls) -> "AsyncClient":
         """Create default async Azure Blob client."""
         from panpath.azure_async_client import AsyncAzureBlobClient
+
         return AsyncAzureBlobClient()

@@ -1,4 +1,5 @@
 """Testing utilities and fixtures for panpath."""
+
 import sys
 from dotenv import load_dotenv
 from unittest.mock import MagicMock

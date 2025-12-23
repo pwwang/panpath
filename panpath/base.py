@@ -1,4 +1,5 @@
 """Base class for all PanPath path implementations."""
+
 import re
 import sys
 from pathlib import Path as PathlibPath, PurePosixPath
@@ -79,7 +80,7 @@ class PanPath(PathlibPath):
         if cls is not PanPath:
             # For CloudPath and its subclasses, we need special handling
             # since they inherit from PurePosixPath behavior
-            if hasattr(cls, '_is_cloud_path') and cls._is_cloud_path:
+            if hasattr(cls, "_is_cloud_path") and cls._is_cloud_path:
                 # CloudPath subclasses use PurePosixPath-like behavior
                 # Create via PurePosixPath mechanism
                 return PurePosixPath.__new__(cls, *args)
@@ -105,6 +106,7 @@ class PanPath(PathlibPath):
             # Local path - create a new args tuple with the clean path
             # This will be passed to LocalPath.__new__ and __init__
             from panpath.local_path import LocalPath
+
             new_args = (clean_path,) + args[1:]
             # Use PathlibPath.__new__() to properly initialize the path object
             instance = PathlibPath.__new__(LocalPath, *new_args)
@@ -122,4 +124,3 @@ class PanPath(PathlibPath):
             return path_class(*args, **kwargs)
         except KeyError:
             raise ValueError(f"Unsupported URI scheme: {scheme!r}")
-

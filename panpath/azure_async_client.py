@@ -1,4 +1,5 @@
 """Async Azure Blob Storage client implementation."""
+
 from typing import TYPE_CHECKING, Any, Optional, Set, Union, AsyncGenerator
 
 import asyncio
@@ -165,11 +166,11 @@ class AsyncAzureBlobClient(AsyncClient):
             exists = await blob_client.exists()
             if exists:
                 return True
-            if blob_name.endswith('/'):
+            if blob_name.endswith("/"):
                 # Already checking as directory
                 return False
             # Checking if it is possibly a directory
-            blob_client_dir = client.get_blob_client(container_name, blob_name + '/')
+            blob_client_dir = client.get_blob_client(container_name, blob_name + "/")
             return await blob_client_dir.exists()
         except Exception:  # pragma: no cover
             return False
@@ -221,10 +222,10 @@ class AsyncAzureBlobClient(AsyncClient):
             if hasattr(item, "name"):
                 # BlobProperties (file)
                 if item.name != prefix:
-                    results.append(f"az://{container_name}/{item.name}")
+                    results.append(f"{self.prefix[0]}://{container_name}/{item.name}")
             else:  # pragma: no cover
                 # BlobPrefix (directory)
-                results.append(f"az://{container_name}/{item.prefix.rstrip('/')}")
+                results.append(f"{self.prefix[0]}://{container_name}/{item.prefix.rstrip('/')}")
 
         return results
 
@@ -249,7 +250,7 @@ class AsyncAzureBlobClient(AsyncClient):
         if not blob_name:
             return False
 
-        blob_client = client.get_blob_client(container_name, blob_name.rstrip('/'))
+        blob_client = client.get_blob_client(container_name, blob_name.rstrip("/"))
         return await blob_client.exists()
 
     async def stat(self, path: str) -> os.stat_result:
@@ -269,7 +270,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 (  # type: ignore[arg-type]
                     None,  # mode
                     None,  # ino
-                    "azure://",  # dev,
+                    f"{self.prefix[0]}://",  # dev,
                     None,  # nlink,
                     None,  # uid,
                     None,  # gid,
@@ -296,9 +297,7 @@ class AsyncAzureBlobClient(AsyncClient):
         This method returns a file-like object that supports the standard file API.
         """
         if mode not in ("r", "rb", "w", "wb", "a", "ab"):
-            raise ValueError(
-                f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'."
-            )
+            raise ValueError(f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'.")
 
         container_name, blob_name = self.__class__._parse_path(path)
         return AzureAsyncFileHandle(
@@ -323,8 +322,8 @@ class AsyncAzureBlobClient(AsyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
 
         # Ensure blob_name ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
 
         blob_client = client.get_blob_client(container_name, blob_name)
 
@@ -336,14 +335,20 @@ class AsyncAzureBlobClient(AsyncClient):
 
         # check parents
         if blob_name:  # not container root
-            parent_path = '/'.join(blob_name.rstrip('/').split('/')[:-1])
-            if parent_path:
-                parent_blob_client = client.get_blob_client(container_name, parent_path + '/')
+            stripped_blob = blob_name.rstrip("/")
+            parts = stripped_blob.rsplit("/", 1)
+            if len(parts) > 1:  # Has a parent directory
+                parent_path = parts[0]
+                parent_blob_client = client.get_blob_client(container_name, parent_path + "/")
                 if not await parent_blob_client.exists():
                     if not parents:
                         raise FileNotFoundError(f"Parent directory does not exist: {path}")
                     # Create parent directories recursively
-                    await self.mkdir(f"az://{container_name}/{parent_path}/", parents=True, exist_ok=True)
+                    await self.mkdir(
+                        f"{self.prefix[0]}://{container_name}/{parent_path}",
+                        parents=True,
+                        exist_ok=True,
+                    )
 
         # Create empty directory marker
         await blob_client.upload_blob(b"", overwrite=False)
@@ -430,7 +435,7 @@ class AsyncAzureBlobClient(AsyncClient):
             for blob in blobs:
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     # Determine scheme from original path
-                    scheme = "az" if path.startswith("az://") else "azure"
+                    scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
@@ -438,7 +443,9 @@ class AsyncAzureBlobClient(AsyncClient):
             return results
         else:
             # Non-recursive - list blobs with prefix
-            prefix_with_slash = f"{blob_prefix}/" if blob_prefix and not blob_prefix.endswith("/") else blob_prefix
+            prefix_with_slash = (
+                f"{blob_prefix}/" if blob_prefix and not blob_prefix.endswith("/") else blob_prefix
+            )
             blobs = []
             async for blob in container_client.list_blobs(name_starts_with=prefix_with_slash):
                 blobs.append(blob)
@@ -446,9 +453,9 @@ class AsyncAzureBlobClient(AsyncClient):
             results = []
             for blob in blobs:
                 # Only include direct children (no additional slashes)
-                rel_name = blob.name[len(prefix_with_slash):]
+                rel_name = blob.name[len(prefix_with_slash) :]
                 if "/" not in rel_name and fnmatch(blob.name, f"{prefix_with_slash}{pattern}"):
-                    scheme = "az" if path.startswith("az://") else "azure"
+                    scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
@@ -477,7 +484,7 @@ class AsyncAzureBlobClient(AsyncClient):
         dirs: dict[str, tuple[set[str], set[str]]] = {}  # dirpath -> (subdirs, files)
         async for blob in container_client.list_blobs(name_starts_with=prefix):
             # Get relative path from prefix
-            rel_path = blob.name[len(prefix):] if prefix else blob.name
+            rel_path = blob.name[len(prefix) :] if prefix else blob.name
 
             # Split into directory and filename
             parts = rel_path.split("/")
@@ -497,13 +504,15 @@ class AsyncAzureBlobClient(AsyncClient):
 
                 # Process all intermediate directories
                 for i in range(len(parts) - 1):
-                    dir_path = f"{path}/" + "/".join(parts[:i+1]) if path else "/".join(parts[:i+1])
+                    dir_path = (
+                        f"{path}/" + "/".join(parts[: i + 1]) if path else "/".join(parts[: i + 1])
+                    )
                     if dir_path not in dirs:
                         dirs[dir_path] = (set(), set())
 
                     # Add subdirectory if not last part
                     if i < len(parts) - 2:
-                        dirs[dir_path][0].add(parts[i+1])
+                        dirs[dir_path][0].add(parts[i + 1])
 
                 # Add file to its parent directory
                 parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
@@ -568,8 +577,8 @@ class AsyncAzureBlobClient(AsyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
 
         # Ensure blob_name ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
 
         blob_client = self._client.get_blob_client(container_name, blob_name)
 
@@ -582,7 +591,9 @@ class AsyncAzureBlobClient(AsyncClient):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Directory not found: {path}")
 
-    async def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
+    async def rmtree(
+        self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
+    ) -> None:
         """Remove directory and all its contents recursively.
 
         Args:
@@ -605,8 +616,8 @@ class AsyncAzureBlobClient(AsyncClient):
         container_name, prefix = self.__class__._parse_path(path)
 
         # Ensure prefix ends with / for directory listing
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
 
         try:
             client = await self._get_client()
@@ -621,6 +632,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 return
             if onerror is not None:
                 import sys
+
                 onerror(blob_client.delete_blob, path, sys.exc_info())
             else:
                 raise
@@ -674,10 +686,10 @@ class AsyncAzureBlobClient(AsyncClient):
         tgt_container_name, tgt_prefix = self.__class__._parse_path(target)
 
         # Ensure prefixes end with / for directory operations
-        if src_prefix and not src_prefix.endswith('/'):
-            src_prefix += '/'
-        if tgt_prefix and not tgt_prefix.endswith('/'):
-            tgt_prefix += '/'
+        if src_prefix and not src_prefix.endswith("/"):
+            src_prefix += "/"
+        if tgt_prefix and not tgt_prefix.endswith("/"):
+            tgt_prefix += "/"
 
         client = await self._get_client()
         src_container_client = client.get_container_client(src_container_name)
@@ -686,7 +698,7 @@ class AsyncAzureBlobClient(AsyncClient):
         async for blob in src_container_client.list_blobs(name_starts_with=src_prefix):
             src_blob_name = blob.name
             # Calculate relative path and target blob name
-            rel_path = src_blob_name[len(src_prefix):]
+            rel_path = src_blob_name[len(src_prefix) :]
             tgt_blob_name = tgt_prefix + rel_path
 
             # Copy blob
@@ -713,7 +725,9 @@ class AzureAsyncFileHandle(AsyncFileHandle):
 
     async def _create_stream(self):
         """Create async read stream generator."""
-        return (await self._client.get_blob_client(self._bucket, self._blob).download_blob()).chunks()
+        return (
+            await self._client.get_blob_client(self._bucket, self._blob).download_blob()
+        ).chunks()
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
@@ -769,24 +783,17 @@ class AzureAsyncFileHandle(AsyncFileHandle):
 
     async def _stream_read_all(self) -> Union[str, bytes]:
         """Read all remaining data from stream."""
-        download_stream = await self._client.get_blob_client(self._bucket, self._blob).download_blob()
+        download_stream = await self._client.get_blob_client(
+            self._bucket, self._blob
+        ).download_blob()
         data = await download_stream.readall()
         if self._is_binary:
             return data
         else:
             return data.decode(self._encoding)
 
-    async def flush(self) -> None:
+    async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to Azure blob."""
-        if not self._is_write or not self._client:
-            return
-
-        if self._is_binary:
-            data_to_upload = bytes(self._write_buffer)
-        else:
-            data_to_upload = "".join(self._write_buffer).encode(self._encoding)
-
         await self._client.get_blob_client(self._bucket, self._blob).upload_blob(
-            data_to_upload, overwrite=True
+            data, overwrite=True
         )
-        self._write_buffer = bytearray() if self._is_binary else []

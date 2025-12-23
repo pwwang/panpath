@@ -26,7 +26,6 @@ def test_asyncs3client_init():
     assert isinstance(client, AsyncS3Client)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_get_client():
     """Test getting async S3 client."""
     client = AsyncS3Client()
@@ -62,7 +61,6 @@ def test_asyncs3client_parse_s3_path(path, results):
     assert (bucket, key) == results
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_exists():
     """Test checking existence of buckets and objects using AsyncS3Client."""
     client = AsyncS3Client()
@@ -87,7 +85,6 @@ async def test_asyncs3client_exists():
     assert exists is False
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_read_bytes():
     """Test reading bytes from an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -100,7 +97,6 @@ async def test_asyncs3client_read_bytes():
     assert content == b"123"
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_read_text():
     """Test reading text from an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -113,7 +109,6 @@ async def test_asyncs3client_read_text():
     assert content == "123"
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_mkdir(testdir):
     """Test creating a 'directory' in S3 using AsyncS3Client."""
     client = AsyncS3Client()
@@ -134,7 +129,6 @@ async def test_asyncs3client_mkdir(testdir):
         await client.mkdir(f"{testdir}/newdir/subdir", exist_ok=True, parents=False)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_get_set_metadata(testdir):
     """Test getting metadata of an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -155,7 +149,6 @@ async def test_asyncs3client_get_set_metadata(testdir):
     assert metadata["Metadata"]["custom_key"] == "custom_value"
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_symlink(testdir):
     """Test creating and reading a symlink using AsyncS3Client."""
     client = AsyncS3Client()
@@ -183,7 +176,6 @@ async def test_asyncs3client_symlink(testdir):
         await client.readlink(resolved_path)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_glob(testdir):
     """Test globbing objects using AsyncS3Client."""
     client = AsyncS3Client()
@@ -197,7 +189,7 @@ async def test_asyncs3client_glob(testdir):
 
     # Test globbing
     txt_files = await client.glob(dirpath, "**/*.txt", _return_panpath=False)
-    txt_file_names = sorted([path.rstrip('/').split('/')[-1] for path in txt_files])
+    txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
     txt_paths = await client.glob(dirpath, "**/*.txt", _return_panpath=True)
@@ -205,11 +197,11 @@ async def test_asyncs3client_glob(testdir):
     assert txt_path_names == sorted(["file1.txt", "file3.txt"])
 
     txt_files2 = await client.glob(dirpath, "*.txt", _return_panpath=False)
-    txt_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in txt_files2])
+    txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
     log_files = await client.glob(dirpath, "**/*.log", _return_panpath=False)
-    log_file_names = sorted([path.rstrip('/').split('/')[-1] for path in log_files])
+    log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
     log_paths = await client.glob(dirpath, "*.log", _return_panpath=True)
@@ -217,14 +209,13 @@ async def test_asyncs3client_glob(testdir):
     assert log_path_names == sorted(["file2.log"])
 
     log_files2 = await client.glob(dirpath, "*.log", _return_panpath=False)
-    log_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in log_files2])
+    log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
     files = await client.glob(dirpath, "**", _return_panpath=False)
     assert len(files) >= 4  # At least the files we created
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_walk(testdir):
     """Test walking objects using AsyncS3Client."""
     client = AsyncS3Client()
@@ -250,7 +241,6 @@ async def test_asyncs3client_walk(testdir):
     assert all_files == [["file1.txt"], ["file2.txt"], ["file3.txt"]]
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_touch(testdir):
     """Test touching an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -274,7 +264,6 @@ async def test_asyncs3client_touch(testdir):
         await client.touch(path, mode=0o644)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_rename(testdir):
     """Test renaming an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -299,7 +288,6 @@ async def test_asyncs3client_rename(testdir):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_rmdir(testdir):
     """Test removing a directory using AsyncS3Client."""
     client = AsyncS3Client()
@@ -325,7 +313,6 @@ async def test_asyncs3client_rmdir(testdir):
         await client.rmdir(path)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_rmtree(testdir):
     """Test removing a directory tree using AsyncS3Client."""
     client = AsyncS3Client()
@@ -349,7 +336,6 @@ async def test_asyncs3client_rmtree(testdir):
         assert not await client.exists(f"{dirpath}/{name}")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_copy(testdir):
     """Test copying an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -385,7 +371,6 @@ async def test_asyncs3client_copy(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_copytree(testdir):
     """Test copying a directory tree using AsyncS3Client."""
     client = AsyncS3Client()
@@ -417,7 +402,9 @@ async def test_asyncs3client_copytree(testdir):
     await client.copytree(symlink_dir, f"{testdir}/copied_from_symlink_tree", follow_symlinks=True)
     for name in blob_names:
         assert await client.exists(f"{testdir}/copied_from_symlink_tree/{name}")
-        content = await client.read_text(f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8")
+        content = await client.read_text(
+            f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8"
+        )
         assert content == "data"
 
     # error if source not dir
@@ -427,7 +414,6 @@ async def test_asyncs3client_copytree(testdir):
         await client.copytree(file_path, f"{testdir}/copy_of_file_tree")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_write_bytes(testdir):
     """Test writing bytes to an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -440,7 +426,6 @@ async def test_asyncs3client_write_bytes(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_write_text(testdir):
     """Test writing text to an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -453,7 +438,6 @@ async def test_asyncs3client_write_text(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_delete(testdir):
     """Test deleting an object using AsyncS3Client."""
     client = AsyncS3Client()
@@ -479,7 +463,6 @@ async def test_asyncs3client_delete(testdir):
         await client.delete(dirpath)
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_list_dir(testdir):
     """Test listing objects in a 'directory' using AsyncS3Client."""
     client = AsyncS3Client()
@@ -495,12 +478,11 @@ async def test_asyncs3client_list_dir(testdir):
 
     # List directory
     items = await client.list_dir(dirpath)
-    item_names = sorted([item.rstrip('/').split('/')[-1] for item in items])
+    item_names = sorted([item.rstrip("/").split("/")[-1] for item in items])
     expected_names = sorted(["file1.txt", "file2.txt", "subdir"])
     assert item_names == expected_names
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_is_dir_file(testdir):
     """Test is_dir method of AsyncS3Client."""
     client = AsyncS3Client()
@@ -519,7 +501,6 @@ async def test_asyncs3client_is_dir_file(testdir):
     assert not await client.is_dir(f"{testdir}/nonexistent")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_stat(testdir):
     """Test stat method of AsyncS3Client."""
     client = AsyncS3Client()
@@ -534,7 +515,6 @@ async def test_asyncs3client_stat(testdir):
         await client.stat(f"{testdir}/nonexistent.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_open_mode_error(testdir):
     """Test opening an object with invalid mode using AsyncS3Client."""
     client = AsyncS3Client()
@@ -544,7 +524,6 @@ async def test_asyncs3client_open_mode_error(testdir):
         client.open(file_path, mode="invalidmode")
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_open_write(testdir):
     """Test opening an object for writing using AsyncS3Client."""
     client = AsyncS3Client()
@@ -575,7 +554,6 @@ async def test_asyncs3client_open_write(testdir):
             pass
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_open_append(testdir):
     """Test opening an object for appending using AsyncS3Client."""
     client = AsyncS3Client()
@@ -605,7 +583,6 @@ async def test_asyncs3client_open_append(testdir):
     assert await client.read_bytes(f"{testdir}/nonexistent.txt") == b"New data"
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_open_read(testdir):
     """Test opening an object for reading using AsyncS3Client."""
     client = AsyncS3Client()
@@ -678,7 +655,6 @@ async def test_asyncs3client_open_read(testdir):
             pass
 
 
-@pytest.mark.asyncio
 async def test_asyncs3client_tell_seek(testdir):
     """Test tell and seek methods of AsyncS3Client."""
     client = AsyncS3Client()

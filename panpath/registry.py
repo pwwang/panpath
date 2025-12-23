@@ -1,4 +1,5 @@
 """Registry for path class implementations."""
+
 from typing import TYPE_CHECKING, Any, Dict, Type
 
 if TYPE_CHECKING:
@@ -63,4 +64,3 @@ def swap_implementation(
     old_class = _REGISTRY.get(scheme)  # type: ignore
     _REGISTRY[scheme] = path_class
     return old_class  # type: ignore
-

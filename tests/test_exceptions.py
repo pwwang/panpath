@@ -1,10 +1,10 @@
 """Tests for exception classes and error handling."""
+
 import pytest
 from panpath.exceptions import (
     PanPathError,
     MissingDependencyError,
     CloudPathError,
-    FileNotFoundError,
 )
 
 
@@ -38,14 +38,6 @@ def test_cloud_path_error():
     assert isinstance(error, PanPathError)
 
 
-def test_no_such_file_error():
-    """Test FileNotFoundError exception."""
-    error = FileNotFoundError("File not found: s3://bucket/key")
-    assert "File not found" in str(error)
-    assert isinstance(error, CloudPathError)
-    assert isinstance(error, FileNotFoundError)
-
-
 def test_missing_dependency_error_message_format():
     """Test that MissingDependencyError provides helpful messages."""
     error = MissingDependencyError("async S3", "aioboto3", "async-s3")
@@ -54,15 +46,3 @@ def test_missing_dependency_error_message_format():
     assert "async S3 backend requires" in message
     assert "aioboto3" in message
     assert "pip install panpath[async-s3]" in message
-
-
-def test_exception_inheritance():
-    """Test exception inheritance hierarchy."""
-    # All custom exceptions inherit from PanPathError
-    assert issubclass(MissingDependencyError, PanPathError)
-    assert issubclass(CloudPathError, PanPathError)
-    assert issubclass(FileNotFoundError, CloudPathError)
-
-    # Also inherit from standard exceptions
-    assert issubclass(MissingDependencyError, ImportError)
-    assert issubclass(FileNotFoundError, FileNotFoundError)

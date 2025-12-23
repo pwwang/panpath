@@ -1,4 +1,5 @@
 """Local filesystem path implementation."""
+
 from pathlib import Path, PosixPath, WindowsPath
 import os
 import sys
@@ -7,11 +8,12 @@ from panpath.base import PanPath
 from panpath.cloud import CloudPath
 
 # Determine the concrete Path class for the current platform
-_ConcretePath = WindowsPath if os.name == 'nt' else PosixPath
+_ConcretePath = WindowsPath if os.name == "nt" else PosixPath
 
 try:
     import aiofiles
     import aiofiles.os
+
     HAS_AIOFILES = True
 except ImportError:
     HAS_AIOFILES = False
@@ -31,7 +33,7 @@ class LocalPath(_ConcretePath, PanPath):
 
         Skip initialization if already initialized (to avoid double-init when created via PanPath factory).
         """
-        if hasattr(self, '_raw_paths'):
+        if hasattr(self, "_raw_paths"):
             # Already initialized in __new__, skip
             return
         # In Python 3.10, pathlib.Path.__init__() doesn't accept arguments
@@ -57,13 +59,14 @@ class LocalPath(_ConcretePath, PanPath):
         """Create the file if it does not exist or update the modification time (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
         try:
-            async with aiofiles.open(str(self), mode='a'):
+            async with aiofiles.open(str(self), mode="a"):
                 pass
             os.chmod(str(self), mode)
         except FileExistsError:
@@ -84,10 +87,10 @@ class LocalPath(_ConcretePath, PanPath):
         target_str = str(target)
         # Check if cross-storage operation
         if CloudPath._is_cross_storage_op(str(self), target_str):
-            await CloudPath.a_copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
+            await CloudPath._a_copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
         else:
-            async with aiofiles.open(str(self), mode='rb') as sf:
-                async with aiofiles.open(target_str, mode='wb') as df:
+            async with aiofiles.open(str(self), mode="rb") as sf:
+                async with aiofiles.open(target_str, mode="wb") as df:
                     while True:
                         chunk = await sf.read(1024 * 1024)
                         if not chunk:
@@ -101,6 +104,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Check if path exists (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -112,6 +116,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Check if path is a file (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -123,6 +128,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Check if path is a directory (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -134,6 +140,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Read file as bytes (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -146,6 +153,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Read file as text (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -158,6 +166,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Write bytes to file (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -170,6 +179,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Write text to file (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -182,6 +192,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Delete file (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -193,10 +204,13 @@ class LocalPath(_ConcretePath, PanPath):
             if not missing_ok:
                 raise
 
-    async def a_mkdir(self, mode: int = 0o777, parents: bool = False, exist_ok: bool = False) -> None:
+    async def a_mkdir(
+        self, mode: int = 0o777, parents: bool = False, exist_ok: bool = False
+    ) -> None:
         """Create directory (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -215,6 +229,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Remove empty directory (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -226,6 +241,7 @@ class LocalPath(_ConcretePath, PanPath):
         """List directory contents (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -238,6 +254,7 @@ class LocalPath(_ConcretePath, PanPath):
         """Get file stats (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -260,6 +277,7 @@ class LocalPath(_ConcretePath, PanPath):
         """
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
+
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -273,4 +291,3 @@ class LocalPath(_ConcretePath, PanPath):
             errors=errors,
             newline=newline,
         )
-

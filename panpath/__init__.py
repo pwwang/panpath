@@ -20,6 +20,7 @@ Examples:
     >>> # Check if object is a PanPath instance
     >>> isinstance(path, PanPath)  # True for any path created by this package
 """
+
 from panpath.base import PanPath
 from panpath.cloud import CloudPath
 from panpath.local_path import LocalPath

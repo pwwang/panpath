@@ -1,4 +1,5 @@
 """Tests for registry system."""
+
 import pytest
 from panpath.registry import (
     register_path_class,

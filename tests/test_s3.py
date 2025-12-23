@@ -1,4 +1,5 @@
 """Tests for S3 path implementations using mocks."""
+
 import sys
 import pytest
 from unittest.mock import Mock, MagicMock, AsyncMock
@@ -22,12 +23,10 @@ class TestS3Path:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_boto3 = sys.modules['boto3']
+        mock_boto3 = sys.modules["boto3"]
         mock_client = Mock()
         mock_boto3.client.return_value = mock_client
-        mock_client.get_object.return_value = {
-            'Body': BytesIO(b'test content')
-        }
+        mock_client.get_object.return_value = {"Body": BytesIO(b"test content")}
 
         path = PanPath("s3://test-bucket/key.txt")
         content = path.read_text()
@@ -40,7 +39,7 @@ class TestS3Path:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_boto3 = sys.modules['boto3']
+        mock_boto3 = sys.modules["boto3"]
         mock_client = Mock()
         mock_boto3.client.return_value = mock_client
 
@@ -49,19 +48,19 @@ class TestS3Path:
 
         mock_client.put_object.assert_called_once()
         call_args = mock_client.put_object.call_args
-        assert call_args[1]['Bucket'] == 'test-bucket'
-        assert call_args[1]['Key'] == 'key.txt'
-        assert call_args[1]['Body'] == b'test content'
+        assert call_args[1]["Bucket"] == "test-bucket"
+        assert call_args[1]["Key"] == "key.txt"
+        assert call_args[1]["Body"] == b"test content"
 
     def test_s3_exists(self):
         """Test checking if S3 object exists."""
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_boto3 = sys.modules['boto3']
+        mock_boto3 = sys.modules["boto3"]
         mock_client = Mock()
         mock_boto3.client.return_value = mock_client
-        mock_client.head_object.return_value = {'ContentLength': 100}
+        mock_client.head_object.return_value = {"ContentLength": 100}
 
         path = PanPath("s3://test-bucket/key.txt")
         assert path.exists()
@@ -95,7 +94,7 @@ class TestS3Path:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_boto3 = sys.modules['boto3']
+        mock_boto3 = sys.modules["boto3"]
         mock_client = Mock()
         mock_boto3.client.return_value = mock_client
 
@@ -125,17 +124,16 @@ class TestAsyncS3Path:
         assert isinstance(path, S3Path)
 
         # Check async methods exist
-        assert hasattr(path, 'a_read_text')
-        assert hasattr(path, 'a_write_text')
-        assert hasattr(path, 'a_exists')
+        assert hasattr(path, "a_read_text")
+        assert hasattr(path, "a_write_text")
+        assert hasattr(path, "a_exists")
 
-    @pytest.mark.asyncio
     async def test_async_s3_read_text(self):
         """Test reading text from S3 asynchronously."""
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_aioboto3 = sys.modules['aioboto3']
+        mock_aioboto3 = sys.modules["aioboto3"]
         mock_session = MagicMock()
         mock_aioboto3.Session.return_value = mock_session
 
@@ -144,28 +142,25 @@ class TestAsyncS3Path:
 
         # Mock Body as an async context manager
         mock_stream = AsyncMock()
-        mock_stream.read = AsyncMock(return_value=b'async test content')
+        mock_stream.read = AsyncMock(return_value=b"async test content")
 
         mock_body = MagicMock()
         mock_body.__aenter__ = AsyncMock(return_value=mock_stream)
         mock_body.__aexit__ = AsyncMock(return_value=None)
 
-        mock_client.get_object.return_value = {
-            'Body': mock_body
-        }
+        mock_client.get_object.return_value = {"Body": mock_body}
 
         path = PanPath("s3://test-bucket/key.txt")
         content = await path.a_read_text()
 
         assert content == "async test content"
 
-    @pytest.mark.asyncio
     async def test_async_s3_write_text(self):
         """Test writing text to S3 asynchronously."""
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_aioboto3 = sys.modules['aioboto3']
+        mock_aioboto3 = sys.modules["aioboto3"]
         mock_session = MagicMock()
         mock_aioboto3.Session.return_value = mock_session
 
@@ -186,10 +181,8 @@ class TestAsyncS3Path:
         parent = path.parent
 
         assert isinstance(parent, S3Path)
-        assert hasattr(parent, 'a_read_text')
+        assert hasattr(parent, "a_read_text")
         assert str(parent) == "s3://test-bucket/dir"
-
-
 
 
 def test_s3_missing_dependency():

@@ -1,12 +1,12 @@
 """Google Cloud Storage client implementation."""
+
 import warnings
 import os
-import datetime
-from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union
+import sys
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from panpath.clients import Client
-from panpath.exceptions import MissingDependencyError, NoSuchFileError, NoStatError
+from panpath.clients import SyncClient, SyncFileHandle
+from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
     from google.cloud import storage
@@ -19,13 +19,16 @@ try:
     from google.api_core.exceptions import NotFound
 
     HAS_GCS = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_GCS = False
     NotFound = Exception  # type: ignore
 
 
-class GSClient(Client):
+class GSClient(SyncClient):
     """Synchronous Google Cloud Storage client implementation."""
+
+    prefix = ("gs",)
+    symlink_target_metaname = "gcsfuse_symlink_target"
 
     def __init__(self, **kwargs: Any):
         """Initialize GCS client.
@@ -33,7 +36,7 @@ class GSClient(Client):
         Args:
             **kwargs: Additional arguments passed to storage.Client()
         """
-        if not HAS_GCS:
+        if not HAS_GCS:  # pragma: no cover
             raise MissingDependencyError(
                 backend="Google Cloud Storage",
                 package="google-cloud-storage",
@@ -41,107 +44,92 @@ class GSClient(Client):
             )
         self._client = storage.Client(**kwargs)
 
-    def _parse_gs_path(self, path: str) -> tuple[str, str]:
-        """Parse GCS path into bucket and blob name.
-
-        Args:
-            path: GCS URI like 'gs://bucket/blob/path'
-
-        Returns:
-            Tuple of (bucket_name, blob_name)
-        """
-        if path.startswith("gs://"):
-            path = path[5:]
-        parts = path.split("/", 1)
-        bucket = parts[0]
-        blob = parts[1] if len(parts) > 1 else ""
-        return bucket, blob
-
     def exists(self, path: str) -> bool:
         """Check if GCS blob exists."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         if not blob_name:
             # Check if bucket exists
             try:
                 bucket = self._client.bucket(bucket_name)
                 return bucket.exists()
-            except Exception:
+            except Exception:  # pragma: no cover
                 return False
 
         bucket = self._client.bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-        return blob.exists()
+        blob = bucket.get_blob(blob_name)
+        if blob is None:
+            blob = bucket.get_blob(f"{blob_name}/")
+
+        return blob is not None and blob.exists()
 
     def read_bytes(self, path: str) -> bytes:
         """Read GCS blob as bytes."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         try:
             return blob.download_as_bytes()
         except NotFound:
-            raise NoSuchFileError(f"GCS blob not found: {path}")
-
-    def read_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read GCS blob as text."""
-        return self.read_bytes(path).decode(encoding)
+            raise FileNotFoundError(f"GCS blob not found: {path}")
 
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write bytes to GCS blob."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         blob.upload_from_string(data)
 
-    def write_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to GCS blob."""
-        self.write_bytes(path, data.encode(encoding))
-
     def delete(self, path: str) -> None:
         """Delete GCS blob."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         try:
             blob.delete()
         except NotFound:
-            raise NoSuchFileError(f"GCS blob not found: {path}")
+            raise FileNotFoundError(f"GCS blob not found: {path}")
 
-    def list_dir(self, path: str) -> Iterator[str]:
+    def list_dir(self, path: str) -> list[str]:
         """List GCS blobs with prefix."""
-        bucket_name, prefix = self._parse_gs_path(path)
+        bucket_name, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
         bucket = self._client.bucket(bucket_name)
         blobs = bucket.list_blobs(prefix=prefix, delimiter="/")
 
-        # List "subdirectories"
-        for prefix_item in blobs.prefixes:
-            yield f"gs://{bucket_name}/{prefix_item.rstrip('/')}"
-
-        # List files
+        results = []
+        # List files first - this populates the prefixes attribute
         for blob in blobs:
             if blob.name != prefix:  # Skip the prefix itself
-                yield f"gs://{bucket_name}/{blob.name}"
+                results.append(f"{self.prefix[0]}://{bucket_name}/{blob.name}")
+
+        # List "subdirectories" - access prefixes after iterating over blobs
+        for prefix_item in blobs.prefixes:
+            results.append(f"{self.prefix[0]}://{bucket_name}/{prefix_item.rstrip('/')}")
+
+        return results
 
     def is_dir(self, path: str) -> bool:
         """Check if GCS path is a directory (has blobs with prefix)."""
-        bucket_name, blob_name = self._parse_gs_path(path)
-        if not blob_name:
+        bucket_name, blob_name = self.__class__._parse_path(path)
+        if not blob_name and self.exists(bucket_name):
             return True  # Bucket root is a directory
 
         prefix = blob_name if blob_name.endswith("/") else blob_name + "/"
         bucket = self._client.bucket(bucket_name)
         blobs = bucket.list_blobs(prefix=prefix, max_results=1)
         # Try to get first item
-        for _ in blobs:
-            return True
+        try:
+            for _ in blobs:
+                return True
+        except NotFound:
+            return False
         return False
 
     def is_file(self, path: str) -> bool:
         """Check if GCS path is a file."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         if not blob_name:
             return False
 
@@ -151,7 +139,7 @@ class GSClient(Client):
 
     def stat(self, path: str) -> Any:
         """Get GCS blob metadata."""
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         bucket = self._client.get_bucket(bucket_name)
         blob = bucket.get_blob(blob_name)
         if blob is None:
@@ -164,7 +152,7 @@ class GSClient(Client):
             (  # type: ignore[arg-type]
                 None,  # mode
                 None,  # ino
-                "gs://",  # dev,
+                f"{self.prefix[0]}://",  # dev,
                 None,  # nlink,
                 None,  # uid,
                 None,  # gid,
@@ -181,48 +169,32 @@ class GSClient(Client):
         mode: str = "r",
         encoding: Optional[str] = None,
         **kwargs: Any,
-    ) -> Union[BinaryIO, TextIO]:
-        """Open GCS blob for reading/writing."""
-        if "r" in mode:
-            data = self.read_bytes(path)
-            if "b" in mode:
-                return BytesIO(data)
-            else:
-                text = data.decode(encoding or "utf-8")
-                return StringIO(text)
-        elif "w" in mode or "a" in mode:
-            bucket_name, blob_name = self._parse_gs_path(path)
-            bucket = self._client.bucket(bucket_name)
-            blob = bucket.blob(blob_name)
+    ) -> Any:
+        """Open GCS blob for reading/writing with streaming support.
 
-            class GSWriteBuffer:
-                def __init__(self, blob: Any, binary: bool, encoding: str):
-                    self._blob = blob
-                    self._binary = binary
-                    self._encoding = encoding
-                    self._buffer = BytesIO() if binary else StringIO()
+        Args:
+            path: GCS path (gs://bucket/blob)
+            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments (chunk_size supported)
 
-                def write(self, data: Any) -> int:
-                    return self._buffer.write(data)
-
-                def close(self) -> None:
-                    if not self._buffer.closed:
-                        if self._binary:
-                            content = self._buffer.getvalue()
-                        else:
-                            content = self._buffer.getvalue().encode(self._encoding)
-                        self._blob.upload_from_string(content)
-                        self._buffer.close()
-
-                def __enter__(self) -> Any:
-                    return self
-
-                def __exit__(self, *args: Any) -> None:
-                    self.close()
-
-            return GSWriteBuffer(blob, "b" in mode, encoding or "utf-8")  # type: ignore
-        else:
+        Returns:
+            GSSyncFileHandle with streaming support
+        """
+        # Validate mode
+        if mode not in ("r", "w", "rb", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode: {mode}")
+
+        bucket, blob_name = self.__class__._parse_path(path)
+        return GSSyncFileHandle(
+            client=self._client,
+            bucket=bucket,
+            blob=blob_name,
+            prefix=self.prefix[0],
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )
 
     def mkdir(self, path: str, parents: bool = False, exist_ok: bool = False) -> None:
         """Create a directory marker (empty blob with trailing slash).
@@ -232,11 +204,11 @@ class GSClient(Client):
             parents: If True, create parent directories as needed (ignored for GCS)
             exist_ok: If True, don't raise error if directory already exists
         """
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
 
         # Ensure path ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
 
         blob = self._client.bucket(bucket_name).blob(blob_name)
 
@@ -245,6 +217,21 @@ class GSClient(Client):
             if not exist_ok:
                 raise FileExistsError(f"Directory already exists: {path}")
             return
+
+        # check parents
+        if blob_name:  # not bucket root
+            parent_path = "/".join(blob_name.rstrip("/").split("/")[:-1])
+            if parent_path:
+                parent_exists = self.exists(f"{self.prefix[0]}://{bucket_name}/{parent_path}/")
+                if not parent_exists:
+                    if not parents:
+                        raise FileNotFoundError(f"Parent directory does not exist: {path}")
+                    # Create parent directories recursively
+                    self.mkdir(
+                        f"{self.prefix[0]}://{bucket_name}/{parent_path}/",
+                        parents=True,
+                        exist_ok=True,
+                    )
 
         # Create empty directory marker
         blob.upload_from_string("")
@@ -258,7 +245,7 @@ class GSClient(Client):
         Returns:
             Dictionary of metadata key-value pairs
         """
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         blob = self._client.bucket(bucket_name).blob(blob_name)
         blob.reload()
         return blob.metadata or {}
@@ -270,13 +257,27 @@ class GSClient(Client):
             path: GCS path
             metadata: Dictionary of metadata key-value pairs
         """
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         blob = self._client.bucket(bucket_name).blob(blob_name)
         blob.metadata = metadata
         blob.patch()
 
+    def symlink_to(self, path: str, target: str) -> None:
+        """Create symlink by storing target in metadata.
+
+        Args:
+            path: GCS path for the symlink
+            target: Target path the symlink should point to
+        """
+        bucket_name, blob_name = self.__class__._parse_path(path)
+        blob = self._client.bucket(bucket_name).blob(blob_name)
+
+        # Create empty blob with symlink metadata
+        blob.metadata = {self.__class__.symlink_target_metaname: target}
+        blob.upload_from_string("")
+
     def is_symlink(self, path: str) -> bool:
-        """Check if blob is a symlink (has gcsfuse_symlink_target metadata).
+        """Check if blob is a symlink (has symlink_target metadata).
 
         Args:
             path: GCS path
@@ -286,8 +287,8 @@ class GSClient(Client):
         """
         try:
             metadata = self.get_metadata(path)
-            return "gcsfuse_symlink_target" in metadata
-        except NotFound:
+            return self.__class__.symlink_target_metaname in metadata
+        except Exception:
             return False
 
     def readlink(self, path: str) -> str:
@@ -300,39 +301,32 @@ class GSClient(Client):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get("gcsfuse_symlink_target")
+        target = metadata.get(self.__class__.symlink_target_metaname)
         if not target:
             raise ValueError(f"Not a symlink: {path}")
-        return target
 
-    def symlink_to(self, path: str, target: str) -> None:
-        """Create symlink by storing target in metadata.
+        if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
+            return target
 
-        Args:
-            path: GCS path for the symlink
-            target: Target path the symlink should point to
-        """
-        bucket_name, blob_name = self._parse_gs_path(path)
-        blob = self._client.bucket(bucket_name).blob(blob_name)
+        # relative path
+        path = path.rstrip("/").rsplit("/", 1)[0]
+        return f"{path}/{target}"
 
-        # Create empty blob with symlink metadata
-        blob.metadata = {"gcsfuse_symlink_target": target}
-        blob.upload_from_string("")
-
-    def glob(self, path: str, pattern: str) -> list["Any"]:
+    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:
             path: Base GCS path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
+            _return_panpath: If True, return PanPath objects; if False, return strings
 
         Returns:
-            List of matching CloudPath objects
+            List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
         from panpath.base import PanPath
 
-        bucket_name, blob_prefix = self._parse_gs_path(path)
+        bucket_name, blob_prefix = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
 
         # Handle recursive patterns
@@ -351,17 +345,27 @@ class GSClient(Client):
             results = []
             for blob in blobs:
                 if fnmatch(blob.name, f"*{file_pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob.name}"))
+                    path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
+                    if _return_panpath:
+                        results.append(PanPath(path_str))
+                    else:  # pragma: no cover
+                        results.append(path_str)
             return results
         else:
             # Non-recursive - list blobs with delimiter
-            prefix = f"{blob_prefix}/" if blob_prefix and not blob_prefix.endswith("/") else blob_prefix
+            prefix = (
+                f"{blob_prefix}/" if blob_prefix and not blob_prefix.endswith("/") else blob_prefix
+            )
             blobs = bucket.list_blobs(prefix=prefix, delimiter="/")
 
             results = []
             for blob in blobs:
                 if fnmatch(blob.name, f"{prefix}{pattern}"):
-                    results.append(PanPath(f"gs://{bucket_name}/{blob.name}"))
+                    path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
+                    if _return_panpath:
+                        results.append(PanPath(path_str))
+                    else:  # pragma: no cover
+                        results.append(path_str)
             return results
 
     def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
@@ -373,7 +377,7 @@ class GSClient(Client):
         Returns:
             List of (dirpath, dirnames, filenames) tuples
         """
-        bucket_name, blob_prefix = self._parse_gs_path(path)
+        bucket_name, blob_prefix = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
 
         # List all blobs under prefix
@@ -388,7 +392,7 @@ class GSClient(Client):
 
         for blob in blobs:
             # Get relative path from prefix
-            rel_path = blob.name[len(prefix):] if prefix else blob.name
+            rel_path = blob.name[len(prefix) :] if prefix else blob.name
 
             # Split into directory and filename
             parts = rel_path.split("/")
@@ -400,17 +404,19 @@ class GSClient(Client):
             else:
                 # File in subdirectory
                 for i in range(len(parts) - 1):
-                    dir_path = f"{path}/" + "/".join(parts[:i+1]) if path else "/".join(parts[:i+1])
+                    dir_path = (
+                        f"{path}/" + "/".join(parts[: i + 1]) if path else "/".join(parts[: i + 1])
+                    )
                     if dir_path not in dirs:
                         dirs[dir_path] = (set(), set())
 
                     # Add subdirectory if not last part
-                    if i < len(parts) - 2:
-                        dirs[dir_path][0].add(parts[i+1])
+                    if i < len(parts) - 2:  # pragma: no cover
+                        dirs[dir_path][0].add(parts[i + 1])
 
                 # Add file to its parent directory
                 parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
-                if parent_dir not in dirs:
+                if parent_dir not in dirs:  # pragma: no cover
                     dirs[parent_dir] = (set(), set())
                 dirs[parent_dir][1].add(parts[-1])
 
@@ -427,7 +433,7 @@ class GSClient(Client):
         if not exist_ok and self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
 
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
         blob = self._client.bucket(bucket_name).blob(blob_name)
         blob.upload_from_string("")
 
@@ -439,8 +445,8 @@ class GSClient(Client):
             target: Target GCS path
         """
         # Copy to new location
-        src_bucket_name, src_blob_name = self._parse_gs_path(source)
-        tgt_bucket_name, tgt_blob_name = self._parse_gs_path(target)
+        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
 
         src_bucket = self._client.bucket(src_bucket_name)
         tgt_bucket = self._client.bucket(tgt_bucket_name)
@@ -459,18 +465,22 @@ class GSClient(Client):
         Args:
             path: GCS path
         """
-        bucket_name, blob_name = self._parse_gs_path(path)
+        bucket_name, blob_name = self.__class__._parse_path(path)
 
         # Ensure path ends with / for directory marker
-        if blob_name and not blob_name.endswith('/'):
-            blob_name += '/'
+        if blob_name and not blob_name.endswith("/"):
+            blob_name += "/"
 
         blob = self._client.bucket(bucket_name).blob(blob_name)
+
+        # Check if it is empty
+        if self.is_dir(path) and self.list_dir(path):
+            raise OSError(f"Directory not empty: {path}")
 
         try:
             blob.delete()
         except NotFound:
-            raise NoSuchFileError(f"Directory not found: {path}")
+            raise FileNotFoundError(f"Directory not found: {path}")
 
     def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
         """Remove directory and all its contents recursively.
@@ -480,11 +490,23 @@ class GSClient(Client):
             ignore_errors: If True, errors are ignored
             onerror: Callable that accepts (function, path, excinfo)
         """
-        bucket_name, prefix = self._parse_gs_path(path)
+        if not self.exists(path):
+            if ignore_errors:
+                return
+            else:
+                raise FileNotFoundError(f"Path not found: {path}")
+
+        if not self.is_dir(path):
+            if ignore_errors:
+                return
+            else:
+                raise NotADirectoryError(f"Not a directory: {path}")
+
+        bucket_name, prefix = self.__class__._parse_path(path)
 
         # Ensure prefix ends with / for directory listing
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
 
         try:
             bucket = self._client.bucket(bucket_name)
@@ -493,11 +515,10 @@ class GSClient(Client):
             # Delete all blobs with this prefix
             for blob in blobs:
                 blob.delete()
-        except Exception as e:
+        except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
-                import sys
                 onerror(blob.delete, path, sys.exc_info())
             else:
                 raise
@@ -510,8 +531,17 @@ class GSClient(Client):
             target: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        src_bucket_name, src_blob_name = self._parse_gs_path(source)
-        tgt_bucket_name, tgt_blob_name = self._parse_gs_path(target)
+        if not self.exists(source):
+            raise FileNotFoundError(f"Source not found: {source}")
+
+        if follow_symlinks and self.is_symlink(source):
+            source = self.readlink(source)
+
+        if self.is_dir(source):
+            raise IsADirectoryError(f"Source is a directory: {source}")
+
+        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
 
         src_bucket = self._client.bucket(src_bucket_name)
         src_blob = src_bucket.blob(src_blob_name)
@@ -528,14 +558,20 @@ class GSClient(Client):
             target: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        src_bucket_name, src_prefix = self._parse_gs_path(source)
-        tgt_bucket_name, tgt_prefix = self._parse_gs_path(target)
+        if not self.exists(source):
+            raise FileNotFoundError(f"Source not found: {source}")
+
+        if follow_symlinks and self.is_symlink(source):
+            source = self.readlink(source)
+
+        src_bucket_name, src_prefix = self.__class__._parse_path(source)
+        tgt_bucket_name, tgt_prefix = self.__class__._parse_path(target)
 
         # Ensure prefixes end with / for directory operations
-        if src_prefix and not src_prefix.endswith('/'):
-            src_prefix += '/'
-        if tgt_prefix and not tgt_prefix.endswith('/'):
-            tgt_prefix += '/'
+        if src_prefix and not src_prefix.endswith("/"):
+            src_prefix += "/"
+        if tgt_prefix and not tgt_prefix.endswith("/"):
+            tgt_prefix += "/"
 
         src_bucket = self._client.bucket(src_bucket_name)
         tgt_bucket = self._client.bucket(tgt_bucket_name)
@@ -543,8 +579,51 @@ class GSClient(Client):
         # List all blobs with source prefix
         for src_blob in src_bucket.list_blobs(prefix=src_prefix):
             # Calculate relative path and target blob name
-            rel_path = src_blob.name[len(src_prefix):]
+            rel_path = src_blob.name[len(src_prefix) :]
             tgt_blob_name = tgt_prefix + rel_path
 
             # Copy blob
             src_bucket.copy_blob(src_blob, tgt_bucket, tgt_blob_name)
+
+
+class GSSyncFileHandle(SyncFileHandle):
+    """Sync file handle for GCS with chunked streaming support.
+
+    Uses google-cloud-storage's streaming API for efficient reading of large files.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._blob: storage.Blob = self._client.bucket(self._bucket).blob(self._blob)
+        if self._is_read and not self._blob.exists():
+            raise FileNotFoundError(f"GCS blob not found: {self._bucket}/{self._blob}")
+
+    @classmethod
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+        """Check if exception is GCS NotFound and convert to FileNotFoundError."""
+        return isinstance(exception, NotFound)
+
+    def reset_stream(self) -> None:
+        """Reset streaming reader/writer."""
+        if self._stream:
+            self._stream.close()
+            self._stream = None
+        super().reset_stream()
+
+    def __del__(self) -> None:
+        """Destructor to ensure stream is closed."""
+        try:
+            if self._stream:
+                self._stream.close()
+            if self._blob.client:  # type: storage.client.Client
+                self._blob.client.close()
+        except Exception:  # pragma: no cover
+            pass
+
+    def _create_stream(self) -> None:
+        """Create streaming reader/writer."""
+        return self._blob.open("rb")
+
+    def _upload(self, data: Union[bytes, str]) -> None:
+        """Flush buffered writes to GCS."""
+        self._blob.upload_from_string(data)

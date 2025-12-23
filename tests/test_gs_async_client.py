@@ -24,7 +24,6 @@ def test_asyncgsclient_init():
     assert isinstance(client, AsyncGSClient)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_get_client():
     """Test getting async storage client."""
     client = AsyncGSClient()
@@ -57,7 +56,6 @@ def test_asyncgsclient_parse_gs_path(path, results):
     assert (bucket, blob_path) == results
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_exists():
     """Test the exists method of AsyncGSClient."""
     client = AsyncGSClient()
@@ -80,7 +78,6 @@ async def test_asyncgsclient_exists():
     assert exists is False
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_read_bytes():
     """Test reading bytes from a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -91,18 +88,18 @@ async def test_asyncgsclient_read_bytes():
     assert content == b"123"
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_read_text():
     """Test reading text from a blob using AsyncGSClient."""
     client = AsyncGSClient()
     with pytest.raises(FileNotFoundError):
         await client.read_text("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
 
-    content = await client.read_text("gs://handy-buffer-287000.appspot.com/readonly.txt", encoding="utf-8")
+    content = await client.read_text(
+        "gs://handy-buffer-287000.appspot.com/readonly.txt", encoding="utf-8"
+    )
     assert content == "123"
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_mkdir(request):
     """Test creating a 'directory' in GCS using AsyncGSClient."""
     requestid = hash((request.node.name, sys.executable, sys.version_info)) & 0xFFFFFFFF
@@ -125,10 +122,11 @@ async def test_asyncgsclient_mkdir(request):
             await client.mkdir(f"{path}/newdir/subdir", exist_ok=True, parents=False)
     finally:
         # Clean up by deleting the created blobs
-        await client.rmtree(f"gs://handy-buffer-287000.appspot.com/mkdir-{requestid}", ignore_errors=True)
+        await client.rmtree(
+            f"gs://handy-buffer-287000.appspot.com/mkdir-{requestid}", ignore_errors=True
+        )
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_get_set_metadata(testdir):
     """Test getting metadata of a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -143,12 +141,11 @@ async def test_asyncgsclient_get_set_metadata(testdir):
     assert isinstance(metadata, dict)
 
     await client.set_metadata(path, {"custom_key": "custom_value"})
-    metadata = (await client.get_metadata(path))['metadata']
+    metadata = (await client.get_metadata(path))["metadata"]
     assert "custom_key" in metadata
     assert metadata["custom_key"] == "custom_value"
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_symlink(testdir):
     """Test creating and reading a symlink using AsyncGSClient."""
     client = AsyncGSClient()
@@ -175,7 +172,6 @@ async def test_asyncgsclient_symlink(testdir):
         await client.readlink(resolved_path)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_glob(testdir):
     """Test globbing blobs using AsyncGSClient."""
     client = AsyncGSClient()
@@ -189,7 +185,7 @@ async def test_asyncgsclient_glob(testdir):
 
     # Test globbing
     txt_files = await client.glob(dirpath, "**/*.txt", _return_panpath=False)
-    txt_file_names = sorted([path.rstrip('/').split('/')[-1] for path in txt_files])
+    txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
     txt_paths = await client.glob(dirpath, "**/*.txt", _return_panpath=True)
@@ -197,11 +193,11 @@ async def test_asyncgsclient_glob(testdir):
     assert txt_path_names == sorted(["file1.txt", "file3.txt"])
 
     txt_files2 = await client.glob(dirpath, "*.txt", _return_panpath=False)
-    txt_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in txt_files2])
+    txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
     log_files = await client.glob(dirpath, "**/*.log", _return_panpath=False)
-    log_file_names = sorted([path.rstrip('/').split('/')[-1] for path in log_files])
+    log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
     log_paths = await client.glob(dirpath, "*.log", _return_panpath=True)
@@ -209,14 +205,13 @@ async def test_asyncgsclient_glob(testdir):
     assert log_path_names == sorted(["file2.log"])
 
     log_files2 = await client.glob(dirpath, "*.log", _return_panpath=False)
-    log_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in log_files2])
+    log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
     files = await client.glob(dirpath, "**", _return_panpath=False)
     assert len(files) >= 4  # At least the files we created
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_walk(testdir):
     """Test walking blobs using AsyncGSClient."""
     client = AsyncGSClient()
@@ -242,7 +237,6 @@ async def test_asyncgsclient_walk(testdir):
     assert all_files == [["file1.txt"], ["file2.txt"], ["file3.txt"]]
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_touch(testdir):
     """Test touching a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -266,7 +260,6 @@ async def test_asyncgsclient_touch(testdir):
         await client.touch(path, mode=0o644)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_rename(testdir):
     """Test renaming a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -291,7 +284,6 @@ async def test_asyncgsclient_rename(testdir):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_rmdir(testdir):
     """Test removing a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -316,7 +308,6 @@ async def test_asyncgsclient_rmdir(testdir):
         await client.rmdir(path)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_rmtree(testdir):
     """Test removing a directory tree using AsyncGSClient."""
     client = AsyncGSClient()
@@ -353,7 +344,6 @@ async def test_asyncgsclient_rmtree(testdir):
     await client.rmtree(dirpath, ignore_errors=True)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_copy(testdir):
     """Test copying a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -390,7 +380,6 @@ async def test_asyncgsclient_copy(testdir):
         await client.copy(dirpath, f"{testdir}/copy_of_dir")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_copytree(testdir):
     """Test copying a directory tree using AsyncGSClient."""
     client = AsyncGSClient()
@@ -422,7 +411,9 @@ async def test_asyncgsclient_copytree(testdir):
     await client.copytree(symlink_dir, f"{testdir}/copied_from_symlink_tree", follow_symlinks=True)
     for name in blob_names:
         assert await client.exists(f"{testdir}/copied_from_symlink_tree/{name}")
-        content = await client.read_text(f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8")
+        content = await client.read_text(
+            f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8"
+        )
         assert content == "data"
 
     # error if source not dir
@@ -432,7 +423,6 @@ async def test_asyncgsclient_copytree(testdir):
         await client.copytree(file_path, f"{testdir}/copy_of_file_tree")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_write_bytes(testdir):
     """Test writing bytes to a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -445,7 +435,6 @@ async def test_asyncgsclient_write_bytes(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_write_text(testdir):
     """Test writing text to a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -458,7 +447,6 @@ async def test_asyncgsclient_write_text(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_delete(testdir):
     """Test deleting a blob using AsyncGSClient."""
     client = AsyncGSClient()
@@ -484,7 +472,6 @@ async def test_asyncgsclient_delete(testdir):
         await client.delete(dirpath)
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_list_dir(testdir):
     """Test listing blobs in a 'directory' using AsyncGSClient."""
     client = AsyncGSClient()
@@ -500,12 +487,11 @@ async def test_asyncgsclient_list_dir(testdir):
 
     # List directory
     items = await client.list_dir(dirpath)
-    item_names = sorted([item.rstrip('/').split('/')[-1] for item in items])
+    item_names = sorted([item.rstrip("/").split("/")[-1] for item in items])
     expected_names = sorted(["file1.txt", "file2.txt", "subdir"])
     assert item_names == expected_names
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_is_dir_file(testdir):
     """Test is_dir method of AsyncGSClient."""
     client = AsyncGSClient()
@@ -524,7 +510,6 @@ async def test_asyncgsclient_is_dir_file(testdir):
     assert not await client.is_dir(f"{testdir}/nonexistent")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_stat(testdir):
     """Test stat method of AsyncGSClient."""
     client = AsyncGSClient()
@@ -539,7 +524,6 @@ async def test_asyncgsclient_stat(testdir):
         await client.stat(f"{testdir}/nonexistent.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_open_mode_error(testdir):
     """Test opening a blob with invalid mode using AsyncGSClient."""
     client = AsyncGSClient()
@@ -549,7 +533,6 @@ async def test_asyncgsclient_open_mode_error(testdir):
         client.open(file_path, mode="invalidmode")
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_open_write(testdir):
     """Test opening a blob for writing using AsyncGSClient."""
     client = AsyncGSClient()
@@ -580,7 +563,6 @@ async def test_asyncgsclient_open_write(testdir):
             pass
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_open_append(testdir):
     """Test opening a blob for appending using AsyncGSClient."""
     client = AsyncGSClient()
@@ -610,7 +592,6 @@ async def test_asyncgsclient_open_append(testdir):
     assert await client.read_bytes(f"{testdir}/nonexistent.txt") == b"New data"
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_open_read(testdir):
     """Test opening a blob for reading using AsyncGSClient."""
     client = AsyncGSClient()
@@ -683,7 +664,6 @@ async def test_asyncgsclient_open_read(testdir):
             pass
 
 
-@pytest.mark.asyncio
 async def test_asyncgsclient_tell_seek(testdir):
     """Test tell and seek methods of AsyncGSClient."""
     client = AsyncGSClient()
@@ -721,10 +701,8 @@ async def test_asyncgsclient_tell_seek(testdir):
         pos = await f.tell()
         assert pos == len(data)
 
-        # GCS supports SEEK_END since we know blob size
-        await f.seek(0, whence=2)
-        pos = await f.tell()
-        assert pos == len(data)
+        with pytest.raises(OSError):
+            await f.seek(0, whence=2)
 
         with pytest.raises(ValueError):
             await f.seek(0, whence=3)

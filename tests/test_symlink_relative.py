@@ -1,4 +1,5 @@
 """Test symlink relative path resolution."""
+
 import sys
 from unittest.mock import MagicMock
 import pytest
@@ -130,7 +131,6 @@ def test_symlink_azure_absolute():
     )
 
 
-@pytest.mark.asyncio
 async def test_async_symlink_relative():
     """Test async symlink with relative target."""
     from panpath import PanPath
@@ -145,6 +145,7 @@ async def test_async_symlink_relative():
     class MockContext:
         async def __aenter__(self):
             return mock_s3_client
+
         async def __aexit__(self, *args):
             pass
 

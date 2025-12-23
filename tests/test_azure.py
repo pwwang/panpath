@@ -1,4 +1,5 @@
 """Tests for Azure Blob Storage path implementations using mocks."""
+
 import sys
 import pytest
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
@@ -32,13 +33,13 @@ class TestAzurePath:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_blob_module = sys.modules['azure.storage.blob']
+        mock_blob_module = sys.modules["azure.storage.blob"]
         mock_client = Mock()
         mock_blob_module.BlobServiceClient.return_value = mock_client
 
         mock_blob_client = Mock()
         mock_download = Mock()
-        mock_download.readall.return_value = b'azure test content'
+        mock_download.readall.return_value = b"azure test content"
         mock_blob_client.download_blob.return_value = mock_download
         mock_client.get_blob_client.return_value = mock_blob_client
 
@@ -52,7 +53,7 @@ class TestAzurePath:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_blob_module = sys.modules['azure.storage.blob']
+        mock_blob_module = sys.modules["azure.storage.blob"]
         mock_client = Mock()
         mock_blob_module.BlobServiceClient.return_value = mock_client
 
@@ -64,14 +65,14 @@ class TestAzurePath:
 
         mock_blob_client.upload_blob.assert_called_once()
         call_args = mock_blob_client.upload_blob.call_args
-        assert call_args[0][0] == b'azure content'
+        assert call_args[0][0] == b"azure content"
 
     def test_azure_exists(self):
         """Test checking if Azure blob exists."""
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_blob_module = sys.modules['azure.storage.blob']
+        mock_blob_module = sys.modules["azure.storage.blob"]
         mock_client = Mock()
         mock_blob_module.BlobServiceClient.return_value = mock_client
 
@@ -106,7 +107,7 @@ class TestAzurePath:
         from panpath import PanPath
 
         # Configure the conftest mock
-        mock_blob_module = sys.modules['azure.storage.blob']
+        mock_blob_module = sys.modules["azure.storage.blob"]
         mock_client = Mock()
         mock_blob_module.BlobServiceClient.return_value = mock_client
 
@@ -131,11 +132,10 @@ class TestAsyncAzurePath:
         assert isinstance(path, AzurePath)
 
         # Check async methods exist
-        assert hasattr(path, 'a_read_text')
-        assert hasattr(path, 'a_write_text')
-        assert hasattr(path, 'a_exists')
+        assert hasattr(path, "a_read_text")
+        assert hasattr(path, "a_write_text")
+        assert hasattr(path, "a_exists")
 
-    @pytest.mark.asyncio
     async def test_read_text(self):
         from panpath import PanPath
 
@@ -145,9 +145,7 @@ class TestAsyncAzurePath:
         mock_container = MagicMock()
         mock_container.get_blob_client.return_value = mock_blob
 
-        with patch(
-            "panpath.azure_path.AzurePath._create_default_async_client"
-        ) as mock_client_func:
+        with patch("panpath.azure_path.AzurePath._create_default_async_client") as mock_client_func:
             mock_container_client = AsyncMock()
             mock_container_client.get_blob_client.return_value = mock_blob
             mock_client = AsyncMock()
@@ -156,7 +154,6 @@ class TestAsyncAzurePath:
 
             path = PanPath("az://test-container/blob.txt")
 
-    @pytest.mark.asyncio
     async def test_write_text(self):
         from panpath import PanPath
 
@@ -165,9 +162,7 @@ class TestAsyncAzurePath:
         mock_container = MagicMock()
         mock_container.get_blob_client.return_value = mock_blob
 
-        with patch(
-            "panpath.azure_path.AzurePath._create_default_async_client"
-        ) as mock_client_func:
+        with patch("panpath.azure_path.AzurePath._create_default_async_client") as mock_client_func:
             mock_container_client = AsyncMock()
             mock_container_client.get_blob_client.return_value = mock_blob
             mock_client = AsyncMock()
@@ -185,7 +180,7 @@ class TestAsyncAzurePath:
         parent = path.parent
 
         assert isinstance(parent, AzurePath)
-        assert hasattr(parent, 'a_read_text')
+        assert hasattr(parent, "a_read_text")
 
 
 def test_azure_missing_dependency():

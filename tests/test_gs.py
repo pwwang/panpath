@@ -1,4 +1,5 @@
 """Tests for Google Cloud Storage path implementations using mocks."""
+
 import sys
 import pytest
 from unittest.mock import Mock, AsyncMock
@@ -26,7 +27,7 @@ class TestGSPath:
         mock_client = Mock()
         mock_bucket = Mock()
         mock_blob = Mock()
-        mock_blob.download_as_bytes.return_value = b'gcs test content'
+        mock_blob.download_as_bytes.return_value = b"gcs test content"
         mock_bucket.blob.return_value = mock_blob
         mock_client.bucket.return_value = mock_bucket
 
@@ -55,7 +56,7 @@ class TestGSPath:
         path = PanPath("gs://test-bucket/blob.txt")
         path.write_text("gcs content")
 
-        mock_blob.upload_from_string.assert_called_once_with(b'gcs content')
+        mock_blob.upload_from_string.assert_called_once_with(b"gcs content")
 
     def test_gs_exists(self):
         """Test checking if GCS blob exists."""
@@ -124,18 +125,17 @@ class TestAsyncGSPath:
         assert isinstance(path, GSPath)
 
         # Check async methods exist
-        assert hasattr(path, 'a_read_text')
-        assert hasattr(path, 'a_write_text')
-        assert hasattr(path, 'a_exists')
+        assert hasattr(path, "a_read_text")
+        assert hasattr(path, "a_write_text")
+        assert hasattr(path, "a_exists")
 
-    @pytest.mark.asyncio
     async def test_async_gs_read_text(self):
         """Test reading text from GCS asynchronously."""
         from panpath import PanPath
         from panpath import gs_async_client
 
         mock_storage = AsyncMock()
-        mock_storage.download = AsyncMock(return_value=b'async gcs content')
+        mock_storage.download = AsyncMock(return_value=b"async gcs content")
         gs_async_client.Storage.return_value = mock_storage
 
         path = PanPath("gs://test-bucket/blob.txt")
@@ -143,7 +143,6 @@ class TestAsyncGSPath:
 
         assert content == "async gcs content"
 
-    @pytest.mark.asyncio
     async def test_async_gs_write_text(self):
         """Test writing text to GCS asynchronously."""
         from panpath import PanPath
@@ -166,7 +165,7 @@ class TestAsyncGSPath:
         parent = path.parent
 
         assert isinstance(parent, GSPath)
-        assert hasattr(parent, 'a_read_text')
+        assert hasattr(parent, "a_read_text")
 
 
 def test_gs_missing_dependency():

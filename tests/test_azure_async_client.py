@@ -24,7 +24,6 @@ def test_asyncazureblobclient_init():
     assert client._connection_string is not None
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_get_clients():
     """Test getting async blob service and container clients."""
     client = AsyncAzureBlobClient()
@@ -59,7 +58,6 @@ def test_asyncazureblobclient_parse_azure_path(path, results):
     assert (container, blob_path) == results
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_exists():
     """Test the exists method of AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -83,7 +81,6 @@ async def test_asyncazureblobclient_exists():
     assert exists is False
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_read_bytes():
     """Test reading bytes from a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -96,7 +93,6 @@ async def test_asyncazureblobclient_read_bytes():
     assert content == b"123"
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_read_text():
     """Test reading text from a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -109,7 +105,6 @@ async def test_asyncazureblobclient_read_text():
     assert content == "123"
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_mkdir(request):
     """Test creating a 'directory' in Azure Blob Storage using AsyncAzureBlobClient."""
     requestid = hash((request.node.name, sys.executable, sys.version_info)) & 0xFFFFFFFF
@@ -137,7 +132,6 @@ async def test_asyncazureblobclient_mkdir(request):
         await client.rmtree(f"az://panpath-test/mkdir-{requestid}", ignore_errors=True)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_get_set_metadata(testdir):
     """Test getting metadata of a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -158,7 +152,6 @@ async def test_asyncazureblobclient_get_set_metadata(testdir):
     assert metadata.metadata["custom_key"] == "custom_value"
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_symlink(testdir):
     """Test creating and reading a symlink using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -186,7 +179,6 @@ async def test_asyncazureblobclient_symlink(testdir):
         await client.readlink(resolved_path)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_glob(testdir):
     """Test globbing blobs using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -200,7 +192,7 @@ async def test_asyncazureblobclient_glob(testdir):
 
     # Test globbing
     txt_files = await client.glob(dirpath, "**/*.txt", _return_panpath=False)
-    txt_file_names = sorted([path.rstrip('/').split('/')[-1] for path in txt_files])
+    txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
     txt_paths = await client.glob(dirpath, "**/*.txt", _return_panpath=True)
@@ -208,11 +200,11 @@ async def test_asyncazureblobclient_glob(testdir):
     assert txt_path_names == sorted(["file1.txt", "file3.txt"])
 
     txt_files2 = await client.glob(dirpath, "*.txt", _return_panpath=False)
-    txt_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in txt_files2])
+    txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
     log_files = await client.glob(dirpath, "**/*.log", _return_panpath=False)
-    log_file_names = sorted([path.rstrip('/').split('/')[-1] for path in log_files])
+    log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
     log_paths = await client.glob(dirpath, "*.log", _return_panpath=True)
@@ -220,14 +212,13 @@ async def test_asyncazureblobclient_glob(testdir):
     assert log_path_names == sorted(["file2.log"])
 
     log_files2 = await client.glob(dirpath, "*.log", _return_panpath=False)
-    log_file_names2 = sorted([path.rstrip('/').split('/')[-1] for path in log_files2])
+    log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
     files = await client.glob(dirpath, "**", _return_panpath=False)
     assert len(files) == 5
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_walk(testdir):
     """Test walking blobs using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -253,7 +244,6 @@ async def test_asyncazureblobclient_walk(testdir):
     assert all_files == [["file1.txt"], ["file2.txt"], ["file3.txt"]]
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_touch(testdir):
     """Test touching a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -277,7 +267,6 @@ async def test_asyncazureblobclient_touch(testdir):
         await client.touch(path, mode=0o644)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_rename(testdir):
     """Test renaming a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -302,7 +291,6 @@ async def test_asyncazureblobclient_rename(testdir):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_rmdir(testdir):
     """Test removing a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -327,7 +315,6 @@ async def test_asyncazureblobclient_rmdir(testdir):
         await client.rmdir(path)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_rmtree(testdir):
     """Test removing a directory tree using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -364,7 +351,6 @@ async def test_asyncazureblobclient_rmtree(testdir):
     await client.rmtree(dirpath, ignore_errors=True)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_copy(testdir):
     """Test copying a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -401,7 +387,6 @@ async def test_asyncazureblobclient_copy(testdir):
         await client.copy(dirpath, f"{testdir}/copy_of_dir")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_copytree(testdir):
     """Test copying a directory tree using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -433,7 +418,9 @@ async def test_asyncazureblobclient_copytree(testdir):
     await client.copytree(symlink_dir, f"{testdir}/copied_from_symlink_tree", follow_symlinks=True)
     for name in blob_names:
         assert await client.exists(f"{testdir}/copied_from_symlink_tree/{name}")
-        content = await client.read_text(f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8")
+        content = await client.read_text(
+            f"{testdir}/copied_from_symlink_tree/{name}", encoding="utf-8"
+        )
         assert content == "data"
 
     # error if source not dir
@@ -443,7 +430,6 @@ async def test_asyncazureblobclient_copytree(testdir):
         await client.copytree(file_path, f"{testdir}/copy_of_file_tree")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_write_bytes(testdir):
     """Test writing bytes to a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -456,7 +442,6 @@ async def test_asyncazureblobclient_write_bytes(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_write_text(testdir):
     """Test writing text to a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -469,7 +454,6 @@ async def test_asyncazureblobclient_write_text(testdir):
     assert content == data
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_delete(testdir):
     """Test deleting a blob using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -495,7 +479,6 @@ async def test_asyncazureblobclient_delete(testdir):
         await client.delete(dirpath)
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_list_dir(testdir):
     """Test listing blobs in a 'directory' using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -511,12 +494,11 @@ async def test_asyncazureblobclient_list_dir(testdir):
 
     # List directory
     items = await client.list_dir(dirpath)
-    item_names = sorted([item.rstrip('/').split('/')[-1] for item in items])
+    item_names = sorted([item.rstrip("/").split("/")[-1] for item in items])
     expected_names = sorted(["file1.txt", "file2.txt", "subdir"])
     assert item_names == expected_names
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_is_dir_file(testdir):
     """Test is_dir method of AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -535,7 +517,6 @@ async def test_asyncazureblobclient_is_dir_file(testdir):
     assert not await client.is_dir(f"{testdir}/nonexistent")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_stat(testdir):
     """Test stat method of AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -550,7 +531,6 @@ async def test_asyncazureblobclient_stat(testdir):
         await client.stat(f"{testdir}/nonexistent.txt")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_open_mode_error(testdir):
     """Test opening a blob with invalid mode using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -560,7 +540,6 @@ async def test_asyncazureblobclient_open_mode_error(testdir):
         await client.open(file_path, mode="invalidmode")
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_open_write(testdir):
     """Test opening a blob for reading using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -592,7 +571,6 @@ async def test_asyncazureblobclient_open_write(testdir):
         #     pass
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_open_append(testdir):
     """Test opening a blob for reading using AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()
@@ -622,7 +600,6 @@ async def test_asyncazureblobclient_open_append(testdir):
     assert await client.read_bytes(f"{testdir}/nonexistent.txt") == b"New data"
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_open_read(testdir):
     client = AsyncAzureBlobClient()
     file_path = f"{testdir}/openread.txt"
@@ -696,7 +673,6 @@ async def test_asyncazureblobclient_open_read(testdir):
             pass
 
 
-@pytest.mark.asyncio
 async def test_asyncazureblobclient_tell_seek(testdir):
     """Test tell and seek methods of AsyncAzureBlobClient."""
     client = AsyncAzureBlobClient()

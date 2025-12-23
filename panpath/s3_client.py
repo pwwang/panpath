@@ -1,9 +1,11 @@
 """S3 client implementation."""
-from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, Optional, TextIO, Union
 
-from panpath.clients import Client
-from panpath.exceptions import MissingDependencyError, NoSuchFileError
+import os
+import re
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+from panpath.clients import SyncClient, SyncFileHandle
+from panpath.exceptions import MissingDependencyError
 
 if TYPE_CHECKING:
     import boto3
@@ -14,13 +16,15 @@ try:
     from botocore.exceptions import ClientError
 
     HAS_BOTO3 = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_BOTO3 = False
     ClientError = Exception  # type: ignore
 
 
-class S3Client(Client):
+class S3Client(SyncClient):
     """Synchronous S3 client implementation using boto3."""
+
+    prefix = ("s3",)
 
     def __init__(self, **kwargs: Any):
         """Initialize S3 client.
@@ -28,7 +32,7 @@ class S3Client(Client):
         Args:
             **kwargs: Additional arguments passed to boto3.client()
         """
-        if not HAS_BOTO3:
+        if not HAS_BOTO3:  # pragma: no cover
             raise MissingDependencyError(
                 backend="S3",
                 package="boto3",
@@ -37,25 +41,9 @@ class S3Client(Client):
         self._client = boto3.client("s3", **kwargs)
         self._resource = boto3.resource("s3", **kwargs)
 
-    def _parse_s3_path(self, path: str) -> tuple[str, str]:
-        """Parse S3 path into bucket and key.
-
-        Args:
-            path: S3 URI like 's3://bucket/key/path'
-
-        Returns:
-            Tuple of (bucket, key)
-        """
-        if path.startswith("s3://"):
-            path = path[5:]
-        parts = path.split("/", 1)
-        bucket = parts[0]
-        key = parts[1] if len(parts) > 1 else ""
-        return bucket, key
-
     def exists(self, path: str) -> bool:
         """Check if S3 object exists."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         if not key:
             # Check if bucket exists
             try:
@@ -68,64 +56,73 @@ class S3Client(Client):
             self._client.head_object(Bucket=bucket, Key=key)
             return True
         except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                return False
-            raise
+            error_code = e.response.get("Error", {}).get("Code")
+            # Common error codes for "not found"
+            if error_code in ("404", "NoSuchKey", "NoSuchBucket", "AccessDenied", "Forbidden"):
+                # Check if it's a directory (with trailing slash)
+                if key.endswith("/"):
+                    return False
+                try:
+                    self._client.head_object(Bucket=bucket, Key=key + "/")
+                    return True
+                except ClientError:
+                    return False
+            # For other errors, re-raise
+            if error_code not in ("403",):  # pragma: no cover
+                raise
+            return False
 
     def read_bytes(self, path: str) -> bytes:
         """Read S3 object as bytes."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         try:
             response = self._client.get_object(Bucket=bucket, Key=key)
             return response["Body"].read()
         except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchKey":
-                raise NoSuchFileError(f"S3 object not found: {path}")
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code in ("NoSuchKey", "NoSuchBucket", "404"):
+                raise FileNotFoundError(f"S3 object not found: {path}")
             raise
-
-    def read_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read S3 object as text."""
-        return self.read_bytes(path).decode(encoding)
 
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write bytes to S3 object."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         self._client.put_object(Bucket=bucket, Key=key, Body=data)
-
-    def write_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to S3 object."""
-        self.write_bytes(path, data.encode(encoding))
 
     def delete(self, path: str) -> None:
         """Delete S3 object."""
-        bucket, key = self._parse_s3_path(path)
-        try:
-            self._client.delete_object(Bucket=bucket, Key=key)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchKey":
-                raise NoSuchFileError(f"S3 object not found: {path}")
-            raise
+        bucket, key = self.__class__._parse_path(path)
 
-    def list_dir(self, path: str) -> Iterator[str]:
+        if self.is_dir(path):
+            raise IsADirectoryError(f"Path is a directory: {path}")
+
+        if not self.exists(path):
+            raise FileNotFoundError(f"S3 object not found: {path}")
+
+        self._client.delete_object(Bucket=bucket, Key=key)
+
+    def list_dir(self, path: str) -> list[str]:
         """List S3 objects with prefix."""
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        results = []
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter="/"):
             # List "subdirectories"
             for common_prefix in page.get("CommonPrefixes", []):
-                yield f"s3://{bucket}/{common_prefix['Prefix'].rstrip('/')}"
+                results.append(f"{self.prefix[0]}://{bucket}/{common_prefix['Prefix'].rstrip('/')}")
             # List files
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 if key != prefix:  # Skip the prefix itself
-                    yield f"s3://{bucket}/{key}"
+                    results.append(f"{self.prefix[0]}://{bucket}/{key}")
+        return results
 
     def is_dir(self, path: str) -> bool:
         """Check if S3 path is a directory (has objects with prefix)."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         if not key:
             return True  # Bucket root is a directory
 
@@ -135,7 +132,7 @@ class S3Client(Client):
 
     def is_file(self, path: str) -> bool:
         """Check if S3 path is a file."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         if not key:
             return False
 
@@ -145,15 +142,38 @@ class S3Client(Client):
         except ClientError:
             return False
 
-    def stat(self, path: str) -> Any:
+    def stat(self, path: str) -> os.stat_result:
         """Get S3 object metadata."""
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         try:
-            return self._client.head_object(Bucket=bucket, Key=key)
+            response = self._client.head_object(Bucket=bucket, Key=key)
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                raise NoSuchFileError(f"S3 object not found: {path}")
-            raise
+                raise FileNotFoundError(f"S3 object not found: {path}")
+            raise  # pragma: no cover
+        except Exception:  # pragma: no cover
+            from panpath.exceptions import NoStatError
+
+            raise NoStatError(f"Cannot retrieve stat for: {path}")
+        else:
+            return os.stat_result(
+                (  # type: ignore[arg-type]
+                    None,  # mode
+                    None,  # ino
+                    f"{self.prefix[0]}://",  # dev
+                    None,  # nlink
+                    None,  # uid
+                    None,  # gid
+                    response.get("ContentLength", 0),  # size
+                    None,  # atime
+                    (
+                        response.get("LastModified").timestamp()
+                        if response.get("LastModified")
+                        else None
+                    ),  # mtime
+                    None,  # ctime
+                )
+            )
 
     def open(
         self,
@@ -161,70 +181,58 @@ class S3Client(Client):
         mode: str = "r",
         encoding: Optional[str] = None,
         **kwargs: Any,
-    ) -> Union[BinaryIO, TextIO]:
-        """Open S3 object for reading/writing.
+    ) -> Any:
+        """Open S3 object for reading/writing with streaming support.
 
-        Note: This returns an in-memory file-like object.
-        For large files, prefer read_bytes/write_bytes with streaming.
+        Args:
+            path: S3 path (s3://bucket/key)
+            mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
+            encoding: Text encoding (for text modes)
+            **kwargs: Additional arguments (chunk_size supported)
+
+        Returns:
+            S3SyncFileHandle with streaming support
         """
-        if "r" in mode:
-            # Read mode
-            data = self.read_bytes(path)
-            if "b" in mode:
-                return BytesIO(data)
-            else:
-                text = data.decode(encoding or "utf-8")
-                return StringIO(text)
-        elif "w" in mode or "a" in mode:
-            # Write mode - return wrapper that writes on close
-            bucket, key = self._parse_s3_path(path)
-
-            class S3WriteBuffer:
-                def __init__(self, client: Any, bucket: str, key: str, binary: bool, encoding: str):
-                    self._client = client
-                    self._bucket = bucket
-                    self._key = key
-                    self._binary = binary
-                    self._encoding = encoding
-                    self._buffer = BytesIO() if binary else StringIO()
-
-                def write(self, data: Any) -> int:
-                    return self._buffer.write(data)
-
-                def close(self) -> None:
-                    if not self._buffer.closed:
-                        if self._binary:
-                            content = self._buffer.getvalue()
-                        else:
-                            content = self._buffer.getvalue().encode(self._encoding)
-                        self._client.put_object(Bucket=self._bucket, Key=self._key, Body=content)
-                        self._buffer.close()
-
-                def __enter__(self) -> Any:
-                    return self
-
-                def __exit__(self, *args: Any) -> None:
-                    self.close()
-
-            return S3WriteBuffer(  # type: ignore
-                self._client, bucket, key, "b" in mode, encoding or "utf-8"
-            )
-        else:
+        # Validate mode
+        if mode not in ("r", "w", "rb", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode: {mode}")
+
+        bucket, key = self.__class__._parse_path(path)
+        return S3SyncFileHandle(
+            client=self._client,
+            bucket=bucket,
+            blob=key,
+            prefix=self.prefix[0],
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )
 
     def mkdir(self, path: str, parents: bool = False, exist_ok: bool = False) -> None:
         """Create a directory marker (empty object with trailing slash).
 
         Args:
             path: S3 path (s3://bucket/path)
-            parents: If True, create parent directories as needed (ignored for S3)
+            parents: If True, create parent directories as needed
             exist_ok: If True, don't raise error if directory already exists
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
-        if key and not key.endswith('/'):
-            key += '/'
+        if key and not key.endswith("/"):
+            key += "/"
+
+        # Clean up any double slashes in the key
+        key = re.sub(r"/+", "/", key)
+
+        # Check parent directories if parents=False
+        if not parents and key:
+            parent_key = "/".join(key.rstrip("/").split("/")[:-1])
+            if parent_key:
+                parent_key += "/"
+                parent_path = f"{self.prefix[0]}://{bucket}/{parent_key}"
+                if not self.exists(parent_path):
+                    raise FileNotFoundError(f"Parent directory does not exist: {parent_path}")
 
         # Check if it already exists
         try:
@@ -232,8 +240,11 @@ class S3Client(Client):
             if not exist_ok:
                 raise FileExistsError(f"Directory already exists: {path}")
             return
-        except self._client.exceptions.NoSuchKey:
-            pass
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code")
+            # Treat 404 and 403 as "doesn't exist" for mkdir
+            if error_code not in ("404", "403", "NoSuchKey", "Forbidden"):  # pragma: no cover
+                raise
 
         # Create empty directory marker
         self._client.put_object(Bucket=bucket, Key=key, Body=b"")
@@ -245,16 +256,16 @@ class S3Client(Client):
             path: S3 path
 
         Returns:
-            Dictionary of metadata key-value pairs
+            Dictionary containing response metadata including 'Metadata' key with user metadata
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         try:
             response = self._client.head_object(Bucket=bucket, Key=key)
-            return response.get("Metadata", {})
+            return response
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                raise NoSuchFileError(f"S3 object not found: {path}")
-            raise
+                raise FileNotFoundError(f"S3 object not found: {path}")
+            raise  # pragma: no cover
 
     def set_metadata(self, path: str, metadata: dict[str, str]) -> None:
         """Set object metadata.
@@ -263,7 +274,7 @@ class S3Client(Client):
             path: S3 path
             metadata: Dictionary of metadata key-value pairs
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # S3 requires copying object to itself to update metadata
         self._client.copy_object(
@@ -271,7 +282,7 @@ class S3Client(Client):
             Key=key,
             CopySource={"Bucket": bucket, "Key": key},
             Metadata=metadata,
-            MetadataDirective="REPLACE"
+            MetadataDirective="REPLACE",
         )
 
     def is_symlink(self, path: str) -> bool:
@@ -285,8 +296,8 @@ class S3Client(Client):
         """
         try:
             metadata = self.get_metadata(path)
-            return "symlink-target" in metadata
-        except NoSuchFileError:
+            return self.__class__.symlink_target_metaname in metadata.get("Metadata", {})
+        except FileNotFoundError:
             return False
 
     def readlink(self, path: str) -> str:
@@ -299,7 +310,7 @@ class S3Client(Client):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get("symlink-target")
+        target = metadata.get("Metadata", {}).get(self.__class__.symlink_target_metaname)
         if not target:
             raise ValueError(f"Not a symlink: {path}")
         return target
@@ -311,30 +322,30 @@ class S3Client(Client):
             path: S3 path for the symlink
             target: Target path the symlink should point to
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # Create empty object with symlink metadata
         self._client.put_object(
             Bucket=bucket,
             Key=key,
             Body=b"",
-            Metadata={"symlink-target": target}
+            Metadata={self.__class__.symlink_target_metaname: target},
         )
 
-    def glob(self, path: str, pattern: str) -> list["Any"]:
+    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:
             path: Base S3 path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
+            _return_panpath: If True, return PanPath objects; if False, return strings
 
         Returns:
-            List of matching CloudPath objects
+            List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         # Handle recursive patterns
         if "**" in pattern:
@@ -354,22 +365,32 @@ class S3Client(Client):
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
-                        results.append(PanPath(f"s3://{bucket}/{key}"))
+                        path_str = f"{self.prefix[0]}://{bucket}/{key}"
+                        if _return_panpath:
+                            from panpath.base import PanPath
+
+                            results.append(PanPath(path_str))
+                        else:  # pragma: no cover
+                            results.append(path_str)
             return results
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
             response = self._client.list_objects_v2(
-                Bucket=bucket,
-                Prefix=prefix_with_slash,
-                Delimiter="/"
+                Bucket=bucket, Prefix=prefix_with_slash, Delimiter="/"
             )
 
             results = []
             for obj in response.get("Contents", []):
                 key = obj["Key"]
                 if fnmatch(key, f"{prefix_with_slash}{pattern}"):
-                    results.append(PanPath(f"s3://{bucket}/{key}"))
+                    path_str = f"{self.prefix[0]}://{bucket}/{key}"
+                    if _return_panpath:
+                        from panpath.base import PanPath
+
+                        results.append(PanPath(path_str))
+                    else:  # pragma: no cover
+                        results.append(path_str)
             return results
 
     def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
@@ -381,7 +402,7 @@ class S3Client(Client):
         Returns:
             List of (dirpath, dirnames, filenames) tuples
         """
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         # List all objects under prefix
         if prefix and not prefix.endswith("/"):
@@ -397,7 +418,7 @@ class S3Client(Client):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 # Get relative path from prefix
-                rel_path = key[len(prefix):] if prefix else key
+                rel_path = key[len(prefix) :] if prefix else key
 
                 # Split into directory and filename
                 parts = rel_path.split("/")
@@ -409,18 +430,28 @@ class S3Client(Client):
                         dirs[path][1].add(parts[0])
                 else:
                     # File in subdirectory
+                    # First, ensure root directory exists and add the first subdir to it
+                    if path not in dirs:  # pragma: no cover
+                        dirs[path] = (set(), set())
+                    if parts[0]:  # Add first-level subdirectory to root
+                        dirs[path][0].add(parts[0])
+
                     for i in range(len(parts) - 1):
-                        dir_path = f"{path}/" + "/".join(parts[:i+1]) if path else "/".join(parts[:i+1])
+                        dir_path = (
+                            f"{path}/" + "/".join(parts[: i + 1])
+                            if path
+                            else "/".join(parts[: i + 1])
+                        )
                         if dir_path not in dirs:
                             dirs[dir_path] = (set(), set())
 
                         # Add subdirectory if not last part
                         if i < len(parts) - 2:
-                            dirs[dir_path][0].add(parts[i+1])
+                            dirs[dir_path][0].add(parts[i + 1])
 
                     # Add file to its parent directory
                     parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
-                    if parent_dir not in dirs:
+                    if parent_dir not in dirs:  # pragma: no cover
                         dirs[parent_dir] = (set(), set())
                     if parts[-1]:  # Skip empty strings
                         dirs[parent_dir][1].add(parts[-1])
@@ -438,7 +469,7 @@ class S3Client(Client):
         if not exist_ok and self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
 
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
         self._client.put_object(Bucket=bucket, Key=key, Body=b"")
 
     def rename(self, source: str, target: str) -> None:
@@ -449,14 +480,12 @@ class S3Client(Client):
             target: Target S3 path
         """
         # Copy to new location
-        src_bucket, src_key = self._parse_s3_path(source)
-        tgt_bucket, tgt_key = self._parse_s3_path(target)
+        src_bucket, src_key = self.__class__._parse_path(source)
+        tgt_bucket, tgt_key = self.__class__._parse_path(target)
 
         # Copy object
         self._client.copy_object(
-            Bucket=tgt_bucket,
-            Key=tgt_key,
-            CopySource={"Bucket": src_bucket, "Key": src_key}
+            Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
         # Delete source
@@ -468,18 +497,21 @@ class S3Client(Client):
         Args:
             path: S3 path
         """
-        bucket, key = self._parse_s3_path(path)
+        bucket, key = self.__class__._parse_path(path)
 
         # Ensure key ends with / for directory marker
-        if key and not key.endswith('/'):
-            key += '/'
+        if key and not key.endswith("/"):
+            key += "/"
 
-        try:
-            self._client.delete_object(Bucket=bucket, Key=key)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                raise NoSuchFileError(f"Directory not found: {path}")
-            raise
+        # client.delete_object will not raise error if object doesn't exist
+        if not self.exists(path):
+            raise FileNotFoundError(f"Directory not found: {path}")
+
+        # Check if it is empty
+        if self.is_dir(path) and list(self.list_dir(path)):
+            raise OSError(f"Directory not empty: {path}")
+
+        self._client.delete_object(Bucket=bucket, Key=key)
 
     def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
         """Remove directory and all its contents recursively.
@@ -489,33 +521,31 @@ class S3Client(Client):
             ignore_errors: If True, errors are ignored
             onerror: Callable that accepts (function, path, excinfo)
         """
-        bucket, prefix = self._parse_s3_path(path)
+        bucket, prefix = self.__class__._parse_path(path)
 
         # Ensure prefix ends with / for directory listing
-        if prefix and not prefix.endswith('/'):
-            prefix += '/'
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
 
         try:
             # List all objects with this prefix
             objects_to_delete = []
-            paginator = self._client.get_paginator('list_objects_v2')
+            paginator = self._client.get_paginator("list_objects_v2")
             for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-                if 'Contents' in page:
-                    objects_to_delete.extend([{'Key': obj['Key']} for obj in page['Contents']])
+                if "Contents" in page:
+                    objects_to_delete.extend([{"Key": obj["Key"]} for obj in page["Contents"]])
 
             # Delete in batches (max 1000 per request)
             if objects_to_delete:
                 for i in range(0, len(objects_to_delete), 1000):
-                    batch = objects_to_delete[i:i+1000]
-                    self._client.delete_objects(
-                        Bucket=bucket,
-                        Delete={'Objects': batch}
-                    )
-        except Exception as e:
+                    batch = objects_to_delete[i : i + 1000]
+                    self._client.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+        except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
+
                 onerror(self._client.delete_objects, path, sys.exc_info())
             else:
                 raise
@@ -528,14 +558,22 @@ class S3Client(Client):
             target: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        src_bucket, src_key = self._parse_s3_path(source)
-        tgt_bucket, tgt_key = self._parse_s3_path(target)
+        if not self.exists(source):
+            raise FileNotFoundError(f"Source not found: {source}")
+
+        if follow_symlinks and self.is_symlink(source):
+            source = self.readlink(source)
+
+        # Check if source is a directory
+        if self.is_dir(source):
+            raise IsADirectoryError(f"Source is a directory: {source}")
+
+        src_bucket, src_key = self.__class__._parse_path(source)
+        tgt_bucket, tgt_key = self.__class__._parse_path(target)
 
         # Use S3's native copy operation
         self._client.copy_object(
-            Bucket=tgt_bucket,
-            Key=tgt_key,
-            CopySource={"Bucket": src_bucket, "Key": src_key}
+            Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
     def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
@@ -546,30 +584,64 @@ class S3Client(Client):
             target: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        src_bucket, src_prefix = self._parse_s3_path(source)
-        tgt_bucket, tgt_prefix = self._parse_s3_path(target)
+        # Check if source exists
+        if not self.exists(source):
+            raise FileNotFoundError(f"Source not found: {source}")
+
+        if follow_symlinks and self.is_symlink(source):
+            source = self.readlink(source)
+
+        # Check if source is a directory
+        if not self.is_dir(source):
+            raise NotADirectoryError(f"Source is not a directory: {source}")
+
+        src_bucket, src_prefix = self.__class__._parse_path(source)
+        tgt_bucket, tgt_prefix = self.__class__._parse_path(target)
 
         # Ensure prefixes end with / for directory operations
-        if src_prefix and not src_prefix.endswith('/'):
-            src_prefix += '/'
-        if tgt_prefix and not tgt_prefix.endswith('/'):
-            tgt_prefix += '/'
+        if src_prefix and not src_prefix.endswith("/"):
+            src_prefix += "/"
+        if tgt_prefix and not tgt_prefix.endswith("/"):
+            tgt_prefix += "/"
 
         # List all objects with source prefix
-        paginator = self._client.get_paginator('list_objects_v2')
+        paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=src_bucket, Prefix=src_prefix):
-            if 'Contents' not in page:
+            if "Contents" not in page:  # pragma: no cover
                 continue
 
-            for obj in page['Contents']:
-                src_key = obj['Key']
+            for obj in page["Contents"]:
+                src_key = obj["Key"]
                 # Calculate relative path and target key
-                rel_path = src_key[len(src_prefix):]
+                rel_path = src_key[len(src_prefix) :]
                 tgt_key = tgt_prefix + rel_path
 
                 # Copy object
                 self._client.copy_object(
                     Bucket=tgt_bucket,
                     Key=tgt_key,
-                    CopySource={"Bucket": src_bucket, "Key": src_key}
+                    CopySource={"Bucket": src_bucket, "Key": src_key},
                 )
+
+
+class S3SyncFileHandle(SyncFileHandle):
+    """Sync file handle for S3 with chunked streaming support.
+
+    Uses boto3's streaming API for efficient reading of large files.
+    """
+
+    def _create_stream(self):
+        """Create the underlying stream."""
+        return self._client.get_object(Bucket=self._bucket, Key=self._blob)["Body"]
+
+    @classmethod
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+        """Check if exception corresponds to FileNotFoundError."""
+        if isinstance(exception, ClientError):
+            error_code = exception.response.get("Error", {}).get("Code")
+            return error_code in ("NoSuchKey", "NoSuchBucket", "404")
+        return False  # pragma: no cover
+
+    def _upload(self, data: Union[str, bytes]) -> None:
+        """Flush write buffer to S3 (no-op for S3)."""
+        self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)

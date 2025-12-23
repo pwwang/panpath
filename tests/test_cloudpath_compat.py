@@ -3,6 +3,7 @@
 These tests verify that PanPath implements the core cloudpathlib-compatible interface
 for path manipulation, file operations, and pathlib compatibility.
 """
+
 import sys
 import pytest
 from pathlib import PurePosixPath, Path
@@ -34,7 +35,9 @@ class TestPathManipulation:
 
         # Test with gs and azure
         assert str(PanPath("gs://bucket/file.txt").with_suffix(".md")) == "gs://bucket/file.md"
-        assert str(PanPath("az://container/file.txt").with_suffix(".md")) == "az://container/file.md"
+        assert (
+            str(PanPath("az://container/file.txt").with_suffix(".md")) == "az://container/file.md"
+        )
 
     def test_with_stem(self):
         """Test changing file stem."""
@@ -63,7 +66,9 @@ class TestPathManipulation:
 
         # joinpath
         assert PanPath("s3://bucket/a").joinpath("b", "c") == PanPath("s3://bucket/a/b/c")
-        assert PanPath("s3://bucket/a").joinpath(PurePosixPath("b"), "c") == PanPath("s3://bucket/a/b/c")
+        assert PanPath("s3://bucket/a").joinpath(PurePosixPath("b"), "c") == PanPath(
+            "s3://bucket/a/b/c"
+        )
 
         # parent
         assert PanPath("s3://bucket/a/b/c/d").parent == PanPath("s3://bucket/a/b/c")
@@ -159,7 +164,7 @@ class TestPathInstantiation:
 
         s3_path = PanPath("s3://bucket/key")
         assert isinstance(s3_path, S3Path)
-        assert hasattr(s3_path, 'a_read_text')  # Has async methods
+        assert hasattr(s3_path, "a_read_text")  # Has async methods
 
     def test_unsupported_scheme(self):
         """Test unsupported scheme raises error."""
@@ -179,7 +184,7 @@ class TestPathInstantiation:
 
         local = PanPath("/tmp/file.txt")
         assert isinstance(local, LocalPath)
-        assert hasattr(local, 'a_read_text')  # Has async methods
+        assert hasattr(local, "a_read_text")  # Has async methods
 
         # Relative paths
         relative = PanPath("relative/path.txt")
@@ -238,9 +243,6 @@ class TestTypePreservation:
         assert type(new_path) == type(az_path)
 
 
-
-
-
 class TestStringOperations:
     """Test string representation and URI operations."""
 
@@ -266,6 +268,7 @@ class TestStringOperations:
     def test_fspath(self):
         """Test __fspath__ returns string representation."""
         import os
+
         path = PanPath("s3://bucket/key")
         assert os.fspath(path) == "s3://bucket/key"
 
