@@ -2121,7 +2121,7 @@
 <span class="sd">        &gt;&gt;&gt; content = await path.a_read_text()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span><span id="panpath.base.PanPath.__new__"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.__new__" href="../../panpath.base/#panpath.base.PanPath.__new__">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span><span id="panpath.base.PanPath.__new__"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.__new__" href="../../panpath.base/#panpath.base.PanPath.__new__">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create and return the appropriate path instance.</span>
 
 <span class="sd">        If called on a subclass, returns instance of that subclass.</span>
@@ -2164,15 +2164,17 @@
             <span class="c1"># In Python 3.10, __init__ doesn&#39;t accept arguments</span>
             <span class="c1"># In Python 3.12+, __init__ needs the arguments</span>
             <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
-                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># type: ignore[no-untyped-call]</span>
+                    <span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+                <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>  <span class="c1"># type: ignore[no-untyped-call]</span>
             <span class="k">return</span> <span class="n">instance</span>
 
         <span class="c1"># Cloud path - look up in registry and instantiate</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">path_class</span> <span class="o">=</span> <span class="n">get_path_class</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">path_class</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">path_class</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># type: ignore[no-any-return]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported URI scheme: </span><span class="si">{</span><span class="n">scheme</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>

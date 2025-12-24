@@ -2069,9 +2069,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoStatError</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">aioboto3</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">aiobotocore.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">AioBaseClient</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">botocore.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientError</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">aioboto3</span>  <span class="c1"># type: ignore[import-not-found]</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">aiobotocore.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">AioBaseClient</span>  <span class="c1"># type: ignore[import-untyped, unused-ignore]</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">botocore.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientError</span>  <span class="c1"># type: ignore[import-untyped, unused-ignore]</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">aioboto3</span>
@@ -2081,11 +2081,11 @@
     <span class="n">HAS_AIOBOTO3</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">HAS_AIOBOTO3</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">ClientError</span> <span class="o">=</span> <span class="ne">Exception</span>  <span class="c1"># type: ignore</span>
+    <span class="n">ClientError</span> <span class="o">=</span> <span class="ne">Exception</span>
 
 
 <span class="c1"># Track all active client instances for cleanup</span>
-<span class="n">_active_clients</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+<span class="n">_active_clients</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># type: ignore[type-arg]</span>
 
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_async_cleanup_all_clients</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -2112,7 +2112,7 @@
     <span class="c1"># Get the original shutdown_asyncgens method</span>
     <span class="n">original_shutdown</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">shutdown_asyncgens</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shutdown_with_cleanup</span><span class="p">():</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shutdown_with_cleanup</span><span class="p">():</span>  <span class="c1"># type: ignore[no-untyped-def]</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Shutdown that includes client cleanup.&quot;&quot;&quot;</span>
         <span class="c1"># Clean up clients first</span>
         <span class="k">await</span> <span class="n">_async_cleanup_all_clients</span><span class="p">()</span>
@@ -2120,7 +2120,7 @@
         <span class="k">await</span> <span class="n">original_shutdown</span><span class="p">()</span>
 
     <span class="c1"># Replace with our version</span>
-    <span class="n">loop</span><span class="o">.</span><span class="n">shutdown_asyncgens</span> <span class="o">=</span> <span class="n">shutdown_with_cleanup</span>
+    <span class="n">loop</span><span class="o">.</span><span class="n">shutdown_asyncgens</span> <span class="o">=</span> <span class="n">shutdown_with_cleanup</span>  <span class="c1"># type: ignore[method-assign]</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">AsyncS3Client</span><span class="p">(</span><span class="n">AsyncClient</span><span class="p">):</span><span id="panpath.s3_async_client.AsyncS3Client"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client">DOCS</a>
@@ -2143,7 +2143,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AioBaseClient</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_client_ref</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client_ref</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore[type-arg]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AioBaseClient</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get or create shared client.&quot;&quot;&quot;</span>
@@ -2182,7 +2182,9 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="s2">&quot;weakref.ref[Any]&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Called when client is garbage collected.&quot;&quot;&quot;</span>
         <span class="n">_active_clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
 
@@ -2233,7 +2235,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;Body&quot;</span><span class="p">]</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
-                <span class="k">return</span> <span class="k">await</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="k">return</span> <span class="k">await</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: ignore[no-any-return]</span>
         <span class="k">except</span> <span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">error_code</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Error&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Code&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">error_code</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;NoSuchKey&quot;</span><span class="p">,</span> <span class="s2">&quot;NoSuchBucket&quot;</span><span class="p">,</span> <span class="s2">&quot;404&quot;</span><span class="p">):</span>
@@ -2428,7 +2430,7 @@
         <span class="n">client</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_client</span><span class="p">()</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">head_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">response</span>
+            <span class="k">return</span> <span class="n">response</span>  <span class="c1"># type: ignore[no-any-return]</span>
         <span class="k">except</span> <span class="n">ClientError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;Error&quot;</span><span class="p">][</span><span class="s2">&quot;Code&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;404&quot;</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S3 object not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -2480,7 +2482,7 @@
         <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a symlink: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">target</span>
+        <span class="k">return</span> <span class="n">target</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.s3_async_client.AsyncS3Client.symlink_to"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client.symlink_to" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client.symlink_to">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink by storing target in metadata.</span>
@@ -2540,7 +2542,7 @@
 
                             <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">))</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
+                            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
             <span class="k">return</span> <span class="n">results</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Non-recursive - list objects with delimiter</span>
@@ -2559,10 +2561,10 @@
 
                         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">))</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
             <span class="k">return</span> <span class="n">results</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.s3_async_client.AsyncS3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client.walk" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client.walk">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.s3_async_client.AsyncS3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client.walk" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client.walk">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.</span>
 
 <span class="sd">        Args:</span>
@@ -2821,7 +2823,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the underlying stream for reading or writing.&quot;&quot;&quot;</span>
         <span class="n">client</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_factory</span><span class="p">()</span>
         <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;Body&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;Body&quot;</span><span class="p">]</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -2836,7 +2838,7 @@
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer to S3 (no-op for S3).&quot;&quot;&quot;</span>
-        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">Body</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">Body</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore[union-attr]</span>
 </code></pre></div>
 </div>
 </div>

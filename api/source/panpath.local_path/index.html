@@ -2069,15 +2069,15 @@
 <span class="n">_ConcretePath</span> <span class="o">=</span> <span class="n">WindowsPath</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;nt&quot;</span> <span class="k">else</span> <span class="n">PosixPath</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles.os</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles</span>  <span class="c1"># type: ignore[import-untyped]</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">aiofiles.os</span>  <span class="c1"># type: ignore[import-untyped]</span>
 
     <span class="n">HAS_AIOFILES</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">HAS_AIOFILES</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">LocalPath</span><span class="p">(</span><span class="n">_ConcretePath</span><span class="p">,</span> <span class="n">PanPath</span><span class="p">):</span><span id="panpath.local_path.LocalPath"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath" href="../../panpath.local_path/#panpath.local_path.LocalPath">DOCS</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LocalPath</span><span class="p">(</span><span class="n">_ConcretePath</span><span class="p">,</span> <span class="n">PanPath</span><span class="p">):</span>  <span class="c1"># type: ignore[valid-type, misc]</span><span id="panpath.local_path.LocalPath"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath" href="../../panpath.local_path/#panpath.local_path.LocalPath">DOCS</a>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Local filesystem path (drop-in replacement for pathlib.Path).</span>
 
 <span class="sd">    Inherits from the platform-specific concrete path class (PosixPath/WindowsPath)</span>
@@ -2086,10 +2086,11 @@
 <span class="sd">    Includes both sync methods (from Path) and async methods with a_ prefix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>  <span class="c1"># type: ignore[no-untyped-def]</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize LocalPath.</span>
 
-<span class="sd">        Skip initialization if already initialized (to avoid double-init when created via PanPath factory).</span>
+<span class="sd">        Skip initialization if already initialized (to avoid double-init when created via PanPath</span>
+<span class="sd">        factory).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_raw_paths&quot;</span><span class="p">):</span>
             <span class="c1"># Already initialized in __new__, skip</span>
@@ -2156,7 +2157,7 @@
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_is_file"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_is_file" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a file (async).&quot;&quot;&quot;</span>
@@ -2168,7 +2169,7 @@
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_is_dir"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_is_dir" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a directory (async).&quot;&quot;&quot;</span>
@@ -2180,7 +2181,7 @@
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_read_bytes"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_read_bytes" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as bytes (async).&quot;&quot;&quot;</span>
@@ -2193,7 +2194,7 @@
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_read_text"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_read_text" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_read_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as text (async).&quot;&quot;&quot;</span>
@@ -2206,7 +2207,7 @@
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_write_bytes"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_write_bytes" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to file (async).&quot;&quot;&quot;</span>
@@ -2306,7 +2307,7 @@
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span><span id="panpath.local_path.LocalPath.a_open"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_open" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_open">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>

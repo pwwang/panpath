@@ -4350,7 +4350,7 @@
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncClient.is_symlink">is_symlink</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(bool)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check if blob is a symlink (has symlink_target metadata).<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient.is_symlink" title="Source for panpath.clients.SyncClient.is_symlink">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check if path is a symlink (has symlink metadata).<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient.is_symlink" title="Source for panpath.clients.SyncClient.is_symlink">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncClient.list_dir">list_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(Iterator)</span>
@@ -4926,7 +4926,7 @@
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Check if blob is a symlink (has symlink_target metadata).</p></div>
+      <div class="mkapi-section-body"><p>Check if path is a symlink (has symlink metadata).</p></div>
     </div>
   <div class="mkapi-section parameters">
       <div class="mkapi-section-name parameters">
@@ -4944,7 +4944,7 @@
       <div class="mkapi-section-name returns">
           <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(bool)</span>
         </div>
-      <div class="mkapi-section-body returns"><p>True if symlink metadata exists</p></div>
+      <div class="mkapi-section-body returns"><p>True if path is a symlink</p></div>
     </div>
   </div>
 
@@ -5066,7 +5066,7 @@
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.is_symlink">is_symlink</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(bool)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check if blob is a symlink (has symlink_target metadata).<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.is_symlink" title="Source for panpath.clients.AsyncClient.is_symlink">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check if path is a symlink (has symlink metadata).<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.is_symlink" title="Source for panpath.clients.AsyncClient.is_symlink">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.list_dir">list_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(list)</span>
@@ -5702,7 +5702,7 @@
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Check if blob is a symlink (has symlink_target metadata).</p></div>
+      <div class="mkapi-section-body"><p>Check if path is a symlink (has symlink metadata).</p></div>
     </div>
   <div class="mkapi-section parameters">
       <div class="mkapi-section-name parameters">
@@ -5720,7 +5720,7 @@
       <div class="mkapi-section-name returns">
           <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(bool)</span>
         </div>
-      <div class="mkapi-section-body returns"><p>True if symlink metadata exists</p></div>
+      <div class="mkapi-section-body returns"><p>True if path is a symlink</p></div>
     </div>
   </div>
 
@@ -6292,7 +6292,7 @@ the provider's specific streaming capabilities.</p>
         </div>
       <div class="mkapi-section-body methods"><ul class="mkapi-items">
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncFileHandle.__enter__">__enter__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(<a href="./#panpath.clients.AsyncFileHandle">AsyncFileHandle</a>)</span>
+<span class="mkapi-item-type">(<a href="./#panpath.clients.SyncFileHandle">SyncFileHandle</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Enter async context manager.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle.__enter__" title="Source for panpath.clients.SyncFileHandle.__enter__">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncFileHandle.__exit__">__exit__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">exc_type</code>, <code class="mkapi-object-signature">exc_val</code>, <code class="mkapi-object-signature">exc_tb</code><code class="mkapi-object-parenthesis">)</code>
@@ -6300,7 +6300,7 @@ the provider's specific streaming capabilities.</p>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Exit async context manager.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle.__exit__" title="Source for panpath.clients.SyncFileHandle.__exit__">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncFileHandle.__iter__">__iter__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(<a href="./#panpath.clients.AsyncFileHandle">AsyncFileHandle</a>)</span>
+<span class="mkapi-item-type">(<a href="./#panpath.clients.SyncFileHandle">SyncFileHandle</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Support async iteration over lines.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle.__iter__" title="Source for panpath.clients.SyncFileHandle.__iter__">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncFileHandle.__next__">__next__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
@@ -6399,7 +6399,7 @@ the provider's specific streaming capabilities.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathclientssyncfilehandleenter" class="mkapi-object-body method"><code class="mkapi-object-name">__enter__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; <a href="./#panpath.clients.AsyncFileHandle">AsyncFileHandle</a></span></h3>
+    <h3 id="panpathclientssyncfilehandleenter" class="mkapi-object-body method"><code class="mkapi-object-name">__enter__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; <a href="./#panpath.clients.SyncFileHandle">SyncFileHandle</a></span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle.__enter__" title="Source for panpath.clients.SyncFileHandle.__enter__">&lt;/&gt;</a>
@@ -6577,7 +6577,7 @@ the provider's specific streaming capabilities.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathclientssyncfilehandleiter" class="mkapi-object-body method"><code class="mkapi-object-name">__iter__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; <a href="./#panpath.clients.AsyncFileHandle">AsyncFileHandle</a></span></h3>
+    <h3 id="panpathclientssyncfilehandleiter" class="mkapi-object-body method"><code class="mkapi-object-name">__iter__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; <a href="./#panpath.clients.SyncFileHandle">SyncFileHandle</a></span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle.__iter__" title="Source for panpath.clients.SyncFileHandle.__iter__">&lt;/&gt;</a>
