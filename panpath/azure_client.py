@@ -1,15 +1,14 @@
 """Azure Blob Storage client implementation."""
 
-from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, Optional, TextIO, Union
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Union
 import os
 
 from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from azure.storage.blob import BlobServiceClient
-    from azure.core.exceptions import ResourceNotFoundError
+    from azure.storage.blob import BlobServiceClient  # type: ignore[import-not-found]
+    from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
 
 try:
     from azure.storage.blob import BlobServiceClient
@@ -18,7 +17,7 @@ try:
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
-    ResourceNotFoundError = Exception  # type: ignore
+    ResourceNotFoundError = Exception
 
 
 class AzureBlobClient(SyncClient):
@@ -54,7 +53,7 @@ class AzureBlobClient(SyncClient):
             # Check if container exists
             try:
                 container_client = self._client.get_container_client(container_name)
-                return container_client.exists()
+                return container_client.exists()  # type: ignore[no-any-return]
             except Exception:  # pragma: no cover
                 return False
 
@@ -67,7 +66,7 @@ class AzureBlobClient(SyncClient):
                 return False
             # Checking if it is possibly a directory
             blob_client_dir = self._client.get_blob_client(container_name, blob_name + "/")
-            return blob_client_dir.exists()
+            return blob_client_dir.exists()  # type: ignore[no-any-return]
         except Exception:  # pragma: no cover
             return False
 
@@ -76,7 +75,7 @@ class AzureBlobClient(SyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
         blob_client = self._client.get_blob_client(container_name, blob_name)
         try:
-            return blob_client.download_blob().readall()
+            return blob_client.download_blob().readall()  # type: ignore[no-any-return]
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -99,7 +98,7 @@ class AzureBlobClient(SyncClient):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
-    def list_dir(self, path: str) -> list[str]:
+    def list_dir(self, path: str) -> list[str]:  # type: ignore[override]
         """List Azure blobs with prefix."""
         container_name, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
@@ -142,7 +141,7 @@ class AzureBlobClient(SyncClient):
             return False
 
         blob_client = self._client.get_blob_client(container_name, blob_name.rstrip("/"))
-        return blob_client.exists()
+        return blob_client.exists()  # type: ignore[no-any-return]
 
     def stat(self, path: str) -> os.stat_result:
         """Get Azure blob metadata."""
@@ -180,13 +179,13 @@ class AzureBlobClient(SyncClient):
         mode: str = "r",
         encoding: Optional[str] = None,
         **kwargs: Any,
-    ) -> Union[BinaryIO, TextIO]:
+    ) -> SyncFileHandle:
         """Open Azure blob for reading/writing."""
         if mode not in ("r", "rb", "w", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'.")
 
         container_name, blob_name = self.__class__._parse_path(path)
-        return AzureSyncFileHandle(
+        return AzureSyncFileHandle(  # type: ignore[no-untyped-call]
             client=self._client,
             bucket=container_name,
             blob=blob_name,
@@ -249,7 +248,7 @@ class AzureBlobClient(SyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
         blob_client = self._client.get_blob_client(container_name, blob_name)
         try:
-            return blob_client.get_blob_properties()
+            return blob_client.get_blob_properties()  # type: ignore[no-any-return]
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -280,7 +279,7 @@ class AzureBlobClient(SyncClient):
         # Set symlink metadata
         blob_client.set_blob_metadata({self.__class__.symlink_target_metaname: target})
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = True) -> list["Any"]:
+    def glob(self, path: str, pattern: str, _return_panpath: bool = True) -> list["Any"]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
@@ -316,7 +315,7 @@ class AzureBlobClient(SyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
+                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list blobs with prefix
@@ -334,7 +333,7 @@ class AzureBlobClient(SyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
+                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
             return results
 
     def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
@@ -399,7 +398,7 @@ class AzureBlobClient(SyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:
+    def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
         """Create empty file.
 
         Args:
@@ -578,7 +577,7 @@ class AzureBlobClient(SyncClient):
 class AzureSyncFileHandle(SyncFileHandle):
     """Synchronous file handle for Azure Blob Storage."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self._read_residue = b"" if self._is_binary else ""
 
@@ -592,7 +591,7 @@ class AzureSyncFileHandle(SyncFileHandle):
         super().reset_stream()
         self._read_residue = b"" if self._is_binary else ""
 
-    def _create_stream(self):
+    def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create sync read stream generator."""
         return self._client.get_blob_client(self._bucket, self._blob).download_blob().chunks()
 
@@ -616,8 +615,8 @@ class AzureSyncFileHandle(SyncFileHandle):
                 pass
 
             self._eof = True
-            result = (b"" if self._is_binary else "").join(chunks)
-            return result
+            result = (b"" if self._is_binary else "").join(chunks)  # type: ignore[attr-defined]
+            return result  # type: ignore[no-any-return]
         else:
             while len(self._read_residue) < size:
                 try:
@@ -637,20 +636,20 @@ class AzureSyncFileHandle(SyncFileHandle):
                 self._eof = True
                 result = self._read_residue
                 self._read_residue = b"" if self._is_binary else ""
-                return result
+                return result  # type: ignore[no-any-return]
 
             result = self._read_residue[:size]
             self._read_residue = self._read_residue[size:]
-            return result
+            return result  # type: ignore[no-any-return]
 
     def _stream_read_all(self) -> Union[str, bytes]:
         """Read all remaining data from stream."""
         download_stream = self._client.get_blob_client(self._bucket, self._blob).download_blob()
         data = download_stream.readall()
         if self._is_binary:
-            return data
+            return data  # type: ignore[no-any-return]
         else:
-            return data.decode(self._encoding)
+            return data.decode(self._encoding)  # type: ignore[no-any-return]
 
     def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to Azure blob."""

@@ -2,7 +2,7 @@
 
 ## Requirements
 
-PanPath requires Python 3.8 or higher.
+PanPath requires Python 3.9 or higher.
 
 ## Core Installation
 

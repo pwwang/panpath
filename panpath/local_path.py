@@ -11,15 +11,15 @@ from panpath.cloud import CloudPath
 _ConcretePath = WindowsPath if os.name == "nt" else PosixPath
 
 try:
-    import aiofiles
-    import aiofiles.os
+    import aiofiles  # type: ignore[import-untyped]
+    import aiofiles.os  # type: ignore[import-untyped]
 
     HAS_AIOFILES = True
 except ImportError:
     HAS_AIOFILES = False
 
 
-class LocalPath(_ConcretePath, PanPath):
+class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     """Local filesystem path (drop-in replacement for pathlib.Path).
 
     Inherits from the platform-specific concrete path class (PosixPath/WindowsPath)
@@ -28,10 +28,11 @@ class LocalPath(_ConcretePath, PanPath):
     Includes both sync methods (from Path) and async methods with a_ prefix.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         """Initialize LocalPath.
 
-        Skip initialization if already initialized (to avoid double-init when created via PanPath factory).
+        Skip initialization if already initialized (to avoid double-init when created via PanPath
+        factory).
         """
         if hasattr(self, "_raw_paths"):
             # Already initialized in __new__, skip
@@ -98,7 +99,7 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        return await aiofiles.os.path.exists(str(self))
+        return await aiofiles.os.path.exists(str(self))  # type: ignore[no-any-return]
 
     async def a_is_file(self) -> bool:
         """Check if path is a file (async)."""
@@ -110,7 +111,7 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        return await aiofiles.os.path.isfile(str(self))
+        return await aiofiles.os.path.isfile(str(self))  # type: ignore[no-any-return]
 
     async def a_is_dir(self) -> bool:
         """Check if path is a directory (async)."""
@@ -122,7 +123,7 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        return await aiofiles.os.path.isdir(str(self))
+        return await aiofiles.os.path.isdir(str(self))  # type: ignore[no-any-return]
 
     async def a_read_bytes(self) -> bytes:
         """Read file as bytes (async)."""
@@ -135,7 +136,7 @@ class LocalPath(_ConcretePath, PanPath):
                 extra="all-async",
             )
         async with aiofiles.open(str(self), mode="rb") as f:
-            return await f.read()
+            return await f.read()  # type: ignore[no-any-return]
 
     async def a_read_text(self, encoding: str = "utf-8") -> str:
         """Read file as text (async)."""
@@ -148,7 +149,7 @@ class LocalPath(_ConcretePath, PanPath):
                 extra="all-async",
             )
         async with aiofiles.open(str(self), mode="r", encoding=encoding) as f:
-            return await f.read()
+            return await f.read()  # type: ignore[no-any-return]
 
     async def a_write_bytes(self, data: bytes) -> None:
         """Write bytes to file (async)."""
@@ -248,7 +249,7 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        return await aiofiles.os.stat(str(self))
+        return await aiofiles.os.stat(str(self))  # type: ignore[no-any-return]
 
     def a_open(
         self,

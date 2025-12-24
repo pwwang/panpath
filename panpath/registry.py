@@ -61,9 +61,9 @@ def swap_implementation(
     Returns:
         Old path class (or None if not previously registered)
     """
-    old_class = _REGISTRY.get(scheme)  # type: ignore
+    old_class = _REGISTRY.get(scheme)
     _REGISTRY[scheme] = path_class
-    return old_class  # type: ignore
+    return old_class  # type: ignore[return-value]
 
 
 def restore_registry(snapshot: Dict[str, Type["CloudPath"]]) -> None:

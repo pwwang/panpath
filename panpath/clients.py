@@ -1,7 +1,7 @@
 """Base client classes for sync and async cloud storage operations."""
 
 from abc import ABC, abstractmethod
-from typing import Any, BinaryIO, Iterator, List, Optional, TextIO, Tuple, Union, Awaitable
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Union, Awaitable
 
 import re
 
@@ -147,17 +147,20 @@ class SyncClient(Client, ABC):
         self.write_bytes(path, data.encode(encoding))
 
     def is_symlink(self, path: str) -> bool:
-        """Check if blob is a symlink (has symlink_target metadata).
+        """Check if path is a symlink (has symlink metadata).
 
         Args:
             path: Cloud path
 
         Returns:
-            True if symlink metadata exists
+            True if path is a symlink
         """
         try:
             metadata = self.get_metadata(path)
-            return self.__class__.symlink_target_metaname in metadata.get("metadata", {})
+            meta_dict: Any = metadata.get("metadata", {})
+            if isinstance(meta_dict, dict):
+                return self.__class__.symlink_target_metaname in meta_dict
+            return False  # pragma: no cover
         except Exception:
             return False
 
@@ -171,12 +174,15 @@ class SyncClient(Client, ABC):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get("metadata", {}).get(self.__class__.symlink_target_metaname, None)
-        if not target:
+        meta_dict: Any = metadata.get("metadata", {})
+        if not isinstance(meta_dict, dict):  # pragma: no cover
+            raise ValueError(f"Invalid metadata format for: {path}")
+        target: Any = meta_dict.get(self.__class__.symlink_target_metaname, None)
+        if not target or not isinstance(target, str):
             raise ValueError(f"Not a symlink: {path}")
 
         if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
-            return target
+            return str(target)
 
         path = path.rstrip("/").rsplit("/", 1)[0]  # pragma: no cover
         return f"{path}/{target}"  # pragma: no cover
@@ -289,17 +295,20 @@ class AsyncClient(Client, ABC):
         await self.write_bytes(path, data.encode(encoding))
 
     async def is_symlink(self, path: str) -> bool:
-        """Check if blob is a symlink (has symlink_target metadata).
+        """Check if path is a symlink (has symlink metadata).
 
         Args:
             path: Cloud path
 
         Returns:
-            True if symlink metadata exists
+            True if path is a symlink
         """
         try:
             metadata = await self.get_metadata(path)
-            return self.__class__.symlink_target_metaname in metadata.get("metadata", {})
+            meta_dict: Any = metadata.get("metadata", {})
+            if isinstance(meta_dict, dict):
+                return self.__class__.symlink_target_metaname in meta_dict
+            return False  # pragma: no cover
         except Exception:
             return False
 
@@ -313,12 +322,15 @@ class AsyncClient(Client, ABC):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("metadata", {}).get("symlink_target", None)
-        if not target:
+        meta_dict: Any = metadata.get("metadata", {})
+        if not isinstance(meta_dict, dict):  # pragma: no cover
+            raise ValueError(f"Invalid metadata format for: {path}")
+        target: Any = meta_dict.get(self.__class__.symlink_target_metaname, None)
+        if not target or not isinstance(target, str):
             raise ValueError(f"Not a symlink: {path}")
 
         if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
-            return target
+            return str(target)
 
         path = path.rstrip("/").rsplit("/", 1)[0]  # # pragma: no cover
         return f"{path}/{target}"  # # pragma: no cover
@@ -334,7 +346,7 @@ class AsyncFileHandle(ABC):
 
     def __init__(
         self,
-        client_factory: Awaitable[Any],
+        client_factory: Callable[[], Awaitable[Any]],
         bucket: str,
         blob: str,
         prefix: str,
@@ -372,8 +384,8 @@ class AsyncFileHandle(ABC):
         self._is_binary = "b" in mode
         self._is_append = "a" in mode
 
-        self._stream = None  # type: ignore
-        self._read_buffer = b"" if self._is_binary else ""
+        self._stream: Any = None
+        self._read_buffer: Union[bytes, str] = b"" if self._is_binary else ""
         self._read_pos = 0
         self._eof = False
 
@@ -392,6 +404,8 @@ class AsyncFileHandle(ABC):
 
     async def _stream_read(self, size: int = -1) -> Union[str, bytes]:
         """Read from stream (used internally)."""
+        if self._stream is None:  # pragma: no cover
+            raise ValueError("Stream not initialized")
         chunk = await self._stream.read(size)
         if self._is_binary:
             return chunk  # type: ignore
@@ -400,6 +414,8 @@ class AsyncFileHandle(ABC):
 
     async def _stream_read_all(self) -> Union[str, bytes]:
         """Read all data from stream (used internally)."""
+        if self._stream is None:  # pragma: no cover
+            raise ValueError("Stream not initialized")
         chunk = await self._stream.read()
         if self._is_binary:
             return chunk  # type: ignore
@@ -428,7 +444,7 @@ class AsyncFileHandle(ABC):
             return
 
         if self._is_binary:
-            data = bytes(self._write_buffer)  # type: ignore
+            data: Union[bytes, str] = bytes(self._write_buffer)  # type: ignore
         else:
             data = "".join(self._write_buffer)  # type: ignore
 
@@ -500,39 +516,42 @@ class AsyncFileHandle(ABC):
                 rest = await self._stream_read(-1)  # Use _stream_read with -1, not _stream_read_all
                 self._read_pos += len(rest)
                 self._eof = True
-                return buffered + rest
+                result: Union[str, bytes] = buffered + rest  # type: ignore
+                return result
             else:
                 # Return from buffer first
                 if len(self._read_buffer) >= size:  # pragma: no cover
-                    result = self._read_buffer[:size]
+                    result_buf: Union[str, bytes] = self._read_buffer[:size]
                     self._read_buffer = self._read_buffer[size:]
-                    return result
+                    return result_buf
                 else:  # pragma: no cover
                     # Not enough in buffer, need to read more
                     buffered = self._read_buffer
                     self._read_buffer = b"" if self._is_binary else ""
                     remaining = size - len(buffered)
-                    result = await self._stream_read(remaining)
-                    if not result:
+                    result_chunk = await self._stream_read(remaining)
+                    if not result_chunk:
                         self._eof = True
                         return buffered
-                    self._read_pos += len(result)
-                    return buffered + result
+                    self._read_pos += len(result_chunk)
+                    combined: Union[str, bytes] = buffered + result_chunk  # type: ignore
+                    return combined
 
         # No buffered data, read from stream
         if size == -1:
-            result = await self._stream_read(-1)  # Use _stream_read with -1, not _stream_read_all
-            self._read_pos += len(result)
+            # Use _stream_read with -1, not _stream_read_all
+            result_stream = await self._stream_read(-1)
+            self._read_pos += len(result_stream)
             self._eof = True
-            return result
+            return result_stream
         else:
-            result = await self._stream_read(size)
-            if not result:  # pragma: no cover
+            result_stream = await self._stream_read(size)
+            if not result_stream:  # pragma: no cover
                 self._eof = True
-                return result
+                return result_stream
 
-            self._read_pos += len(result)
-            return result
+            self._read_pos += len(result_stream)
+            return result_stream
 
     async def readline(self, size: int = -1) -> Union[str, bytes]:
         """Read and return one line from the file."""
@@ -541,27 +560,39 @@ class AsyncFileHandle(ABC):
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
-        newline = b"\n" if self._is_binary else "\n"
+        newline: Union[bytes, str] = b"\n" if self._is_binary else "\n"
         # Fill buffer until we find a newline or reach EOF
-        while newline not in self._read_buffer and not self._eof:
+        while not self._eof:
+            if self._is_binary:  # pragma: no cover
+                bytes_buffer: bytes = self._read_buffer  # type: ignore
+                bytes_newline: bytes = newline  # type: ignore
+                if bytes_newline in bytes_buffer:
+                    break
+            else:
+                str_buffer_check: str = self._read_buffer  # type: ignore
+                str_newline: str = newline  # type: ignore
+                if str_newline in str_buffer_check:
+                    break
+
             chunk = await self._stream_read(self._chunk_size)
             if not chunk:
                 self._eof = True
                 break
             self._read_pos += len(chunk)
-            self._read_buffer += chunk
+            buffer_tmp: Union[bytes, str] = self._read_buffer + chunk  # type: ignore
+            self._read_buffer = buffer_tmp
 
         try:
-            end = self._read_buffer.index(newline) + 1
+            end = self._read_buffer.index(newline) + 1  # type: ignore
         except ValueError:
             end = len(self._read_buffer)
 
         if size != -1 and end > size:
             end = size
 
-        result = self._read_buffer[:end]
+        result_line: Union[str, bytes] = self._read_buffer[:end]
         self._read_buffer = self._read_buffer[end:]
-        return result
+        return result_line
 
     async def readlines(self) -> List[Union[str, bytes]]:
         """Read and return all lines from the file."""
@@ -640,7 +671,8 @@ class AsyncFileHandle(ABC):
             buffer_byte_size = len(self._read_buffer)
         else:
             # In text mode, encode the buffer to get its byte size
-            buffer_byte_size = len(self._read_buffer.encode(self._encoding))
+            str_buffer: str = self._read_buffer  # type: ignore
+            buffer_byte_size = len(str_buffer.encode(self._encoding))
 
         return self._read_pos - buffer_byte_size
 
@@ -694,7 +726,12 @@ class AsyncFileHandle(ABC):
             chunk = await self.read(chunk_size)
             if not chunk:  # pragma: no cover
                 break
-            bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
+            if self._is_binary:
+                bytes_chunk: bytes = chunk  # type: ignore
+                bytes_to_skip -= len(bytes_chunk)
+            else:  # pragma: no cover
+                str_chunk: str = chunk  # type: ignore
+                bytes_to_skip -= len(str_chunk.encode(self._encoding))
 
         return await self.tell()
 
@@ -746,8 +783,8 @@ class SyncFileHandle(ABC):
         self._is_binary = "b" in mode
         self._is_append = "a" in mode
 
-        self._stream = None  # type: ignore
-        self._read_buffer = b"" if self._is_binary else ""
+        self._stream: Any = None
+        self._read_buffer: Union[bytes, str] = b"" if self._is_binary else ""
         self._read_pos = 0
         self._eof = False
 
@@ -785,6 +822,8 @@ class SyncFileHandle(ABC):
         # Python 3.9 compatibility: http.client.HTTPResponse.read() doesn't accept -1
         # but google.cloud.storage.fileio.BlobReader doesn't accept None
         # Check the stream type to determine which to use
+        if self._stream is None:  # pragma: no cover
+            raise ValueError("Stream not initialized")
         if size == -1:
             # Check if this is a boto3/botocore stream (wraps HTTPResponse)
             # These don't accept -1 in Python 3.9
@@ -803,6 +842,8 @@ class SyncFileHandle(ABC):
         Suppose self._stream.read() reads all remaining data.
         If not, this method should be overridden in subclasses.
         """
+        if self._stream is None:  # pragma: no cover
+            raise ValueError("Stream not initialized")
         chunk = self._stream.read()
         if self._is_binary:
             return chunk  # type: ignore
@@ -829,7 +870,7 @@ class SyncFileHandle(ABC):
         self._read_pos = 0
         self._eof = False
 
-    def __enter__(self) -> "AsyncFileHandle":
+    def __enter__(self) -> "SyncFileHandle":
         """Enter async context manager."""
         if self._is_read:
             try:
@@ -898,27 +939,39 @@ class SyncFileHandle(ABC):
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
-        newline = b"\n" if self._is_binary else "\n"
+        newline: Union[bytes, str] = b"\n" if self._is_binary else "\n"
         # Fill buffer until we find a newline or reach EOF
-        while newline not in self._read_buffer and not self._eof:
+        while not self._eof:
+            if self._is_binary:  # pragma: no cover
+                bytes_buffer_sync: bytes = self._read_buffer  # type: ignore
+                bytes_newline_sync: bytes = newline  # type: ignore
+                if bytes_newline_sync in bytes_buffer_sync:
+                    break
+            else:
+                str_buffer_check_sync: str = self._read_buffer  # type: ignore
+                str_newline_sync: str = newline  # type: ignore
+                if str_newline_sync in str_buffer_check_sync:  # pragma: no cover
+                    break
+
             chunk = self._stream_read(self._chunk_size)
             if not chunk:  # pragma: no cover
                 self._eof = True
                 break
             self._read_pos += len(chunk)
-            self._read_buffer += chunk
+            buffer_tmp: Union[bytes, str] = self._read_buffer + chunk  # type: ignore
+            self._read_buffer = buffer_tmp
 
         try:
-            end = self._read_buffer.index(newline) + 1
+            end = self._read_buffer.index(newline) + 1  # type: ignore
         except ValueError:
             end = len(self._read_buffer)
 
         if size != -1 and end > size:
             end = size
 
-        result = self._read_buffer[:end]
+        result_line: Union[str, bytes] = self._read_buffer[:end]
         self._read_buffer = self._read_buffer[end:]
-        return result
+        return result_line
 
     def readlines(self) -> List[Union[str, bytes]]:
         """Read and return all lines from the file."""
@@ -963,7 +1016,7 @@ class SyncFileHandle(ABC):
 
         self._closed = True
 
-    def __iter__(self) -> "AsyncFileHandle":
+    def __iter__(self) -> "SyncFileHandle":
         """Support async iteration over lines."""
         if not self._is_read:
             raise ValueError("File not opened for reading")
@@ -997,7 +1050,8 @@ class SyncFileHandle(ABC):
             buffer_byte_size = len(self._read_buffer)
         else:
             # In text mode, encode the buffer to get its byte size
-            buffer_byte_size = len(self._read_buffer.encode(self._encoding))
+            str_buffer_sync: str = self._read_buffer  # type: ignore
+            buffer_byte_size = len(str_buffer_sync.encode(self._encoding))
 
         return self._read_pos - buffer_byte_size
 
@@ -1051,6 +1105,11 @@ class SyncFileHandle(ABC):
             chunk = self.read(chunk_size)
             if not chunk:  # pragma: no cover
                 break
-            bytes_to_skip -= len(chunk.encode(self._encoding) if not self._is_binary else chunk)
+            if self._is_binary:
+                bytes_chunk_sync: bytes = chunk  # type: ignore
+                bytes_to_skip -= len(bytes_chunk_sync)
+            else:  # pragma: no cover
+                str_chunk_sync: str = chunk  # type: ignore
+                bytes_to_skip -= len(str_chunk_sync.encode(self._encoding))
 
         return self.tell()

@@ -17,7 +17,7 @@ class AzurePath(CloudPath):
     _default_client: Optional[AzureBlobClient] = None
 
     @classmethod
-    def _create_default_client(cls) -> "Client":
+    def _create_default_client(cls) -> "Client":  # type: ignore[override]
         """Create default Azure Blob client."""
         return AzureBlobClient()
 

@@ -11,9 +11,9 @@ from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    import aioboto3
-    from aiobotocore.client import AioBaseClient
-    from botocore.exceptions import ClientError
+    import aioboto3  # type: ignore[import-not-found]
+    from aiobotocore.client import AioBaseClient  # type: ignore[import-untyped, unused-ignore]
+    from botocore.exceptions import ClientError  # type: ignore[import-untyped, unused-ignore]
 
 try:
     import aioboto3
@@ -23,11 +23,11 @@ try:
     HAS_AIOBOTO3 = True
 except ImportError:
     HAS_AIOBOTO3 = False
-    ClientError = Exception  # type: ignore
+    ClientError = Exception
 
 
 # Track all active client instances for cleanup
-_active_clients: Set[weakref.ref] = set()
+_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
 
 
 async def _async_cleanup_all_clients() -> None:
@@ -54,7 +54,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
     # Get the original shutdown_asyncgens method
     original_shutdown = loop.shutdown_asyncgens
 
-    async def shutdown_with_cleanup():
+    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
         """Shutdown that includes client cleanup."""
         # Clean up clients first
         await _async_cleanup_all_clients()
@@ -62,7 +62,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
         await original_shutdown()
 
     # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup
+    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
 
 
 class AsyncS3Client(AsyncClient):
@@ -85,7 +85,7 @@ class AsyncS3Client(AsyncClient):
 
         self._client: Optional[AioBaseClient] = None
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None
+        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
 
     async def _get_client(self) -> AioBaseClient:
         """Get or create shared client."""
@@ -124,7 +124,9 @@ class AsyncS3Client(AsyncClient):
 
         return self._client
 
-    def _on_client_deleted(self, ref: weakref.ref) -> None:  # pragma: no cover
+    def _on_client_deleted(
+        self, ref: "weakref.ref[Any]"
+    ) -> None:  # pragma: no cover
         """Called when client is garbage collected."""
         _active_clients.discard(ref)
 
@@ -175,7 +177,7 @@ class AsyncS3Client(AsyncClient):
         try:
             response = await client.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
-                return await stream.read()
+                return await stream.read()  # type: ignore[no-any-return]
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             if error_code in ("NoSuchKey", "NoSuchBucket", "404"):
@@ -370,7 +372,7 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         try:
             response = await client.head_object(Bucket=bucket, Key=key)
-            return response
+            return response  # type: ignore[no-any-return]
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 raise FileNotFoundError(f"S3 object not found: {path}")
@@ -422,7 +424,7 @@ class AsyncS3Client(AsyncClient):
         target = metadata.get("Metadata", {}).get(self.__class__.symlink_target_metaname)
         if not target:
             raise ValueError(f"Not a symlink: {path}")
-        return target
+        return target  # type: ignore[no-any-return]
 
     async def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata.
@@ -482,7 +484,7 @@ class AsyncS3Client(AsyncClient):
 
                             results.append(PanPath(path_str))
                         else:
-                            results.append(path_str)
+                            results.append(path_str)  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list objects with delimiter
@@ -501,10 +503,10 @@ class AsyncS3Client(AsyncClient):
 
                         results.append(PanPath(path_str))
                     else:
-                        results.append(path_str)
+                        results.append(path_str)  # type: ignore[arg-type]
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
+    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
         """Walk directory tree.
 
         Args:
@@ -763,7 +765,7 @@ class S3AsyncFileHandle(AsyncFileHandle):
         """Create the underlying stream for reading or writing."""
         client = await self._client_factory()
         response = await client.get_object(Bucket=self._bucket, Key=self._blob)
-        return response["Body"]
+        return response["Body"]  # type: ignore[no-any-return]
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
@@ -778,4 +780,4 @@ class S3AsyncFileHandle(AsyncFileHandle):
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to S3 (no-op for S3)."""
-        await self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+        await self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore[union-attr]

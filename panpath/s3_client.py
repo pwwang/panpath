@@ -8,8 +8,8 @@ from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError
 
 if TYPE_CHECKING:
-    import boto3
-    from botocore.exceptions import ClientError
+    import boto3  # type: ignore[import-untyped]
+    from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 try:
     import boto3
@@ -18,7 +18,7 @@ try:
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
-    ClientError = Exception  # type: ignore
+    ClientError = Exception
 
 
 class S3Client(SyncClient):
@@ -77,7 +77,7 @@ class S3Client(SyncClient):
         bucket, key = self.__class__._parse_path(path)
         try:
             response = self._client.get_object(Bucket=bucket, Key=key)
-            return response["Body"].read()
+            return response["Body"].read()  # type: ignore[no-any-return]
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             if error_code in ("NoSuchKey", "NoSuchBucket", "404"):
@@ -101,7 +101,7 @@ class S3Client(SyncClient):
 
         self._client.delete_object(Bucket=bucket, Key=key)
 
-    def list_dir(self, path: str) -> list[str]:
+    def list_dir(self, path: str) -> list[str]:  # type: ignore[override]
         """List S3 objects with prefix."""
         bucket, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
@@ -261,7 +261,7 @@ class S3Client(SyncClient):
         bucket, key = self.__class__._parse_path(path)
         try:
             response = self._client.head_object(Bucket=bucket, Key=key)
-            return response
+            return response  # type: ignore[no-any-return]
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 raise FileNotFoundError(f"S3 object not found: {path}")
@@ -310,10 +310,12 @@ class S3Client(SyncClient):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get("Metadata", {}).get(self.__class__.symlink_target_metaname)
+        target = metadata.get("Metadata", {}).get(  # type: ignore[union-attr, call-overload]
+            self.__class__.symlink_target_metaname
+        )
         if not target:
             raise ValueError(f"Not a symlink: {path}")
-        return target
+        return target  # type: ignore[no-any-return]
 
     def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata.
@@ -332,7 +334,9 @@ class S3Client(SyncClient):
             Metadata={self.__class__.symlink_target_metaname: target},
         )
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:
+    def glob(  # type: ignore[override]
+        self, path: str, pattern: str, _return_panpath: bool = False
+    ) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:
@@ -371,7 +375,7 @@ class S3Client(SyncClient):
 
                             results.append(PanPath(path_str))
                         else:  # pragma: no cover
-                            results.append(path_str)
+                            results.append(path_str)  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list objects with delimiter
@@ -390,10 +394,12 @@ class S3Client(SyncClient):
 
                         results.append(PanPath(path_str))
                     else:  # pragma: no cover
-                        results.append(path_str)
+                        results.append(path_str)  # type: ignore[arg-type]
             return results
 
-    def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
+    def walk(  # type: ignore[override]
+        self, path: str
+    ) -> list[tuple[str, list[str], list[str]]]:
         """Walk directory tree.
 
         Args:
@@ -630,7 +636,7 @@ class S3SyncFileHandle(SyncFileHandle):
     Uses boto3's streaming API for efficient reading of large files.
     """
 
-    def _create_stream(self):
+    def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create the underlying stream."""
         return self._client.get_object(Bucket=self._bucket, Key=self._blob)["Body"]
 

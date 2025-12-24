@@ -9,8 +9,8 @@ from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from azure.storage.blob.aio import BlobServiceClient
-    from azure.core.exceptions import ResourceNotFoundError
+    from azure.storage.blob.aio import BlobServiceClient  # type: ignore[import-not-found]
+    from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
 
 try:
     from azure.storage.blob.aio import BlobServiceClient
@@ -19,11 +19,11 @@ try:
     HAS_AZURE_AIO = True
 except ImportError:
     HAS_AZURE_AIO = False
-    ResourceNotFoundError = Exception  # type: ignore
+    ResourceNotFoundError = Exception
 
 
 # Track all active client instances for cleanup
-_active_clients: Set[weakref.ref] = set()
+_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
 
 
 async def _async_cleanup_all_clients() -> None:
@@ -50,7 +50,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
     # Get the original shutdown_asyncgens method
     original_shutdown = loop.shutdown_asyncgens
 
-    async def shutdown_with_cleanup():
+    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
         """Shutdown that includes client cleanup."""
         # Clean up clients first
         await _async_cleanup_all_clients()
@@ -58,7 +58,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
         await original_shutdown()
 
     # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup
+    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
 
 
 class AsyncAzureBlobClient(AsyncClient):
@@ -84,7 +84,7 @@ class AsyncAzureBlobClient(AsyncClient):
         self._client: Optional[BlobServiceClient] = None
         self._connection_string = connection_string
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None
+        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
 
     async def _get_client(self) -> BlobServiceClient:
         """Get or create shared BlobServiceClient."""
@@ -136,7 +136,9 @@ class AsyncAzureBlobClient(AsyncClient):
 
         return self._client
 
-    def _on_client_deleted(self, ref: weakref.ref) -> None:  # pragma: no cover
+    def _on_client_deleted(
+        self, ref: "weakref.ref[Any]"
+    ) -> None:  # pragma: no cover
         """Called when client is garbage collected."""
         _active_clients.discard(ref)
 
@@ -157,7 +159,7 @@ class AsyncAzureBlobClient(AsyncClient):
         if not blob_name:
             try:
                 container_client = client.get_container_client(container_name)
-                return await container_client.exists()
+                return await container_client.exists()  # type: ignore[no-any-return]
             except Exception:  # pragma: no cover
                 return False
 
@@ -171,7 +173,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 return False
             # Checking if it is possibly a directory
             blob_client_dir = client.get_blob_client(container_name, blob_name + "/")
-            return await blob_client_dir.exists()
+            return await blob_client_dir.exists()  # type: ignore[no-any-return]
         except Exception:  # pragma: no cover
             return False
 
@@ -183,7 +185,7 @@ class AsyncAzureBlobClient(AsyncClient):
 
         try:
             download_stream = await blob_client.download_blob()
-            return await download_stream.readall()
+            return await download_stream.readall()  # type: ignore[no-any-return]
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -251,7 +253,7 @@ class AsyncAzureBlobClient(AsyncClient):
             return False
 
         blob_client = client.get_blob_client(container_name, blob_name.rstrip("/"))
-        return await blob_client.exists()
+        return await blob_client.exists()  # type: ignore[no-any-return]
 
     async def stat(self, path: str) -> os.stat_result:
         """Get Azure blob metadata."""
@@ -300,7 +302,7 @@ class AsyncAzureBlobClient(AsyncClient):
             raise ValueError(f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'.")
 
         container_name, blob_name = self.__class__._parse_path(path)
-        return AzureAsyncFileHandle(
+        return AzureAsyncFileHandle(  # type: ignore[no-untyped-call]
             client_factory=self._get_client,
             bucket=container_name,
             blob=blob_name,
@@ -367,7 +369,7 @@ class AsyncAzureBlobClient(AsyncClient):
         blob_client = client.get_blob_client(container_name, blob_name)
 
         try:
-            return await blob_client.get_blob_properties()
+            return await blob_client.get_blob_properties()  # type: ignore[no-any-return]
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -439,7 +441,7 @@ class AsyncAzureBlobClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
+                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list blobs with prefix
@@ -459,10 +461,10 @@ class AsyncAzureBlobClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))
+                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
+    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
         """Walk directory tree.
 
         Args:
@@ -525,7 +527,7 @@ class AsyncAzureBlobClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:
+    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
         """Create empty file.
 
         Args:
@@ -580,7 +582,7 @@ class AsyncAzureBlobClient(AsyncClient):
         if blob_name and not blob_name.endswith("/"):
             blob_name += "/"
 
-        blob_client = self._client.get_blob_client(container_name, blob_name)
+        blob_client = self._client.get_blob_client(container_name, blob_name)  # type: ignore[union-attr]
 
         # Check if it is empty
         if await self.is_dir(path) and await self.list_dir(path):
@@ -714,7 +716,7 @@ class AzureAsyncFileHandle(AsyncFileHandle):
     Uses Azure SDK's download_blob streaming API.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self._read_residue = b"" if self._is_binary else ""
 
@@ -723,10 +725,10 @@ class AzureAsyncFileHandle(AsyncFileHandle):
         await super().reset_stream()
         self._read_residue = b"" if self._is_binary else ""
 
-    async def _create_stream(self):
+    async def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create async read stream generator."""
         return (
-            await self._client.get_blob_client(self._bucket, self._blob).download_blob()
+            await self._client.get_blob_client(self._bucket, self._blob).download_blob()  # type: ignore[union-attr]
         ).chunks()
 
     @classmethod
@@ -754,8 +756,8 @@ class AzureAsyncFileHandle(AsyncFileHandle):
                 pass
 
             self._eof = True
-            result = (b"" if self._is_binary else "").join(chunks)
-            return result
+            result = (b"" if self._is_binary else "").join(chunks)  # type: ignore[attr-defined]
+            return result  # type: ignore[no-any-return]
         else:
             while len(self._read_residue) < size:
                 try:
@@ -775,25 +777,25 @@ class AzureAsyncFileHandle(AsyncFileHandle):
                 self._eof = True
                 result = self._read_residue
                 self._read_residue = b"" if self._is_binary else ""
-                return result
+                return result  # type: ignore[no-any-return]
 
             result = self._read_residue[:size]
             self._read_residue = self._read_residue[size:]
-            return result
+            return result  # type: ignore[no-any-return]
 
     async def _stream_read_all(self) -> Union[str, bytes]:
         """Read all remaining data from stream."""
-        download_stream = await self._client.get_blob_client(
+        download_stream = await self._client.get_blob_client(  # type: ignore[union-attr]
             self._bucket, self._blob
         ).download_blob()
         data = await download_stream.readall()
         if self._is_binary:
-            return data
+            return data  # type: ignore[no-any-return]
         else:
-            return data.decode(self._encoding)
+            return data.decode(self._encoding)  # type: ignore[no-any-return]
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to Azure blob."""
-        await self._client.get_blob_client(self._bucket, self._blob).upload_blob(
+        await self._client.get_blob_client(self._bucket, self._blob).upload_blob(  # type: ignore[union-attr]
             data, overwrite=True
         )

@@ -63,7 +63,7 @@ class PanPath(PathlibPath):
         >>> content = await path.a_read_text()
     """
 
-    def __new__(cls, *args: Any, **kwargs: Any):
+    def __new__(cls, *args: Any, **kwargs: Any) -> "PanPath":
         """Create and return the appropriate path instance.
 
         If called on a subclass, returns instance of that subclass.
@@ -106,14 +106,16 @@ class PanPath(PathlibPath):
             # In Python 3.10, __init__ doesn't accept arguments
             # In Python 3.12+, __init__ needs the arguments
             if sys.version_info >= (3, 12):
-                LocalPath.__init__(instance, *new_args, **kwargs)
+                LocalPath.__init__(  # type: ignore[no-untyped-call]
+                    instance, *new_args, **kwargs
+                )
             else:  # pragma: no cover
-                LocalPath.__init__(instance)
+                LocalPath.__init__(instance)  # type: ignore[no-untyped-call]
             return instance
 
         # Cloud path - look up in registry and instantiate
         try:
             path_class = get_path_class(scheme)
-            return path_class(*args, **kwargs)
+            return path_class(*args, **kwargs)  # type: ignore[no-any-return]
         except KeyError:
             raise ValueError(f"Unsupported URI scheme: {scheme!r}")

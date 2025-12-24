@@ -9,7 +9,7 @@ from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from google.cloud import storage
+    from google.cloud import storage  # type: ignore[import-untyped, unused-ignore]
     from google.api_core.exceptions import NotFound
 
 try:
@@ -51,7 +51,7 @@ class GSClient(SyncClient):
             # Check if bucket exists
             try:
                 bucket = self._client.bucket(bucket_name)
-                return bucket.exists()
+                return bucket.exists()  # type: ignore[no-any-return]
             except Exception:  # pragma: no cover
                 return False
 
@@ -68,7 +68,7 @@ class GSClient(SyncClient):
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         try:
-            return blob.download_as_bytes()
+            return blob.download_as_bytes()  # type: ignore[no-any-return]
         except NotFound:
             raise FileNotFoundError(f"GCS blob not found: {path}")
 
@@ -89,7 +89,7 @@ class GSClient(SyncClient):
         except NotFound:
             raise FileNotFoundError(f"GCS blob not found: {path}")
 
-    def list_dir(self, path: str) -> list[str]:
+    def list_dir(self, path: str) -> list[str]:  # type: ignore[override]
         """List GCS blobs with prefix."""
         bucket_name, prefix = self.__class__._parse_path(path)
         if prefix and not prefix.endswith("/"):
@@ -135,7 +135,7 @@ class GSClient(SyncClient):
 
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
-        return blob.exists()
+        return blob.exists()  # type: ignore[no-any-return]
 
     def stat(self, path: str) -> Any:
         """Get GCS blob metadata."""
@@ -186,7 +186,7 @@ class GSClient(SyncClient):
             raise ValueError(f"Unsupported mode: {mode}")
 
         bucket, blob_name = self.__class__._parse_path(path)
-        return GSSyncFileHandle(
+        return GSSyncFileHandle(  # type: ignore[no-untyped-call]
             client=self._client,
             bucket=bucket,
             blob=blob_name,
@@ -312,7 +312,7 @@ class GSClient(SyncClient):
         path = path.rstrip("/").rsplit("/", 1)[0]
         return f"{path}/{target}"
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:
+    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
@@ -349,7 +349,7 @@ class GSClient(SyncClient):
                     if _return_panpath:
                         results.append(PanPath(path_str))
                     else:  # pragma: no cover
-                        results.append(path_str)
+                        results.append(path_str)  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list blobs with delimiter
@@ -365,10 +365,10 @@ class GSClient(SyncClient):
                     if _return_panpath:
                         results.append(PanPath(path_str))
                     else:  # pragma: no cover
-                        results.append(path_str)
+                        results.append(path_str)  # type: ignore[arg-type]
             return results
 
-    def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
+    def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:  # type: ignore[override]
         """Walk directory tree.
 
         Args:
@@ -592,7 +592,7 @@ class GSSyncFileHandle(SyncFileHandle):
     Uses google-cloud-storage's streaming API for efficient reading of large files.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self._blob: storage.Blob = self._client.bucket(self._bucket).blob(self._blob)
         if self._is_read and not self._blob.exists():
@@ -615,14 +615,14 @@ class GSSyncFileHandle(SyncFileHandle):
         try:
             if self._stream:
                 self._stream.close()
-            if self._blob.client:  # type: storage.client.Client
+            if self._blob.client:
                 self._blob.client.close()
         except Exception:  # pragma: no cover
             pass
 
     def _create_stream(self) -> None:
         """Create streaming reader/writer."""
-        return self._blob.open("rb")
+        return self._blob.open("rb")  # type: ignore[no-any-return]
 
     def _upload(self, data: Union[bytes, str]) -> None:
         """Flush buffered writes to GCS."""

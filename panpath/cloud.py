@@ -17,7 +17,7 @@ from typing import (
 from panpath.base import PanPath
 
 if TYPE_CHECKING:
-    from panpath.clients import AsyncClient, AsyncFileHandle, Client
+    from panpath.clients import AsyncClient, AsyncFileHandle, SyncClient
 
 
 class CloudPath(PanPath, PurePosixPath, ABC):
@@ -28,8 +28,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
     """
 
     _is_cloud_path = True  # Marker for PanPath.__new__
-    _client: Optional["Client"] = None
-    _default_client: Optional["Client"] = None
+    _client: Optional["SyncClient"] = None
+    _default_client: Optional["SyncClient"] = None
     _async_client: Optional["AsyncClient"] = None
     _default_async_client: Optional["AsyncClient"] = None
 
@@ -41,7 +41,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         obj = PurePosixPath.__new__(cls, *args)
         obj._client = client
         obj._async_client = async_client
-        return obj  # type: ignore
+        return obj
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize cloud path (clients already handled in __new__())."""
@@ -59,7 +59,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # else: Python 3.9-3.11 don't need __init__ called (already done in __new__)
 
     @property
-    def client(self) -> "Client":
+    def client(self) -> "SyncClient":
         """Get or create the sync client for this path."""
         if self._client is None:  # pragma: no cover
             if self.__class__._default_client is None:
@@ -78,7 +78,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @classmethod
     @abstractmethod
-    def _create_default_client(cls) -> "Client":
+    def _create_default_client(cls) -> "SyncClient":
         """Create the default sync client for this path class."""
 
     @classmethod
@@ -157,15 +157,15 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Read file as bytes."""
         return self.client.read_bytes(str(self))
 
-    def read_text(self, encoding: str = "utf-8") -> str:
+    def read_text(self, encoding: str = "utf-8") -> str:  # type: ignore[override]
         """Read file as text."""
         return self.client.read_text(str(self), encoding=encoding)
 
-    def write_bytes(self, data: bytes) -> None:
+    def write_bytes(self, data: bytes) -> None:  # type: ignore[override]
         """Write bytes to file."""
         self.client.write_bytes(str(self), data)
 
-    def write_text(self, data: str, encoding: str = "utf-8") -> None:
+    def write_text(self, data: str, encoding: str = "utf-8") -> None:  # type: ignore[override]
         """Write text to file."""
         self.client.write_text(str(self), data, encoding=encoding)
 
@@ -177,7 +177,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             if not missing_ok:
                 raise
 
-    def iterdir(self) -> Iterator["CloudPath"]:
+    def iterdir(self) -> Iterator["CloudPath"]:  # type: ignore[override]
         """Iterate over directory contents."""
         for item in self.client.list_dir(str(self)):
             yield self._new_cloudpath(item)
@@ -207,14 +207,14 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         self.client.mkdir(str(self), parents=parents, exist_ok=exist_ok)
 
-    def open(
+    def open(  # type: ignore[override]
         self,
         mode: str = "r",
         encoding: Optional[str] = None,
         **kwargs: Any,
     ) -> Union[BinaryIO, TextIO]:
         """Open file for reading/writing."""
-        return self.client.open(str(self), mode=mode, encoding=encoding, **kwargs)
+        return self.client.open(str(self), mode=mode, encoding=encoding, **kwargs)  # type: ignore[return-value]
 
     def __eq__(self, other: Any) -> bool:
         """Check equality."""
@@ -258,7 +258,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # Use PurePosixPath's match which handles ** correctly
         return key_path.match(pattern)
 
-    def glob(self, pattern: str) -> List["CloudPath"]:
+    def glob(self, pattern: str) -> List["CloudPath"]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
@@ -267,9 +267,9 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths
         """
-        return self.client.glob(str(self), pattern)
+        return self.client.glob(str(self), pattern)  # type: ignore[return-value]
 
-    def rglob(self, pattern: str) -> List["CloudPath"]:
+    def rglob(self, pattern: str) -> List["CloudPath"]:  # type: ignore[override]
         """Recursively glob for files matching pattern.
 
         Args:
@@ -286,9 +286,9 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of (dirpath, dirnames, filenames) tuples
         """
-        return self.client.walk(str(self))
+        return self.client.walk(str(self))  # type: ignore[return-value]
 
-    def touch(self, exist_ok: bool = True) -> None:
+    def touch(self, exist_ok: bool = True) -> None:  # type: ignore[override]
         """Create empty file.
 
         Args:
@@ -296,7 +296,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         self.client.touch(str(self), exist_ok=exist_ok)
 
-    def rename(self, target: Union[str, "CloudPath"]) -> "CloudPath":
+    def rename(self, target: Union[str, "CloudPath"]) -> "CloudPath":  # type: ignore[override]
         """Rename/move file to target.
 
         Can move between cloud and local paths.
@@ -319,7 +319,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         return PanPath(target_str)  # type: ignore
 
-    def replace(self, target: Union[str, "CloudPath"]) -> "CloudPath":
+    def replace(self, target: Union[str, "CloudPath"]) -> "CloudPath":  # type: ignore[override]
         """Replace file at target (overwriting if exists).
 
         Args:
@@ -335,7 +335,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Remove empty directory marker."""
         self.client.rmdir(str(self))
 
-    def resolve(self) -> "CloudPath":
+    def resolve(self) -> "CloudPath":  # type: ignore[override]
         """Resolve to absolute path (no-op for cloud paths).
 
         Returns:
@@ -343,7 +343,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         return self.readlink() if self.is_symlink() else self
 
-    def samefile(self, other: Union[str, "CloudPath"]) -> bool:
+    def samefile(self, other: Union[str, "CloudPath"]) -> bool:  # type: ignore[override]
         """Check if this path refers to same file as other.
 
         Args:
@@ -372,7 +372,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         return PanPath(target)  # type: ignore
 
-    def symlink_to(self, target: Union[str, "CloudPath"]) -> None:
+    def symlink_to(self, target: Union[str, "CloudPath"]) -> None:  # type: ignore[override]
         """Create symlink pointing to target (via metadata).
 
         Args:
@@ -481,7 +481,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         dst_path.mkdir(parents=True, exist_ok=True)
 
         # Walk source tree and copy all files
-        for dirpath, dirnames, filenames in src_path.walk():
+        for dirpath, dirnames, filenames in src_path.walk():  # type: ignore[attr-defined]
             # Calculate relative path from src
             rel_dir = dirpath[len(str(src)) :].lstrip("/")
 
@@ -581,7 +581,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths
         """
-        return await self.async_client.glob(str(self), pattern)
+        return await self.async_client.glob(str(self), pattern)  # type: ignore[return-value]
 
     async def a_rglob(self, pattern: str) -> List["CloudPath"]:
         """Recursively glob for files matching pattern.
@@ -710,7 +710,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             # Same storage, use native copy
             await self.async_client.copy(str(self), target_str, follow_symlinks=follow_symlinks)
 
-        return PanPath(target_str)  # type: ignore
+        return PanPath(target_str)
 
     async def a_copytree(
         self, target: Union[str, "CloudPath"], follow_symlinks: bool = True
@@ -747,14 +747,14 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         dst_path = PanPath(dst)
 
         # Handle symlinks
-        if not follow_symlinks and await src_path.a_is_symlink():
+        if not follow_symlinks and await src_path.a_is_symlink():  # type: ignore[attr-defined]
             # Copy as symlink
-            target = await src_path.a_readlink()
-            await dst_path.a_symlink_to(str(target))
+            target = await src_path.a_readlink()  # type: ignore[attr-defined]
+            await dst_path.a_symlink_to(str(target))  # type: ignore[attr-defined]
         else:
             # Read from source and write to destination
-            data = await src_path.a_read_bytes()
-            await dst_path.a_write_bytes(data)
+            data = await src_path.a_read_bytes()  # type: ignore[attr-defined]
+            await dst_path.a_write_bytes(data)  # type: ignore[attr-defined]
 
     @staticmethod
     async def _a_copytree_cross_storage(
@@ -765,10 +765,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         dst_path = PanPath(dst)
 
         # Create destination directory
-        await dst_path.a_mkdir(parents=True, exist_ok=True)
+        await dst_path.a_mkdir(parents=True, exist_ok=True)  # type: ignore[attr-defined]
 
         # Walk source tree and copy all files
-        for dirpath, dirnames, filenames in await src_path.a_walk():
+        for dirpath, dirnames, filenames in await src_path.a_walk():  # type: ignore[attr-defined]
             # Calculate relative path from src
             rel_dir = dirpath[len(str(src)) :].lstrip("/")
 
@@ -806,4 +806,4 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             Async file handle from the async client
         """
-        return self.async_client.open(str(self), mode=mode, encoding=encoding, **kwargs)
+        return self.async_client.open(str(self), mode=mode, encoding=encoding, **kwargs)  # type: ignore[return-value]

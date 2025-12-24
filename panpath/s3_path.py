@@ -17,7 +17,7 @@ class S3Path(CloudPath):
     _default_client: Optional[S3Client] = None
 
     @classmethod
-    def _create_default_client(cls) -> "Client":
+    def _create_default_client(cls) -> "Client":  # type: ignore[override]
         """Create default S3 client."""
         return S3Client()
 

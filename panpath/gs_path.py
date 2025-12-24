@@ -16,7 +16,7 @@ class GSPath(CloudPath):
     _default_client: Optional[GSClient] = None
 
     @classmethod
-    def _create_default_client(cls) -> "Client":
+    def _create_default_client(cls) -> "Client":  # type: ignore[override]
         """Create default GCS client."""
         return GSClient()
 

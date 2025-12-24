@@ -31,7 +31,7 @@ except ImportError:
 
 
 # Track all active storage instances for cleanup
-_active_clients: Set[weakref.ref] = set()
+_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
 
 
 async def _async_cleanup_all_clients() -> None:
@@ -58,7 +58,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
     # Get the original shutdown_asyncgens method
     original_shutdown = loop.shutdown_asyncgens
 
-    async def shutdown_with_cleanup():
+    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
         """Shutdown that includes storage cleanup."""
         # Clean up storages first
         await _async_cleanup_all_clients()
@@ -66,7 +66,7 @@ def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
         await original_shutdown()
 
     # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup
+    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
 
 
 class AsyncGSClient(AsyncClient):
@@ -89,7 +89,7 @@ class AsyncGSClient(AsyncClient):
             )
         self._client: Optional[Storage] = None
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None
+        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
 
     async def _get_client(self) -> Storage:
         """Get or create shared storage client for the AsyncGSClient."""
@@ -129,9 +129,11 @@ class AsyncGSClient(AsyncClient):
                 # No running loop, cleanup will be handled by explicit close
                 pass
 
-        return self._client
+        return self._client  # type: ignore[return-value]
 
-    def _on_client_deleted(self, ref: weakref.ref) -> None:  # pragma: no cover
+    def _on_client_deleted(
+        self, ref: "weakref.ref[Any]"
+    ) -> None:  # pragma: no cover
         """Called when storage is garbage collected."""
         _active_clients.discard(ref)
 
@@ -245,7 +247,7 @@ class AsyncGSClient(AsyncClient):
             # If no marker, check if any objects exist with this prefix
             try:
                 response = await storage.list_objects(
-                    bucket_name, params={"prefix": blob_name, "maxResults": 1}
+                    bucket_name, params={"prefix": blob_name, "maxResults": 1}  # type: ignore[dict-item]
                 )
                 return len(response.get("items", [])) > 0
             except Exception:  # pragma: no cover
@@ -401,7 +403,7 @@ class AsyncGSClient(AsyncClient):
         storage = await self._get_client()
 
         # Update metadata using patch
-        metadata = {"metadata": metadata}
+        metadata = {"metadata": metadata}  # type: ignore[dict-item]
         await storage.patch_metadata(bucket_name, blob_name, metadata=metadata)
 
     async def readlink(self, path: str) -> str:
@@ -414,10 +416,10 @@ class AsyncGSClient(AsyncClient):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("metadata", {}).get(self.__class__.symlink_target_metaname)
+        target = metadata.get("metadata", {}).get(self.__class__.symlink_target_metaname)  # type: ignore[union-attr, call-overload]
         if not target:
             raise ValueError(f"Not a symlink: {path}")
-        return target
+        return target  # type: ignore[no-any-return]
 
     async def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata.
@@ -475,7 +477,7 @@ class AsyncGSClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
                     else:
-                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))
+                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))  # type: ignore[arg-type]
             return results
         else:
             # Non-recursive - list blobs with delimiter
@@ -495,10 +497,10 @@ class AsyncGSClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
                     else:
-                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))
+                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))  # type: ignore[arg-type]
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
+    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
         """Walk directory tree.
 
         Args:
@@ -567,7 +569,7 @@ class AsyncGSClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:
+    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
         """Create empty file.
 
         Args:
@@ -753,9 +755,9 @@ class GSAsyncFileHandle(AsyncFileHandle):
     Uses range requests for reading to avoid loading entire blobs.
     """
 
-    async def _create_stream(self):
+    async def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create a GSAsyncReadStream for this file handle."""
-        return await self._client.download_stream(self._bucket, self._blob)
+        return await self._client.download_stream(self._bucket, self._blob)  # type: ignore[union-attr]
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
@@ -768,4 +770,4 @@ class GSAsyncFileHandle(AsyncFileHandle):
         Args:
             data: Data to upload
         """
-        await self._client.upload(self._bucket, self._blob, data)
+        await self._client.upload(self._bucket, self._blob, data)  # type: ignore[union-attr]
