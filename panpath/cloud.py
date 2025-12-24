@@ -627,6 +627,18 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             New path instance
         """
         target_str = str(target)
+        if not isinstance(target, PanPath):  # pragma: no cover
+            target = PanPath(target_str)
+
+        if await self.a_is_dir():
+            # Support renaming directories by copying contents
+            async for item in self.a_iterdir():
+                relative_path = item.relative_to(self)
+                new_target = target / relative_path
+                await item.a_rename(new_target)
+            await self.a_rmdir()
+            return target
+
         # Check if cross-storage operation
         if CloudPath._is_cross_storage_op(str(self), target_str):  # pragma: no cover
             # Copy then delete for cross-storage

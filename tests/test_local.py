@@ -120,6 +120,50 @@ class TestLocalPath:
         # Ensure directory is removed
         assert not dir_path.exists()
 
+    async def test_async_rmtree(self, tmp_path):
+        """Test async rmtree method."""
+        dir_path = LocalPath(tmp_path / "to_remove_tree")
+        await dir_path.a_mkdir()
+        await (dir_path / "subdir").a_mkdir()
+        await (dir_path / "subdir" / "file.txt").a_write_text("content")
+
+        # Ensure directory exists
+        assert dir_path.exists()
+
+        await dir_path.a_rmtree()
+
+        # Ensure directory is removed
+        assert not dir_path.exists()
+
+    async def test_async_rename(self, tmp_path):
+        """Test async rename method."""
+        src_path = LocalPath(tmp_path / "src.txt")
+        dest_path = LocalPath(tmp_path / "dest.txt")
+
+        await src_path.a_write_text("rename_content")
+
+        await src_path.a_rename(dest_path)
+
+        assert not src_path.exists()
+        assert dest_path.exists()
+        content = await dest_path.a_read_text()
+        assert content == "rename_content"
+
+    async def test_async_rename_dir(self, tmp_path):
+        """Test async rename method for directories."""
+        src_dir = LocalPath(tmp_path / "src_dir")
+        dest_dir = LocalPath(tmp_path / "dest_dir")
+
+        await src_dir.a_mkdir()
+        await (src_dir / "file.txt").a_write_text("dir_content")
+
+        await src_dir.a_rename(dest_dir)
+
+        assert not src_dir.exists()
+        assert dest_dir.exists()
+        content = await (dest_dir / "file.txt").a_read_text()
+        assert content == "dir_content"
+
     async def test_async_mkdir(self, tmp_path):
         """Test async mkdir method."""
         dir_path = LocalPath(tmp_path / "new_dir")
@@ -153,7 +197,6 @@ class TestLocalPath:
 
         await file_path.a_unlink(missing_ok=True)
 
-
     async def test_async_copy(self, tmp_path):
         """Test async copy method."""
         src_path = LocalPath(tmp_path / "src.txt")
@@ -166,7 +209,6 @@ class TestLocalPath:
         assert dest_path.exists()
         content = await dest_path.a_read_text()
         assert content == "copy content"
-
 
     async def test_async_touch(self, tmp_path):
         """Test async touch method."""

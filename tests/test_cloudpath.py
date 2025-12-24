@@ -23,7 +23,7 @@ external dependencies.
 import os
 import pytest
 from unittest.mock import MagicMock, Mock
-from typing import Any, Iterator, List, Tuple, Union, Optional
+from typing import Any, List, Tuple, Optional
 from panpath.cloud import CloudPath
 from panpath.clients import SyncClient, AsyncClient, AsyncFileHandle
 from panpath.registry import register_path_class
@@ -586,7 +586,7 @@ def test_cloudpath_rename():
     src.write_text("content to move")
 
     # Rename file
-    result = src.rename(dst)
+    src.rename(dst)
 
     # Verify source no longer exists and dest does
     assert not src.exists()
@@ -916,7 +916,7 @@ async def test_cloudpath_async_walk():
     await file3.a_write_text("content3")
 
     # Walk directory
-    walks = await base.a_walk()
+    await base.a_walk()
     # Since walk is simplified, we won't assert on its content here
 
 
@@ -999,6 +999,28 @@ async def test_cloudpath_async_rename():
     assert await src.a_exists()
     assert not await dst.a_exists()
     assert await src.a_read_text() == "async move"
+
+
+async def test_cloudpath_async_rename_dir():
+    """Test async rename directory operations."""
+    client = MockAsyncClient()
+    src_base = MockCloudPath("mock://bucket/async-rename-dir-src/", async_client=client)
+    dst_base = MockCloudPath("mock://bucket/async-rename-dir-dst/", async_client=client)
+
+    # Create directory structure
+    await src_base.a_mkdir(exist_ok=True)
+    file1 = src_base / "file1.txt"
+    await file1.a_write_text("content1")
+
+    # Rename directory
+    await src_base.a_rename(dst_base)
+
+    # Verify source no longer exists and dest does
+    assert not await src_base.a_exists()
+    assert await dst_base.a_exists()
+    dst_file1 = dst_base / "file1.txt"
+    assert await dst_file1.a_exists()
+    assert await dst_file1.a_read_text() == "content1"
 
 
 async def test_cloudpath_async_iterdir():
