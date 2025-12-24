@@ -1,4 +1,5 @@
 """Async S3 client implementation."""
+from __future__ import annotations
 
 import asyncio
 import os

@@ -782,6 +782,16 @@ class SyncFileHandle(ABC):
 
     def _stream_read(self, size: int = -1) -> Union[str, bytes]:
         """Read from stream (used internally)."""
+        # Python 3.9 compatibility: http.client.HTTPResponse.read() doesn't accept -1
+        # but google.cloud.storage.fileio.BlobReader doesn't accept None
+        # Check the stream type to determine which to use
+        if size == -1:
+            # Check if this is a boto3/botocore stream (wraps HTTPResponse)
+            # These don't accept -1 in Python 3.9
+            stream_module = getattr(self._stream.__class__, '__module__', '')
+            if 'botocore' in stream_module or 'urllib3' in stream_module:
+                size = None  # type: ignore
+
         chunk = self._stream.read(size)
         if self._is_binary:
             return chunk  # type: ignore
