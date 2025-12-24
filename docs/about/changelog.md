@@ -5,8 +5,51 @@ All notable changes to PanPath will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0]
+## [Unreleased]
 
+### 🚀 New Features
+
+#### Async File Handle Enhancements
+- **`tell()` and `seek()` methods**: Added `tell()` and `seek()` methods to async file handle classes for S3, GCS, and Azure clients, enabling better control over file position during async read/write operations
+
+#### Resource Management
+- **Async cleanup for GCS**: Implemented async cleanup for active storage instances in `AsyncGSClient`, improving resource management and preventing resource leaks
+
+### 🔧 Refactoring & Architecture Improvements
+
+#### Client Architecture
+- **Optimized async client architecture**: Refactored cloud async clients (Azure, GCS, S3) for better code organization and maintainability
+- **Sync client refactoring**: Refactored synchronous clients with improved structure and enhanced test coverage
+- **Base client classes**: Introduced base `Client`, `SyncClient`, and `AsyncClient` classes for better code reuse and consistency across cloud providers
+
+#### Code Quality
+- **Enhanced error handling**: Improved error handling and path parsing logic across all client classes
+- **Better code organization**: Consolidated common methods in base classes, reducing code duplication
+
+### 🐛 Bug Fixes
+
+- **Cloud async clients**: Fixed various issues in cloud async clients for more reliable async operations
+- **Warning suppression**: Added warning suppression for `FutureWarning` in Google Cloud Storage import
+
+### 🧪 Testing Improvements
+
+- **Increased test coverage**: Significantly improved test coverage across all modules
+- **Comprehensive test suites**: Added extensive test suites for all client classes:
+  - `AzureBlobClient` tests covering initialization, path parsing, file operations, metadata, symlinks, and directory operations
+  - `GSClient` tests with comprehensive coverage of GCS operations
+  - `S3Client` tests with thorough validation of S3 operations
+  - New `test_cloudpath.py` with 1000+ lines of comprehensive tests
+- **Edge case coverage**: Enhanced tests to cover edge cases and error scenarios for robust validation
+
+### 📊 Statistics
+
+- **Test improvements**: Added 2,000+ lines of comprehensive tests
+- **Code consolidation**: Removed redundant test files, streamlining the test suite
+- **Coverage increase**: Improved overall code coverage with better test organization
+
+---
+
+## [0.2.0] - 2025-12-18
 
 ### Overview
 
