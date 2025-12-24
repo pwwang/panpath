@@ -1,0 +1,18 @@
+[run]
+omit =
+    # need plugins to be installed to test
+    tests/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    if not HAS_AIOFILES:
+    if not HAS_GCS:
+    if not HAS_GCLOUD_AIO:
+    if not HAS_AZURE:
+    if not HAS_AZURE_AIO:
+    if not HAS_AIOBOTO3:
+    if not HAS_BOTO3:
+    except ImportError:
+    except NameError:

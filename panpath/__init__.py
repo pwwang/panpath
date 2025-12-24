@@ -33,16 +33,16 @@ try:
     from panpath.s3_path import S3Path
 
     register_path_class("s3", S3Path)
-except ImportError:  # pragma: no cover
+except ImportError:
     # S3 dependencies not installed
-    pass
+    raise
 
 # Register Google Cloud Storage
 try:
     from panpath.gs_path import GSPath
 
     register_path_class("gs", GSPath)
-except ImportError:  # pragma: no cover
+except ImportError:
     # GCS dependencies not installed
     pass
 
@@ -52,7 +52,7 @@ try:
 
     register_path_class("az", AzurePath)
     register_path_class("azure", AzurePath)  # Support both schemes
-except ImportError:  # pragma: no cover
+except ImportError:
     # Azure dependencies not installed
     pass
 
@@ -68,15 +68,15 @@ __all__ = [
 # Add cloud path classes to __all__ if they're available
 try:
     __all__.extend(["S3Path"])
-except NameError:  # pragma: no cover
+except NameError:
     pass
 
 try:
     __all__.extend(["GSPath"])
-except NameError:  # pragma: no cover
+except NameError:
     pass
 
 try:
     __all__.extend(["AzurePath"])
-except NameError:  # pragma: no cover
+except NameError:
     pass

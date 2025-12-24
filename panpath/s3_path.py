@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 from panpath.cloud import CloudPath
 from panpath.s3_client import S3Client
+from panpath.s3_async_client import AsyncS3Client
 
 if TYPE_CHECKING:
     from panpath.clients import Client, AsyncClient
@@ -23,6 +24,4 @@ class S3Path(CloudPath):
     @classmethod
     def _create_default_async_client(cls) -> "AsyncClient":
         """Create default async S3 client."""
-        from panpath.s3_async_client import AsyncS3Client
-
         return AsyncS3Client()

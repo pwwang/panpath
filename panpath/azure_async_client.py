@@ -17,7 +17,7 @@ try:
     from azure.core.exceptions import ResourceNotFoundError
 
     HAS_AZURE_AIO = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_AZURE_AIO = False
     ResourceNotFoundError = Exception  # type: ignore
 
@@ -73,7 +73,7 @@ class AsyncAzureBlobClient(AsyncClient):
             connection_string: Azure storage connection string
             **kwargs: Additional arguments
         """
-        if not HAS_AZURE_AIO:  # pragma: no cover
+        if not HAS_AZURE_AIO:
             raise MissingDependencyError(
                 backend="async Azure Blob Storage",
                 package="azure-storage-blob[aio]",

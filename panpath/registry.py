@@ -64,3 +64,13 @@ def swap_implementation(
     old_class = _REGISTRY.get(scheme)  # type: ignore
     _REGISTRY[scheme] = path_class
     return old_class  # type: ignore
+
+
+def restore_registry(snapshot: Dict[str, Type["CloudPath"]]) -> None:
+    """Restore the registry from a snapshot (for testing).
+
+    Args:
+        snapshot: Registry snapshot to restore
+    """
+    _REGISTRY.clear()
+    _REGISTRY.update(snapshot)

@@ -60,103 +60,82 @@ class SyncClient(Client, ABC):
     @abstractmethod
     def exists(self, path: str) -> bool:
         """Check if path exists."""
-        ...
 
     @abstractmethod
     def read_bytes(self, path: str) -> bytes:
         """Read file as bytes."""
-        ...
-        ...
 
     @abstractmethod
     def write_bytes(self, path: str, data: bytes) -> None:
         """Write bytes to file."""
-        ...
 
     @abstractmethod
     def delete(self, path: str) -> None:
         """Delete file."""
-        ...
 
     @abstractmethod
     def list_dir(self, path: str) -> Iterator[str]:
         """List directory contents."""
-        ...
 
     @abstractmethod
     def is_dir(self, path: str) -> bool:
         """Check if path is a directory."""
-        ...
 
     @abstractmethod
     def is_file(self, path: str) -> bool:
         """Check if path is a file."""
-        ...
 
     @abstractmethod
     def stat(self, path: str) -> Any:
         """Get file stats."""
-        ...
 
     @abstractmethod
     def mkdir(self, path: str, parents: bool = False, exist_ok: bool = False) -> None:
         """Create a directory marker (empty blob with trailing slash)."""
-        ...
 
     @abstractmethod
     def glob(self, path: str, pattern: str) -> Iterator[str]:
         """Find all paths matching pattern."""
-        ...
 
     @abstractmethod
     def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
         """Walk directory tree."""
-        ...
 
     @abstractmethod
     def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file or update metadata."""
-        ...
 
     @abstractmethod
     def rename(self, src: str, dst: str) -> None:
         """Rename/move file."""
-        ...
 
     @abstractmethod
     def rmdir(self, path: str) -> None:
         """Remove directory marker."""
-        ...
 
     @abstractmethod
     def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata."""
-        ...
 
     @abstractmethod
     def get_metadata(self, path: str) -> dict[str, str]:
         """Get object metadata."""
-        ...
 
     @abstractmethod
     def set_metadata(self, path: str, metadata: dict[str, str]) -> None:
         """Set object metadata."""
-        ...
 
     @abstractmethod
     def rmtree(self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
         """Remove directory and all its contents recursively."""
-        ...
 
     @abstractmethod
     def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file from src to dst."""
-        ...
 
     @abstractmethod
     def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree from src to dst recursively."""
-        ...
 
     def read_text(self, path: str, encoding: str = "utf-8") -> str:
         """Read file as text."""
@@ -209,109 +188,88 @@ class AsyncClient(Client, ABC):
     @abstractmethod
     async def close(self) -> None:
         """Close any open connections/resources."""
-        ...
 
     @abstractmethod
     async def exists(self, path: str) -> bool:
         """Check if path exists."""
-        ...
 
     @abstractmethod
     async def read_bytes(self, path: str) -> bytes:
         """Read file as bytes."""
-        ...
 
     @abstractmethod
     async def write_bytes(self, path: str, data: bytes) -> None:
         """Write bytes to file."""
-        ...
 
     @abstractmethod
     async def delete(self, path: str) -> None:
         """Delete file."""
-        ...
 
     @abstractmethod
     async def list_dir(self, path: str) -> list[str]:
         """List directory contents."""
-        ...
 
     @abstractmethod
     async def is_dir(self, path: str) -> bool:
         """Check if path is a directory."""
-        ...
 
     @abstractmethod
     async def is_file(self, path: str) -> bool:
         """Check if path is a file."""
-        ...
 
     @abstractmethod
     async def stat(self, path: str) -> Any:
         """Get file stats."""
-        ...
 
     @abstractmethod
     async def mkdir(self, path: str, parents: bool = False, exist_ok: bool = False) -> None:
         """Create a directory marker (empty blob with trailing slash)."""
-        ...
 
     @abstractmethod
     async def glob(self, path: str, pattern: str) -> list[str]:
         """Find all paths matching pattern."""
-        ...
 
     @abstractmethod
     async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
         """Walk directory tree."""
-        ...
 
     @abstractmethod
     async def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file or update metadata."""
-        ...
 
     @abstractmethod
     async def rename(self, src: str, dst: str) -> None:
         """Rename/move file."""
-        ...
 
     @abstractmethod
     async def rmdir(self, path: str) -> None:
         """Remove directory marker."""
-        ...
 
     @abstractmethod
     async def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata."""
-        ...
 
     @abstractmethod
     async def get_metadata(self, path: str) -> dict[str, str]:
         """Get object metadata."""
-        ...
 
     @abstractmethod
     async def set_metadata(self, path: str, metadata: dict[str, str]) -> None:
         """Set object metadata."""
-        ...
 
     @abstractmethod
     async def rmtree(
         self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
     ) -> None:
         """Remove directory and all its contents recursively."""
-        ...
 
     @abstractmethod
     async def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file from src to dst."""
-        ...
 
     @abstractmethod
     async def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree from src to dst recursively."""
-        ...
 
     async def __aenter__(self) -> "AsyncClient":
         """Enter async context manager."""
@@ -423,17 +381,14 @@ class AsyncFileHandle(ABC):
     @abstractmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
-        ...
 
     @abstractmethod
     async def _create_stream(self) -> Any:
         """Create and return the underlying async stream for reading."""
-        ...
 
     @abstractmethod
     async def _upload(self, data: Union[bytes, str]) -> None:
         """Upload data to cloud storage (used internally)."""
-        ...
 
     async def _stream_read(self, size: int = -1) -> Union[str, bytes]:
         """Read from stream (used internally)."""
@@ -552,7 +507,7 @@ class AsyncFileHandle(ABC):
                     result = self._read_buffer[:size]
                     self._read_buffer = self._read_buffer[size:]
                     return result
-                else:
+                else:  # pragma: no cover
                     # Not enough in buffer, need to read more
                     buffered = self._read_buffer
                     self._read_buffer = b"" if self._is_binary else ""
@@ -800,17 +755,14 @@ class SyncFileHandle(ABC):
     @abstractmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
-        ...
 
     @abstractmethod
     def _create_stream(self) -> Any:
         """Create and return the underlying async stream for reading."""
-        ...
 
     @abstractmethod
     def _upload(self, data: Union[bytes, str]) -> None:
         """Upload data to cloud storage (used internally)."""
-        ...
 
     def flush(self) -> None:
         """Flush write buffer (optional, default implementation is no-op)."""

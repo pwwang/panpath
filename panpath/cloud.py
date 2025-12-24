@@ -80,13 +80,11 @@ class CloudPath(PanPath, PurePosixPath, ABC):
     @abstractmethod
     def _create_default_client(cls) -> "Client":
         """Create the default sync client for this path class."""
-        ...
 
     @classmethod
     @abstractmethod
     def _create_default_async_client(cls) -> "AsyncClient":
         """Create the default async client for this path class."""
-        ...
 
     def _new_cloudpath(self, path: str) -> "CloudPath":
         """Create a new cloud path preserving client and type.

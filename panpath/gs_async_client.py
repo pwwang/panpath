@@ -26,7 +26,7 @@ try:
     from gcloud.aio.storage import Storage
 
     HAS_GCLOUD_AIO = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_GCLOUD_AIO = False
 
 
@@ -81,7 +81,7 @@ class AsyncGSClient(AsyncClient):
         Args:
             **kwargs: Additional arguments
         """
-        if not HAS_GCLOUD_AIO:  # pragma: no cover
+        if not HAS_GCLOUD_AIO:
             raise MissingDependencyError(
                 backend="async Google Cloud Storage",
                 package="gcloud-aio-storage",

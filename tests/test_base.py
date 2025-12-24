@@ -16,3 +16,5 @@ def test_version():
 
     assert hasattr(panpath, "__version__")
     assert isinstance(panpath.__version__, str)
+
+

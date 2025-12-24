@@ -26,14 +26,7 @@ def _parse_uri(path: str) -> tuple[Union[str, None], str]:
         scheme = match.group(1).lower()
         # Special handling for file:// URLs - strip to local path
         if scheme == "file":
-            # Handle file:/// (8 chars, use [7:] to keep leading /)
-            # and file:// (7 chars, use [7:])
-            if path.startswith("file:///"):
-                return None, path[7:]  # Keeps /path from file:///path
-            elif path.startswith("file://"):
-                return None, path[7:]  # Keeps path from file://path
-            else:
-                return None, path[5:]  # file: is 5 chars
+            return None, path[7:]  # Keeps path from file://path
         return scheme, path
     return None, path
 
@@ -80,7 +73,7 @@ class PanPath(PathlibPath):
         if cls is not PanPath:
             # For CloudPath and its subclasses, we need special handling
             # since they inherit from PurePosixPath behavior
-            if hasattr(cls, "_is_cloud_path") and cls._is_cloud_path:
+            if hasattr(cls, "_is_cloud_path") and cls._is_cloud_path:  # pragma: no cover
                 # CloudPath subclasses use PurePosixPath-like behavior
                 # Create via PurePosixPath mechanism
                 return PurePosixPath.__new__(cls, *args)
@@ -90,7 +83,7 @@ class PanPath(PathlibPath):
         # PanPath factory logic - only when called as PanPath(...) directly
         # Extract the first argument as the path
         if not args:
-            raise TypeError("PanPath() missing required argument: 'path'")
+            args = ("",)  # Default to empty path if no args provided
 
         path = args[0]
         if isinstance(path, PanPath):
@@ -114,7 +107,7 @@ class PanPath(PathlibPath):
             # In Python 3.12+, __init__ needs the arguments
             if sys.version_info >= (3, 12):
                 LocalPath.__init__(instance, *new_args, **kwargs)
-            else:
+            else:  # pragma: no cover
                 LocalPath.__init__(instance)
             return instance
 

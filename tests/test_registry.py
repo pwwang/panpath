@@ -7,7 +7,22 @@ from panpath.registry import (
     get_registered_schemes,
     clear_registry,
     swap_implementation,
+    restore_registry,
 )
+
+
+@pytest.fixture(autouse=True)
+def save_and_restore_registry():
+    """Save and restore registry for each test to prevent cross-test contamination."""
+    from panpath import registry
+
+    # Save current registry state
+    old_registry = registry._REGISTRY.copy()
+
+    yield
+
+    # Restore original registry state
+    restore_registry(old_registry)
 
 
 def test_register_and_get_path_class():
@@ -31,19 +46,12 @@ def test_register_and_get_path_class():
     path_class = get_path_class("test")
     assert path_class == MockPath
 
-    # Cleanup
-    clear_registry()
-
 
 def test_get_registered_schemes():
     """Test getting list of registered schemes."""
-    from panpath import registry
     from panpath.s3_path import S3Path
     from panpath.gs_path import GSPath
     from panpath.azure_path import AzurePath
-
-    # Save current registry
-    old_registry = registry._REGISTRY.copy()
 
     # Clear registry
     clear_registry()
@@ -65,17 +73,10 @@ def test_get_registered_schemes():
     assert "az" in schemes
     assert "azure" in schemes
 
-    # Restore original registry
-    registry._REGISTRY = old_registry
-
 
 def test_swap_implementation():
     """Test swapping implementations (for testing)."""
-    from panpath import registry
     from panpath.cloud import CloudPath
-
-    # Save current registry
-    old_registry = registry._REGISTRY.copy()
 
     class OriginalPath(CloudPath):
         @classmethod
@@ -107,33 +108,18 @@ def test_swap_implementation():
     # Check new class is registered
     assert get_path_class("swap-test") == NewPath
 
-    # Restore registry
-    registry._REGISTRY = old_registry
-
 
 def test_get_path_class_unknown_scheme():
     """Test that unknown scheme raises KeyError."""
-    from panpath import registry
-
-    # Save current registry
-    old_registry = registry._REGISTRY.copy()
-
     clear_registry()
 
     with pytest.raises(KeyError):
         get_path_class("unknown-scheme")
 
-    # Restore registry
-    registry._REGISTRY = old_registry
-
 
 def test_clear_registry():
     """Test clearing the registry."""
-    from panpath import registry
     from panpath.cloud import CloudPath
-
-    # Save current registry
-    old_registry = registry._REGISTRY.copy()
 
     class TestPath(CloudPath):
         @classmethod
@@ -150,6 +136,3 @@ def test_clear_registry():
     clear_registry()
     assert "clear-test" not in get_registered_schemes()
     assert len(get_registered_schemes()) == 0
-
-    # Restore registry
-    registry._REGISTRY = old_registry

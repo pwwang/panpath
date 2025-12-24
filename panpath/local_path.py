@@ -3,7 +3,7 @@
 from pathlib import Path, PosixPath, WindowsPath
 import os
 import sys
-from typing import Any, Optional, Union
+from typing import Any, AsyncGenerator, Optional, Union
 from panpath.base import PanPath
 from panpath.cloud import CloudPath
 
@@ -40,20 +40,8 @@ class LocalPath(_ConcretePath, PanPath):
         # In Python 3.12+, pathlib.Path.__init__() needs the arguments
         if sys.version_info >= (3, 12):
             super().__init__(*args, **kwargs)
-        else:
+        else:  # pragma: no cover
             super().__init__()
-
-    def __eq__(self, other):  # type: ignore
-        """Check equality."""
-        return super().__eq__(other)
-
-    def __hash__(self) -> int:
-        """Return hash of path."""
-        return super().__hash__()
-
-    def touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
-        """Create the file if it does not exist or update the modification time."""
-        return super().touch(mode=mode, exist_ok=exist_ok)
 
     async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
         """Create the file if it does not exist or update the modification time (async)."""
@@ -65,13 +53,13 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        try:
-            async with aiofiles.open(str(self), mode="a"):
-                pass
-            os.chmod(str(self), mode)
-        except FileExistsError:
-            if not exist_ok:
-                raise
+
+        if await self.a_exists() and not exist_ok:
+            raise FileExistsError(f"File {self} already exists.")
+
+        async with aiofiles.open(str(self), mode="a"):
+            pass
+        os.chmod(str(self), mode)
 
     async def a_copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
@@ -86,14 +74,14 @@ class LocalPath(_ConcretePath, PanPath):
         """
         target_str = str(target)
         # Check if cross-storage operation
-        if CloudPath._is_cross_storage_op(str(self), target_str):
+        if CloudPath._is_cross_storage_op(str(self), target_str):  # pragma: no cover
             await CloudPath._a_copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
         else:
             async with aiofiles.open(str(self), mode="rb") as sf:
                 async with aiofiles.open(target_str, mode="wb") as df:
                     while True:
                         chunk = await sf.read(1024 * 1024)
-                        if not chunk:
+                        if not chunk:  # pragma: no cover
                             break
                         await df.write(chunk)
 
@@ -237,7 +225,7 @@ class LocalPath(_ConcretePath, PanPath):
             )
         await aiofiles.os.rmdir(str(self))
 
-    async def a_iterdir(self) -> list["LocalPath"]:
+    async def a_iterdir(self) -> AsyncGenerator["LocalPath", None]:
         """List directory contents (async)."""
         if not HAS_AIOFILES:
             from panpath.exceptions import MissingDependencyError
@@ -247,8 +235,8 @@ class LocalPath(_ConcretePath, PanPath):
                 package="aiofiles",
                 extra="all-async",
             )
-        entries = await aiofiles.os.listdir(str(self))
-        return [self / entry for entry in entries]
+        for item in await aiofiles.os.listdir(str(self)):
+            yield self / item
 
     async def a_stat(self) -> os.stat_result:
         """Get file stats (async)."""

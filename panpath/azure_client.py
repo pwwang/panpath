@@ -16,7 +16,7 @@ try:
     from azure.core.exceptions import ResourceNotFoundError
 
     HAS_AZURE = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_AZURE = False
     ResourceNotFoundError = Exception  # type: ignore
 
@@ -33,7 +33,7 @@ class AzureBlobClient(SyncClient):
             connection_string: Azure storage connection string
             **kwargs: Additional arguments passed to BlobServiceClient
         """
-        if not HAS_AZURE:  # pragma: no cover
+        if not HAS_AZURE:
             raise MissingDependencyError(
                 backend="Azure Blob Storage",
                 package="azure-storage-blob",

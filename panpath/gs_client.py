@@ -19,7 +19,7 @@ try:
     from google.api_core.exceptions import NotFound
 
     HAS_GCS = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_GCS = False
     NotFound = Exception  # type: ignore
 
@@ -36,7 +36,7 @@ class GSClient(SyncClient):
         Args:
             **kwargs: Additional arguments passed to storage.Client()
         """
-        if not HAS_GCS:  # pragma: no cover
+        if not HAS_GCS:
             raise MissingDependencyError(
                 backend="Google Cloud Storage",
                 package="google-cloud-storage",

@@ -56,6 +56,7 @@ all = ["boto3", "google-cloud-storage", "azure-storage-blob", "aioboto3", "gclou
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0.0"
 pytest-cov = ">=4.0.0"
+pytest-asyncio = ">=0.21.0"
 pytest-xdist = ">=3.0.0"
 python-dotenv = "^1"
 mypy = ">=1.0.0"
@@ -74,7 +75,7 @@ asyncio_mode = "auto"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v -n auto --cov=panpath --cov-report=term-missing"
+addopts = "-v -n auto --cov=panpath --cov-report=term-missing --cov-config=.coveragerc"
 
 [tool.mypy]
 python_version = "3.9"

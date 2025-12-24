@@ -20,7 +20,7 @@ try:
     from botocore.exceptions import ClientError
 
     HAS_AIOBOTO3 = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_AIOBOTO3 = False
     ClientError = Exception  # type: ignore
 
@@ -75,7 +75,7 @@ class AsyncS3Client(AsyncClient):
         Args:
             **kwargs: Additional arguments passed to aioboto3.Session
         """
-        if not HAS_AIOBOTO3:  # pragma: no cover
+        if not HAS_AIOBOTO3:
             raise MissingDependencyError(
                 backend="async S3",
                 package="aioboto3",

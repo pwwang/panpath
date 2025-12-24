@@ -16,7 +16,7 @@ try:
     from botocore.exceptions import ClientError
 
     HAS_BOTO3 = True
-except ImportError:  # pragma: no cover
+except ImportError:
     HAS_BOTO3 = False
     ClientError = Exception  # type: ignore
 
@@ -32,7 +32,7 @@ class S3Client(SyncClient):
         Args:
             **kwargs: Additional arguments passed to boto3.client()
         """
-        if not HAS_BOTO3:  # pragma: no cover
+        if not HAS_BOTO3:
             raise MissingDependencyError(
                 backend="S3",
                 package="boto3",
