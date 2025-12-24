@@ -312,7 +312,12 @@ class GSClient(SyncClient):
         path = path.rstrip("/").rsplit("/", 1)[0]
         return f"{path}/{target}"
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> list["Any"]:  # type: ignore[override]
+    def glob(  # type: ignore[override]
+        self,
+        path: str,
+        pattern: str,
+        _return_panpath: bool = False,
+    ) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:

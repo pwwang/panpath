@@ -279,7 +279,12 @@ class AzureBlobClient(SyncClient):
         # Set symlink metadata
         blob_client.set_blob_metadata({self.__class__.symlink_target_metaname: target})
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = True) -> list["Any"]:  # type: ignore[override]
+    def glob(  # type: ignore[override]
+        self,
+        path: str,
+        pattern: str,
+        _return_panpath: bool = True,
+    ) -> list["Any"]:
         """Glob for files matching pattern.
 
         Args:
@@ -315,7 +320,11 @@ class AzureBlobClient(SyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{scheme}://{container_name}/{blob.name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
         else:
             # Non-recursive - list blobs with prefix
@@ -333,7 +342,11 @@ class AzureBlobClient(SyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{scheme}://{container_name}/{blob.name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
 
     def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
@@ -398,7 +411,12 @@ class AzureBlobClient(SyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
+    def touch(  # type: ignore[no-untyped-def, override]
+        self,
+        path: str,
+        mode=None,
+        exist_ok: bool = True,
+    ) -> None:
         """Create empty file.
 
         Args:

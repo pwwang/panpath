@@ -1,4 +1,5 @@
 """Async S3 client implementation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -124,9 +125,7 @@ class AsyncS3Client(AsyncClient):
 
         return self._client
 
-    def _on_client_deleted(
-        self, ref: "weakref.ref[Any]"
-    ) -> None:  # pragma: no cover
+    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
         """Called when client is garbage collected."""
         _active_clients.discard(ref)
 
@@ -506,7 +505,10 @@ class AsyncS3Client(AsyncClient):
                         results.append(path_str)  # type: ignore[arg-type]
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
+    async def walk(  # type: ignore[override]
+        self,
+        path: str,
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -780,4 +782,8 @@ class S3AsyncFileHandle(AsyncFileHandle):
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to S3 (no-op for S3)."""
-        await self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore[union-attr]
+        await self._client.put_object(  # type: ignore[union-attr]
+            Bucket=self._bucket,
+            Key=self._blob,
+            Body=data,
+        )

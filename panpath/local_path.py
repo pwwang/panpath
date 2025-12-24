@@ -62,6 +62,19 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             pass
         os.chmod(str(self), mode)
 
+    async def a_rename(self, target: Union[str, "Path"]) -> "PanPath":
+        """Rename the file or directory to target.
+
+        Args:
+            target: New path
+
+        Returns:
+            New path instance
+        """
+        target_str = str(target)
+        await aiofiles.os.rename(str(self), target_str)
+        return PanPath(target_str)
+
     async def a_copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
 
@@ -224,6 +237,25 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 package="aiofiles",
                 extra="all-async",
             )
+        await aiofiles.os.rmdir(str(self))
+
+    async def a_rmtree(self) -> None:
+        """Recursively remove directory and its contents (async)."""
+        if not HAS_AIOFILES:
+            from panpath.exceptions import MissingDependencyError
+
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        for entry in await aiofiles.os.listdir(str(self)):
+            path = self / entry
+            if await path.a_is_dir():
+                await path.a_rmtree()
+            else:
+                await aiofiles.os.remove(str(path))
         await aiofiles.os.rmdir(str(self))
 
     async def a_iterdir(self) -> AsyncGenerator["LocalPath", None]:

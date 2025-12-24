@@ -214,7 +214,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         **kwargs: Any,
     ) -> Union[BinaryIO, TextIO]:
         """Open file for reading/writing."""
-        return self.client.open(str(self), mode=mode, encoding=encoding, **kwargs)  # type: ignore[return-value]
+        return self.client.open(
+            str(self),
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )  # type: ignore[return-value]
 
     def __eq__(self, other: Any) -> bool:
         """Check equality."""
@@ -806,4 +811,9 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             Async file handle from the async client
         """
-        return self.async_client.open(str(self), mode=mode, encoding=encoding, **kwargs)  # type: ignore[return-value]
+        return self.async_client.open(
+            str(self),
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )  # type: ignore[return-value]

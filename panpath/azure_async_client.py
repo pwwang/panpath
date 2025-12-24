@@ -1,5 +1,7 @@
 """Async Azure Blob Storage client implementation."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Optional, Set, Union, AsyncGenerator
 
 import asyncio
@@ -136,9 +138,7 @@ class AsyncAzureBlobClient(AsyncClient):
 
         return self._client
 
-    def _on_client_deleted(
-        self, ref: "weakref.ref[Any]"
-    ) -> None:  # pragma: no cover
+    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
         """Called when client is garbage collected."""
         _active_clients.discard(ref)
 
@@ -441,7 +441,11 @@ class AsyncAzureBlobClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{scheme}://{container_name}/{blob.name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
         else:
             # Non-recursive - list blobs with prefix
@@ -461,10 +465,17 @@ class AsyncAzureBlobClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{scheme}://{container_name}/{blob.name}")
                     else:
-                        results.append(PanPath(f"{scheme}://{container_name}/{blob.name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{scheme}://{container_name}/{blob.name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
+    async def walk(  # type: ignore[override]
+        self,
+        path: str,
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -527,7 +538,12 @@ class AsyncAzureBlobClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
+    async def touch(  # type: ignore[no-untyped-def, override]
+        self,
+        path: str,
+        mode=None,
+        exist_ok: bool = True,
+    ) -> None:
         """Create empty file.
 
         Args:
@@ -582,7 +598,10 @@ class AsyncAzureBlobClient(AsyncClient):
         if blob_name and not blob_name.endswith("/"):
             blob_name += "/"
 
-        blob_client = self._client.get_blob_client(container_name, blob_name)  # type: ignore[union-attr]
+        blob_client = self._client.get_blob_client(  # type: ignore[union-attr]
+            container_name,
+            blob_name,
+        )
 
         # Check if it is empty
         if await self.is_dir(path) and await self.list_dir(path):
@@ -728,7 +747,10 @@ class AzureAsyncFileHandle(AsyncFileHandle):
     async def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create async read stream generator."""
         return (
-            await self._client.get_blob_client(self._bucket, self._blob).download_blob()  # type: ignore[union-attr]
+            await self._client.get_blob_client(  # type: ignore[union-attr]
+                self._bucket,
+                self._blob,
+            ).download_blob()
         ).chunks()
 
     @classmethod
@@ -796,6 +818,7 @@ class AzureAsyncFileHandle(AsyncFileHandle):
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Flush write buffer to Azure blob."""
-        await self._client.get_blob_client(self._bucket, self._blob).upload_blob(  # type: ignore[union-attr]
-            data, overwrite=True
-        )
+        await self._client.get_blob_client(  # type: ignore[union-attr]
+            self._bucket,
+            self._blob,
+        ).upload_blob(data, overwrite=True)

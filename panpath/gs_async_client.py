@@ -131,9 +131,7 @@ class AsyncGSClient(AsyncClient):
 
         return self._client  # type: ignore[return-value]
 
-    def _on_client_deleted(
-        self, ref: "weakref.ref[Any]"
-    ) -> None:  # pragma: no cover
+    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
         """Called when storage is garbage collected."""
         _active_clients.discard(ref)
 
@@ -247,7 +245,8 @@ class AsyncGSClient(AsyncClient):
             # If no marker, check if any objects exist with this prefix
             try:
                 response = await storage.list_objects(
-                    bucket_name, params={"prefix": blob_name, "maxResults": 1}  # type: ignore[dict-item]
+                    bucket_name,
+                    params={"prefix": blob_name, "maxResults": 1},  # type: ignore[dict-item]
                 )
                 return len(response.get("items", [])) > 0
             except Exception:  # pragma: no cover
@@ -416,7 +415,9 @@ class AsyncGSClient(AsyncClient):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("metadata", {}).get(self.__class__.symlink_target_metaname)  # type: ignore[union-attr, call-overload]
+        target = metadata.get("metadata", {}).get(  # type: ignore[union-attr, call-overload]
+            self.__class__.symlink_target_metaname,
+        )
         if not target:
             raise ValueError(f"Not a symlink: {path}")
         return target  # type: ignore[no-any-return]
@@ -477,7 +478,11 @@ class AsyncGSClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
                     else:
-                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{self.prefix[0]}://{bucket_name}/{blob_name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
         else:
             # Non-recursive - list blobs with delimiter
@@ -497,10 +502,17 @@ class AsyncGSClient(AsyncClient):
                     if not _return_panpath:
                         results.append(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
                     else:
-                        results.append(PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}"))  # type: ignore[arg-type]
+                        results.append(
+                            PanPath(
+                                f"{self.prefix[0]}://{bucket_name}/{blob_name}"
+                            )  # type: ignore[arg-type]
+                        )
             return results
 
-    async def walk(self, path: str) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:  # type: ignore[override]
+    async def walk(  # type: ignore[override]
+        self,
+        path: str,
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -569,7 +581,12 @@ class AsyncGSClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(files))
 
-    async def touch(self, path: str, mode=None, exist_ok: bool = True) -> None:  # type: ignore[no-untyped-def, override]
+    async def touch(  # type: ignore[no-untyped-def, override]
+        self,
+        path: str,
+        mode=None,
+        exist_ok: bool = True,
+    ) -> None:
         """Create empty file.
 
         Args:
@@ -757,7 +774,10 @@ class GSAsyncFileHandle(AsyncFileHandle):
 
     async def _create_stream(self):  # type: ignore[no-untyped-def]
         """Create a GSAsyncReadStream for this file handle."""
-        return await self._client.download_stream(self._bucket, self._blob)  # type: ignore[union-attr]
+        return await self._client.download_stream(  # type: ignore[union-attr]
+            self._bucket,
+            self._blob,
+        )
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
