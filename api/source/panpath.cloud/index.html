@@ -2057,11 +2057,22 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Base classes for cloud path implementations.&quot;&quot;&quot;</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">PurePosixPath</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
+    <span class="n">Any</span><span class="p">,</span>
+    <span class="n">AsyncGenerator</span><span class="p">,</span>
+    <span class="n">BinaryIO</span><span class="p">,</span>
+    <span class="n">Iterator</span><span class="p">,</span>
+    <span class="n">List</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">TextIO</span><span class="p">,</span>
+    <span class="n">Tuple</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NoSuchFileError</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncClient</span><span class="p">,</span> <span class="n">AsyncFileHandle</span><span class="p">,</span> <span class="n">Client</span>
@@ -2083,8 +2094,8 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.__new__"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.__new__" href="../../panpath.cloud/#panpath.cloud.CloudPath.__new__">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create new cloud path instance.&quot;&quot;&quot;</span>
         <span class="c1"># Extract client before passing to PurePosixPath</span>
-        <span class="n">client</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;client&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">async_client</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;async_client&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">async_client</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;async_client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
         <span class="n">obj</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
         <span class="n">obj</span><span class="o">.</span><span class="n">_async_client</span> <span class="o">=</span> <span class="n">async_client</span>
@@ -2093,12 +2104,13 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize cloud path (clients already handled in __new__()).&quot;&quot;&quot;</span>
         <span class="c1"># Remove client from kwargs if present (already handled in __new__())</span>
-        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;client&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;async_client&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;async_client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="c1"># Python version compatibility for PurePosixPath.__init__():</span>
         <span class="c1"># - Python 3.9-3.11: Fully initialized in __new__()</span>
         <span class="c1"># - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
         <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
             <span class="c1"># Python 3.12+ requires calling __init__ with args to set internal properties</span>
             <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -2107,7 +2119,7 @@
     <span class="nd">@property</span><span id="panpath.cloud.CloudPath.client"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.client" href="../../panpath.cloud/#panpath.cloud.CloudPath.client">DOCS</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Client&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get or create the sync client for this path.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_default_client</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_client</span>
@@ -2116,7 +2128,7 @@
     <span class="nd">@property</span><span id="panpath.cloud.CloudPath.async_client"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.async_client" href="../../panpath.cloud/#panpath.cloud.CloudPath.async_client">DOCS</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">async_client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AsyncClient&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get or create the async client for this path.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_async_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_async_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_async_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_async_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_default_async_client</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_async_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_default_async_client</span>
@@ -2126,13 +2138,11 @@
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_default_client</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Client&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the default sync client for this path class.&quot;&quot;&quot;</span>
-        <span class="o">...</span>
 
     <span class="nd">@classmethod</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_default_async_client</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AsyncClient&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the default async client for this path class.&quot;&quot;&quot;</span>
-        <span class="o">...</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_new_cloudpath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new cloud path preserving client and type.</span>
@@ -2167,14 +2177,14 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return properly formatted cloud URI with double slash.&quot;&quot;&quot;</span>
         <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parts</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">scheme</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
             <span class="n">bucket</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
                 <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="k">return</span> <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span>
 
     <span class="nd">@property</span><span id="panpath.cloud.CloudPath.cloud_prefix"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.cloud_prefix" href="../../panpath.cloud/#panpath.cloud.CloudPath.cloud_prefix">DOCS</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">cloud_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -2182,10 +2192,10 @@
         <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parts</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="c1"># parts[0] is &#39;s3:&#39;, parts[1] is &#39;bucket&#39;</span>
-            <span class="n">scheme</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
             <span class="n">bucket</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>  <span class="c1"># pragma: no cover</span>
 
     <span class="nd">@property</span><span id="panpath.cloud.CloudPath.key"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.key" href="../../panpath.cloud/#panpath.cloud.CloudPath.key">DOCS</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -2221,7 +2231,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete file.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">missing_ok</span><span class="p">:</span>
                 <span class="k">raise</span>
 
@@ -2297,8 +2307,8 @@
         <span class="n">our_parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="p">()</span>
 
         <span class="c1"># If no key parts, can only match empty patterns</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">our_parts</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;**&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">our_parts</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">return</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;**&quot;</span><span class="p">)</span>
 
         <span class="c1"># Create a PurePosixPath from the key parts to do matching</span>
         <span class="n">key_path</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="o">*</span><span class="n">our_parts</span><span class="p">)</span>
@@ -2357,7 +2367,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation (cloud &lt;-&gt; local or cloud &lt;-&gt; cloud)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
             <span class="c1"># Copy then delete for cross-storage</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
@@ -2389,7 +2399,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Self (cloud paths are already absolute)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">samefile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.cloud.CloudPath.samefile"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.samefile" href="../../panpath.cloud/#panpath.cloud.CloudPath.samefile">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if this path refers to same file as other.</span>
@@ -2417,7 +2427,7 @@
 <span class="sd">            Path that this symlink points to</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.symlink_to"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.symlink_to" href="../../panpath.cloud/#panpath.cloud.CloudPath.symlink_to">DOCS</a>
@@ -2428,7 +2438,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># If target doesn&#39;t have a scheme prefix, treat as relative path</span>
-        <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_str</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="c1"># Resolve relative to symlink&#39;s parent directory</span>
             <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">target_str</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
@@ -2453,17 +2463,24 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Target path instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>  <span class="c1"># pragma: no cover</span>
+            <span class="c1"># If following symlinks, read the target and copy that instead</span>
+            <span class="n">real_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">real_path</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native copy</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">copytree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.copytree"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.copytree" href="../../panpath.cloud/#panpath.cloud.CloudPath.copytree">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copytree</span><span class="p">(</span><span id="panpath.cloud.CloudPath.copytree"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.copytree" href="../../panpath.cloud/#panpath.cloud.CloudPath.copytree">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree to target recursively.</span>
 
 <span class="sd">        Can copy between cloud and local paths.</span>
@@ -2477,12 +2494,12 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_copytree_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native copytree</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="nd">@staticmethod</span>
@@ -2493,9 +2510,10 @@
         <span class="k">return</span> <span class="n">src_scheme</span> <span class="o">!=</span> <span class="n">dst_scheme</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_copy_cross_storage</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_copy_cross_storage</span><span class="p">(</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries.&quot;&quot;&quot;</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2510,9 +2528,10 @@
             <span class="n">dst_path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_copytree_cross_storage</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_copytree_cross_storage</span><span class="p">(</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries.&quot;&quot;&quot;</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2522,7 +2541,7 @@
         <span class="c1"># Walk source tree and copy all files</span>
         <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">src_path</span><span class="o">.</span><span class="n">walk</span><span class="p">():</span>
             <span class="c1"># Calculate relative path from src</span>
-            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">)):]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
             <span class="c1"># Create subdirectories in destination</span>
             <span class="k">for</span> <span class="n">dirname</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
@@ -2547,26 +2566,21 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path exists.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_read_bytes"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_read_bytes" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as bytes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_read_text"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_read_text" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_read_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as text.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_write_bytes"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_write_bytes" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to file.&quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">data</span><span class="p">)</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_write_text"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_write_text" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_write_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write text to file.&quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">data</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_unlink" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_unlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete file.&quot;&quot;&quot;</span>
@@ -2576,29 +2590,34 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">missing_ok</span><span class="p">:</span>
                 <span class="k">raise</span>
 
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_resolve" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_resolve">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;CloudPath&quot;</span><span class="p">]:</span><span id="panpath.cloud.CloudPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_iterdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_iterdir">DOCS</a>
+<span class="sd">        Returns:</span>
+<span class="sd">            Self (cloud paths are already absolute)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span> <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;CloudPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.cloud.CloudPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_iterdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_iterdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List directory contents (async version returns list).&quot;&quot;&quot;</span>
-        <span class="n">items</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_cloudpath</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
-
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_new_cloudpath</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_is_dir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_is_dir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a directory.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_is_file"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_is_file" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a file.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">is_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_stat" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_stat">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get file stats.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o777</span><span class="p">,</span> <span class="n">parents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_mkdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_mkdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_mkdir">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_mkdir</span><span class="p">(</span><span id="panpath.cloud.CloudPath.a_mkdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_mkdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_mkdir">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o777</span><span class="p">,</span> <span class="n">parents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a directory marker in cloud storage.</span>
 
 <span class="sd">        In cloud storage (S3, GCS, Azure), directories are implicit. This method</span>
@@ -2611,7 +2630,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">parents</span><span class="o">=</span><span class="n">parents</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="n">exist_ok</span><span class="p">)</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;CloudPath&quot;</span><span class="p">]:</span><span id="panpath.cloud.CloudPath.a_glob"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_glob" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_glob">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Glob for files matching pattern.</span>
 
@@ -2622,7 +2640,6 @@
 <span class="sd">            List of matching paths</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">pattern</span><span class="p">)</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rglob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s2">&quot;CloudPath&quot;</span><span class="p">]:</span><span id="panpath.cloud.CloudPath.a_rglob"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_rglob" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_rglob">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursively glob for files matching pattern.</span>
@@ -2635,7 +2652,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;**/</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_walk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span><span id="panpath.cloud.CloudPath.a_walk"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_walk" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_walk">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree (like os.walk).</span>
 
@@ -2644,7 +2660,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_touch"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_touch" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_touch">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create empty file.</span>
 
@@ -2652,7 +2667,6 @@
 <span class="sd">            exist_ok: If False, raise error if file exists</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">touch</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">exist_ok</span><span class="o">=</span><span class="n">exist_ok</span><span class="p">)</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_rename"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_rename" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_rename">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Rename/move file to target.</span>
@@ -2667,16 +2681,15 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
-        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
             <span class="c1"># Copy then delete for cross-storage</span>
-            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
             <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_unlink</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native rename</span>
             <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
-        <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
+        <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_replace"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_replace" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_replace">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Replace file at target (overwriting if exists).</span>
@@ -2690,11 +2703,9 @@
         <span class="c1"># For cloud storage, replace is same as rename (always overwrites)</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_rename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_rmdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_rmdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_rmdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove empty directory marker.&quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">rmdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_is_symlink"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_is_symlink" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_is_symlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if this is a symbolic link (via metadata).</span>
@@ -2704,7 +2715,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_readlink"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_readlink" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_readlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read symlink target from metadata.</span>
 
@@ -2712,9 +2722,8 @@
 <span class="sd">            Path that this symlink points to</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
-        <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
+        <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_symlink_to" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_symlink_to">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink pointing to target (via metadata).</span>
@@ -2724,11 +2733,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># If target doesn&#39;t have a scheme prefix, treat as relative path</span>
-        <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_str</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="c1"># Resolve relative to symlink&#39;s parent directory</span>
             <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">target_str</span><span class="p">)</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
-
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_rmtree"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_rmtree" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_rmtree">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove directory and all its contents recursively.</span>
@@ -2739,8 +2747,9 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="n">ignore_errors</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">onerror</span><span class="p">)</span>
 
-
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copy" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copy">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span id="panpath.cloud.CloudPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copy" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copy">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file to target.</span>
 
 <span class="sd">        Can copy between cloud and local paths.</span>
@@ -2753,16 +2762,17 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
-        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
-            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native copy</span>
             <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copytree" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copytree">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span><span id="panpath.cloud.CloudPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copytree" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copytree">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree to target recursively.</span>
 
 <span class="sd">        Can copy between cloud and local paths.</span>
@@ -2776,18 +2786,21 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
-        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>
-            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_copytree_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a_copytree_cross_storage</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native copytree</span>
             <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-    <span class="nd">@staticmethod</span><span id="panpath.cloud.CloudPath.a_copy_cross_storage"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copy_cross_storage" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copy_cross_storage">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy_cross_storage</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_a_copy_cross_storage</span><span class="p">(</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries (async).&quot;&quot;&quot;</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2801,11 +2814,11 @@
             <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_read_bytes</span><span class="p">()</span>
             <span class="k">await</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">a_write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-
-    <span class="nd">@staticmethod</span><span id="panpath.cloud.CloudPath.a_copytree_cross_storage"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_copytree_cross_storage" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_copytree_cross_storage">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree_cross_storage</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_a_copytree_cross_storage</span><span class="p">(</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries (async).&quot;&quot;&quot;</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2815,7 +2828,7 @@
         <span class="c1"># Walk source tree and copy all files</span>
         <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_walk</span><span class="p">():</span>
             <span class="c1"># Calculate relative path from src</span>
-            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">)):]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
             <span class="c1"># Create subdirectories in destination</span>
             <span class="k">for</span> <span class="n">dirname</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
@@ -2851,7 +2864,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Async file handle from the async client</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">a_open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 </div>
 </div>

@@ -2057,11 +2057,17 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Azure Blob Storage client implementation.&quot;&quot;&quot;</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span><span class="p">,</span> <span class="n">StringIO</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoSuchFileError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span><span class="p">,</span> <span class="n">StringIO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">SyncClient</span><span class="p">,</span> <span class="n">SyncFileHandle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoStatError</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">azure.storage.blob</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlobServiceClient</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">azure.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResourceNotFoundError</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">azure.storage.blob</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlobServiceClient</span>
@@ -2070,12 +2076,13 @@
     <span class="n">HAS_AZURE</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">HAS_AZURE</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">BlobServiceClient</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore</span>
     <span class="n">ResourceNotFoundError</span> <span class="o">=</span> <span class="ne">Exception</span>  <span class="c1"># type: ignore</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">AzureBlobClient</span><span class="p">(</span><span class="n">Client</span><span class="p">):</span><span id="panpath.azure_client.AzureBlobClient"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient">DOCS</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AzureBlobClient</span><span class="p">(</span><span class="n">SyncClient</span><span class="p">):</span><span id="panpath.azure_client.AzureBlobClient"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient">DOCS</a>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous Azure Blob Storage client implementation.&quot;&quot;&quot;</span>
+
+    <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;azure&quot;</span><span class="p">,</span> <span class="s2">&quot;az&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_string</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Azure Blob client.</span>
@@ -2090,108 +2097,97 @@
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;azure-storage-blob&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;azure&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">connection_string</span> <span class="ow">and</span> <span class="s2">&quot;AZURE_STORAGE_CONNECTION_STRING&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="n">connection_string</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;AZURE_STORAGE_CONNECTION_STRING&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">connection_string</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">BlobServiceClient</span><span class="o">.</span><span class="n">from_connection_string</span><span class="p">(</span><span class="n">connection_string</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="c1"># Assume credentials from environment or other auth methods</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">BlobServiceClient</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_azure_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Parse Azure path into container and blob name.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            path: Azure URI like &#39;az://container/blob/path&#39; or &#39;azure://container/blob/path&#39;</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Tuple of (container_name, blob_name)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;az://&quot;</span><span class="p">):</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
-        <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;azure://&quot;</span><span class="p">):</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">8</span><span class="p">:]</span>
-
-        <span class="n">parts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">container</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">blob</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">container</span><span class="p">,</span> <span class="n">blob</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.exists"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.exists" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.exists">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if Azure blob exists.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
             <span class="c1"># Check if container exists</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">container_client</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+                <span class="c1"># Already checking as directory</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="c1"># Checking if it is possibly a directory</span>
+            <span class="n">blob_client_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">blob_client_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.read_bytes"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.read_bytes" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read Azure blob as bytes.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">download_blob</span><span class="p">()</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.read_text"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.read_text" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.read_text">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read Azure blob as text.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.write_bytes"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.write_bytes" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to Azure blob.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.write_text"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.write_text" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.write_text">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write text to Azure blob.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.delete"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.delete" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.delete">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete Azure blob.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IsADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path is a directory: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="k">try</span><span class="p">:</span>
             <span class="n">blob_client</span><span class="o">.</span><span class="n">delete_blob</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span><span id="panpath.azure_client.AzureBlobClient.list_dir"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.list_dir" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.list_dir">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span><span id="panpath.azure_client.AzureBlobClient.list_dir"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.list_dir" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.list_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List Azure blobs with prefix.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
             <span class="n">prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
         <span class="n">blob_list</span> <span class="o">=</span> <span class="n">container_client</span><span class="o">.</span><span class="n">walk_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">blob_list</span><span class="p">:</span>
             <span class="c1"># walk_blobs returns both BlobProperties and BlobPrefix objects</span>
             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">):</span>
                 <span class="c1"># BlobProperties (file)</span>
                 <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">prefix</span><span class="p">:</span>
-                    <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;az://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="k">else</span><span class="p">:</span>
+                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="c1"># BlobPrefix (directory)</span>
-                <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;az://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">prefix</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">prefix</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.is_dir"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.is_dir" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if Azure path is a directory (has blobs with prefix).&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># Container root is a directory</span>
 
         <span class="n">prefix</span> <span class="o">=</span> <span class="n">blob_name</span> <span class="k">if</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_name</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
         <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
-        <span class="n">blob_list</span> <span class="o">=</span> <span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">max_results</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">blob_list</span> <span class="o">=</span> <span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">blob_list</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">True</span>
@@ -2199,21 +2195,42 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.is_file"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.is_file" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if Azure path is a file.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
 
-        <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
+        <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.stat"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.stat" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.stat">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.stat"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.stat" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.stat">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Azure blob metadata.&quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
+
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">get_blob_properties</span><span class="p">()</span>
+            <span class="n">props</span> <span class="o">=</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">get_blob_properties</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">raise</span> <span class="n">NoStatError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot retrieve stat for: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">(</span>
+                <span class="p">(</span>  <span class="c1"># type: ignore[arg-type]</span>
+                    <span class="kc">None</span><span class="p">,</span>  <span class="c1"># mode</span>
+                    <span class="kc">None</span><span class="p">,</span>  <span class="c1"># ino</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://&quot;</span><span class="p">,</span>  <span class="c1"># dev,</span>
+                    <span class="kc">None</span><span class="p">,</span>  <span class="c1"># nlink,</span>
+                    <span class="kc">None</span><span class="p">,</span>  <span class="c1"># uid,</span>
+                    <span class="kc">None</span><span class="p">,</span>  <span class="c1"># gid,</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>  <span class="c1"># size,</span>
+                    <span class="c1"># atime</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">last_modified</span><span class="p">,</span>
+                    <span class="c1"># mtime</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">last_modified</span><span class="p">,</span>
+                    <span class="c1"># ctime</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">creation_time</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span id="panpath.azure_client.AzureBlobClient.open"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.open" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.open">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
@@ -2223,59 +2240,33 @@
         <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">BinaryIO</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Open Azure blob for reading/writing.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="s2">&quot;r&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">text</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
-                <span class="k">return</span> <span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="s2">&quot;w&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="ow">or</span> <span class="s2">&quot;a&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-            <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;ab&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported mode &#39;</span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&#39;. Use &#39;r&#39;, &#39;rb&#39;, &#39;w&#39;, &#39;wb&#39;, &#39;a&#39;, or &#39;ab&#39;.&quot;</span><span class="p">)</span>
 
-            <span class="k">class</span><span class="w"> </span><span class="nc">AzureWriteBuffer</span><span class="p">:</span>
-                <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blob_client</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">binary</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_blob_client</span> <span class="o">=</span> <span class="n">blob_client</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_binary</span> <span class="o">=</span> <span class="n">binary</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">if</span> <span class="n">binary</span> <span class="k">else</span> <span class="n">StringIO</span><span class="p">()</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binary</span><span class="p">:</span>
-                            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="bp">self</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-            <span class="k">return</span> <span class="n">AzureWriteBuffer</span><span class="p">(</span><span class="n">blob_client</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported mode: </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AzureSyncFileHandle</span><span class="p">(</span>
+            <span class="n">client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="o">=</span><span class="n">container_name</span><span class="p">,</span>
+            <span class="n">blob</span><span class="o">=</span><span class="n">blob_name</span><span class="p">,</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">parents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.mkdir"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.mkdir" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.mkdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a directory marker (empty blob with trailing slash).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Azure path (az://container/path or azure://container/path)</span>
-<span class="sd">            parents: If True, create parent directories as needed (ignored for Azure)</span>
+<span class="sd">            parents: If True, create parent directories as needed</span>
 <span class="sd">            exist_ok: If True, don&#39;t raise error if directory already exists</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure blob_name ends with / for directory marker</span>
-        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
 
@@ -2284,6 +2275,22 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">exist_ok</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span>
+
+        <span class="c1"># check parents</span>
+        <span class="k">if</span> <span class="n">blob_name</span><span class="p">:</span>  <span class="c1"># not container root</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># has a parent (not directly under container)</span>
+                <span class="n">parent_path</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">parent_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">parent_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">parent_blob_client</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">parents</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parent directory does not exist: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># Create parent directories recursively</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parent_path</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+                        <span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
 
         <span class="c1"># Create empty directory marker</span>
         <span class="n">blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -2297,13 +2304,12 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Dictionary of metadata key-value pairs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">properties</span> <span class="o">=</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">get_blob_properties</span><span class="p">()</span>
-            <span class="k">return</span> <span class="n">properties</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="k">return</span> <span class="n">blob_client</span><span class="o">.</span><span class="n">get_blob_properties</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Azure blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.set_metadata"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.set_metadata" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.set_metadata">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set blob metadata.</span>
@@ -2312,39 +2318,9 @@
 <span class="sd">            path: Azure path</span>
 <span class="sd">            metadata: Dictionary of metadata key-value pairs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob_client</span><span class="o">.</span><span class="n">set_blob_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.is_symlink"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.is_symlink" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.is_symlink">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if blob is a symlink (has symlink_target metadata).</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            path: Azure path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            True if symlink metadata exists</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">return</span> <span class="s2">&quot;symlink_target&quot;</span> <span class="ow">in</span> <span class="n">metadata</span>
-        <span class="k">except</span> <span class="n">NoSuchFileError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.readlink"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.readlink" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.readlink">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read symlink target from metadata.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            path: Azure path</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Symlink target path</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;symlink_target&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a symlink: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">target</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.symlink_to"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.symlink_to" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.symlink_to">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink by storing target in metadata.</span>
@@ -2353,16 +2329,16 @@
 <span class="sd">            path: Azure path for the symlink</span>
 <span class="sd">            target: Target path the symlink should point to</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
 
         <span class="c1"># Create empty blob</span>
         <span class="n">blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Set symlink metadata</span>
-        <span class="n">blob_client</span><span class="o">.</span><span class="n">set_blob_metadata</span><span class="p">({</span><span class="s2">&quot;symlink_target&quot;</span><span class="p">:</span> <span class="n">target</span><span class="p">})</span>
+        <span class="n">blob_client</span><span class="o">.</span><span class="n">set_blob_metadata</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">:</span> <span class="n">target</span><span class="p">})</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;Any&quot;</span><span class="p">]:</span><span id="panpath.azure_client.AzureBlobClient.glob"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.glob" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.glob">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">_return_panpath</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;Any&quot;</span><span class="p">]:</span><span id="panpath.azure_client.AzureBlobClient.glob"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.glob" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.glob">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Glob for files matching pattern.</span>
 
 <span class="sd">        Args:</span>
@@ -2375,7 +2351,7 @@
         <span class="kn">from</span><span class="w"> </span><span class="nn">fnmatch</span><span class="w"> </span><span class="kn">import</span> <span class="n">fnmatch</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
 
         <span class="c1"># Handle recursive patterns</span>
@@ -2394,33 +2370,41 @@
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;*</span><span class="si">{</span><span class="n">file_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
                     <span class="c1"># Determine scheme from original path</span>
-                    <span class="n">scheme</span> <span class="o">=</span> <span class="s2">&quot;az&quot;</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;az://&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;azure&quot;</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+                    <span class="n">scheme</span> <span class="o">=</span> <span class="s2">&quot;az&quot;</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;azure&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_return_panpath</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">results</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Non-recursive - list blobs with prefix</span>
-            <span class="n">prefix_with_slash</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_prefix</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">if</span> <span class="n">blob_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_prefix</span>
+            <span class="n">prefix_with_slash</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_prefix</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">if</span> <span class="n">blob_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_prefix</span>
+            <span class="p">)</span>
             <span class="n">blobs</span> <span class="o">=</span> <span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix_with_slash</span><span class="p">)</span>
 
             <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
                 <span class="c1"># Only include direct children (no additional slashes)</span>
-                <span class="n">rel_name</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix_with_slash</span><span class="p">):]</span>
+                <span class="n">rel_name</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix_with_slash</span><span class="p">)</span> <span class="p">:]</span>
                 <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rel_name</span> <span class="ow">and</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix_with_slash</span><span class="si">}{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
-                    <span class="n">scheme</span> <span class="o">=</span> <span class="s2">&quot;az&quot;</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;az://&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;azure&quot;</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+                    <span class="n">scheme</span> <span class="o">=</span> <span class="s2">&quot;az&quot;</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;azure&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_return_panpath</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">container_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">results</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span><span id="panpath.azure_client.AzureBlobClient.walk"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.walk" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.walk">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span><span id="panpath.azure_client.AzureBlobClient.walk"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.walk" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.walk">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Base Azure path</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            List of (dirpath, dirnames, filenames) tuples</span>
+<span class="sd">        Yields:</span>
+<span class="sd">            Tuples of (dirpath, dirnames, filenames)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
 
         <span class="c1"># List all blobs under prefix</span>
@@ -2428,14 +2412,11 @@
         <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
             <span class="n">prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
-        <span class="n">blobs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">))</span>
-
-        <span class="c1"># Organize into directory structure</span>
+        <span class="c1"># Organize into directory structure as we stream blobs</span>
         <span class="n">dirs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># dirpath -&gt; (subdirs, files)</span>
-
-        <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">):</span>
             <span class="c1"># Get relative path from prefix</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">):]</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span>
 
             <span class="c1"># Split into directory and filename</span>
             <span class="n">parts</span> <span class="o">=</span> <span class="n">rel_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
@@ -2447,36 +2428,50 @@
                     <span class="n">dirs</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># File in subdirectory</span>
+                <span class="c1"># First, ensure root directory exists and add the first subdir to it</span>
+                <span class="k">if</span> <span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                    <span class="n">dirs</span><span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>  <span class="c1"># Add first-level subdirectory to root</span>
+                    <span class="n">dirs</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+                <span class="c1"># Process all intermediate directories</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                    <span class="n">dir_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">dir_path</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                    <span class="p">)</span>
                     <span class="k">if</span> <span class="n">dir_path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
                         <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
 
                     <span class="c1"># Add subdirectory if not last part</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
 
                 <span class="c1"># Add file to its parent directory</span>
                 <span class="n">parent_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                     <span class="n">dirs</span><span class="p">[</span><span class="n">parent_dir</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
                 <span class="k">if</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># Skip empty strings</span>
                     <span class="n">dirs</span><span class="p">[</span><span class="n">parent_dir</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
-        <span class="c1"># Convert to list of tuples</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="n">d</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">subdirs</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">))</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="p">(</span><span class="n">subdirs</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">items</span><span class="p">())]</span>
+        <span class="c1"># Yield each directory tuple</span>
+        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="p">(</span><span class="n">subdirs</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">subdirs</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.touch"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.touch" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.touch">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.touch"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.touch" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.touch">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create empty file.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Azure path</span>
+<span class="sd">            mode: File mode (not supported for Azure)</span>
 <span class="sd">            exist_ok: If False, raise error if file exists</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mode setting is not supported for Azure Blob Storage.&quot;</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">exist_ok</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob_client</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -2487,9 +2482,12 @@
 <span class="sd">            source: Source Azure path</span>
 <span class="sd">            target: Target Azure path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source not found: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="c1"># Copy to new location</span>
-        <span class="n">src_container</span><span class="p">,</span> <span class="n">src_blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_container</span><span class="p">,</span> <span class="n">tgt_blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">src_container</span><span class="p">,</span> <span class="n">src_blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_container</span><span class="p">,</span> <span class="n">tgt_blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="n">src_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">src_container</span><span class="p">,</span> <span class="n">src_blob</span><span class="p">)</span>
         <span class="n">tgt_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">tgt_container</span><span class="p">,</span> <span class="n">tgt_blob</span><span class="p">)</span>
@@ -2506,18 +2504,22 @@
 <span class="sd">        Args:</span>
 <span class="sd">            path: Azure path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure blob_name ends with / for directory marker</span>
-        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">)</span>
+
+        <span class="c1"># Check if it is empty</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not empty: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">blob_client</span><span class="o">.</span><span class="n">delete_blob</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">ResourceNotFoundError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureBlobClient.rmtree"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.rmtree" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.rmtree">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove directory and all its contents recursively.</span>
@@ -2527,11 +2529,23 @@
 <span class="sd">            ignore_errors: If True, errors are ignored</span>
 <span class="sd">            onerror: Callable that accepts (function, path, excinfo)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">container_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path is not a directory: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">container_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure prefix ends with / for directory listing</span>
-        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">)</span>
@@ -2540,11 +2554,12 @@
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">prefix</span><span class="p">):</span>
                 <span class="n">blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">container_name</span><span class="p">,</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
                 <span class="n">blob_client</span><span class="o">.</span><span class="n">delete_blob</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
                 <span class="k">return</span>
             <span class="k">if</span> <span class="n">onerror</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
                 <span class="n">onerror</span><span class="p">(</span><span class="n">blob_client</span><span class="o">.</span><span class="n">delete_blob</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span>
@@ -2557,8 +2572,17 @@
 <span class="sd">            target: Target Azure path</span>
 <span class="sd">            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">src_container_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source not found: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IsADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source is a directory: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">src_container_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="n">src_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">src_container_name</span><span class="p">,</span> <span class="n">src_blob_name</span><span class="p">)</span>
         <span class="n">tgt_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span><span class="p">)</span>
@@ -2575,14 +2599,23 @@
 <span class="sd">            target: Target Azure path</span>
 <span class="sd">            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">src_container_name</span><span class="p">,</span> <span class="n">src_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_azure_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source not found: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">NotADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source is not a directory: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">src_container_name</span><span class="p">,</span> <span class="n">src_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="c1"># Ensure prefixes end with / for directory operations</span>
-        <span class="k">if</span> <span class="n">src_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">src_prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
-        <span class="k">if</span> <span class="n">tgt_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tgt_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">tgt_prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">src_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">src_prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
+        <span class="k">if</span> <span class="n">tgt_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tgt_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">tgt_prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">src_container_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_container_client</span><span class="p">(</span><span class="n">src_container_name</span><span class="p">)</span>
 
@@ -2590,7 +2623,7 @@
         <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">src_container_client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">name_starts_with</span><span class="o">=</span><span class="n">src_prefix</span><span class="p">):</span>
             <span class="n">src_blob_name</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span>
             <span class="c1"># Calculate relative path and target blob name</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">src_blob_name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">src_prefix</span><span class="p">):]</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">src_blob_name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">src_prefix</span><span class="p">)</span> <span class="p">:]</span>
             <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="n">tgt_prefix</span> <span class="o">+</span> <span class="n">rel_path</span>
 
             <span class="c1"># Copy blob</span>
@@ -2598,6 +2631,88 @@
             <span class="n">tgt_blob_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="n">tgt_container_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span><span class="p">)</span>
             <span class="n">source_url</span> <span class="o">=</span> <span class="n">src_blob_client</span><span class="o">.</span><span class="n">url</span>
             <span class="n">tgt_blob_client</span><span class="o">.</span><span class="n">start_copy_from_url</span><span class="p">(</span><span class="n">source_url</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AzureSyncFileHandle</span><span class="p">(</span><span class="n">SyncFileHandle</span><span class="p">):</span><span id="panpath.azure_client.AzureSyncFileHandle"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureSyncFileHandle" href="../../panpath.azure_client/#panpath.azure_client.AzureSyncFileHandle">DOCS</a>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous file handle for Azure Blob Storage.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if exception indicates blob does not exist.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exception</span><span class="p">,</span> <span class="n">ResourceNotFoundError</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.azure_client.AzureSyncFileHandle.reset_stream"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureSyncFileHandle.reset_stream" href="../../panpath.azure_client/#panpath.azure_client.AzureSyncFileHandle.reset_stream">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the underlying stream to the beginning.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">reset_stream</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create sync read stream generator.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span><span class="o">.</span><span class="n">download_blob</span><span class="p">()</span><span class="o">.</span><span class="n">chunks</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_stream_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read from stream in chunks.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Read all remaining data from current position</span>
+            <span class="n">chunks</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+                        <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                <span class="k">pass</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">chunk</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">+=</span> <span class="n">chunk</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">+=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">return</span> <span class="n">result</span>
+
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">[:</span><span class="n">size</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_residue</span><span class="p">[</span><span class="n">size</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_stream_read_all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read all remaining data from stream.&quot;&quot;&quot;</span>
+        <span class="n">download_stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span><span class="o">.</span><span class="n">download_blob</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">download_stream</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer to Azure blob.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_blob_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span><span class="o">.</span><span class="n">upload_blob</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 </div>
 </div>

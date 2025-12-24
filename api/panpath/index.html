@@ -2708,6 +2708,10 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Synchronous Google Cloud Storage client implementation.<a class="mkapi-src-link" href="../source/panpath.gs_client/#panpath.gs_client.GSClient" title="Source for panpath.gs_client.GSClient">&lt;/&gt;</a></span></li>
 
+<li class="class"><code class="mkapi-item-name"><a href="../panpath.gs_client#panpath.gs_client.GSSyncFileHandle">GSSyncFileHandle</a></code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Sync file handle for GCS with chunked streaming support.<a class="mkapi-src-link" href="../source/panpath.gs_client/#panpath.gs_client.GSSyncFileHandle" title="Source for panpath.gs_client.GSSyncFileHandle">&lt;/&gt;</a></span></li>
+
 
 </ul></div>
     </div>
@@ -2806,9 +2810,9 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base exception for cloud path errors.<a class="mkapi-src-link" href="../source/panpath.exceptions/#panpath.exceptions.CloudPathError" title="Source for panpath.exceptions.CloudPathError">&lt;/&gt;</a></span></li>
 
-<li class="class"><code class="mkapi-item-name"><a href="../panpath.exceptions#panpath.exceptions.NoSuchFileError">NoSuchFileError</a></code>
+<li class="class"><code class="mkapi-item-name"><a href="../panpath.exceptions#panpath.exceptions.NoStatError">NoStatError</a></code>
 
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Raised when a cloud file does not exist.<a class="mkapi-src-link" href="../source/panpath.exceptions/#panpath.exceptions.NoSuchFileError" title="Source for panpath.exceptions.NoSuchFileError">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Raised when stat information cannot be retrieved.<a class="mkapi-src-link" href="../source/panpath.exceptions/#panpath.exceptions.NoStatError" title="Source for panpath.exceptions.NoStatError">&lt;/&gt;</a></span></li>
 
 
 </ul></div>
@@ -2870,6 +2874,10 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Synchronous Azure Blob Storage client implementation.<a class="mkapi-src-link" href="../source/panpath.azure_client/#panpath.azure_client.AzureBlobClient" title="Source for panpath.azure_client.AzureBlobClient">&lt;/&gt;</a></span></li>
 
+<li class="class"><code class="mkapi-item-name"><a href="../panpath.azure_client#panpath.azure_client.AzureSyncFileHandle">AzureSyncFileHandle</a></code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Synchronous file handle for Azure Blob Storage.<a class="mkapi-src-link" href="../source/panpath.azure_client/#panpath.azure_client.AzureSyncFileHandle" title="Source for panpath.azure_client.AzureSyncFileHandle">&lt;/&gt;</a></span></li>
+
 
 </ul></div>
     </div>
@@ -2898,19 +2906,23 @@
       <div class="mkapi-section-body classes"><ul class="mkapi-items">
 <li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.Client">Client</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for synchronous cloud storage clients.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.Client" title="Source for panpath.clients.Client">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for cloud storage clients.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.Client" title="Source for panpath.clients.Client">&lt;/&gt;</a></span></li>
+
+<li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.SyncClient">SyncClient</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for synchronous cloud storage clients.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient" title="Source for panpath.clients.SyncClient">&lt;/&gt;</a></span></li>
 
 <li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.AsyncClient">AsyncClient</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for asynchronous cloud storage clients.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient" title="Source for panpath.clients.AsyncClient">&lt;/&gt;</a></span></li>
 
-<li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.AsyncFileHandle">AsyncFileHandle</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.AsyncFileHandle">AsyncFileHandle</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client_factory</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">encoding</code>, <code class="mkapi-object-signature">chunk_size</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for async file handles.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncFileHandle" title="Source for panpath.clients.AsyncFileHandle">&lt;/&gt;</a></span></li>
 
-<li class="class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.BaseAsyncFileHandle">BaseAsyncFileHandle</a></code>
+<li class="abstract-class"><code class="mkapi-item-name"><a href="../panpath.clients#panpath.clients.SyncFileHandle">SyncFileHandle</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">encoding</code>, <code class="mkapi-object-signature">chunk_size</code><code class="mkapi-object-parenthesis">)</code>
 
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base implementation of AsyncFileHandle using generic client APIs.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.BaseAsyncFileHandle" title="Source for panpath.clients.BaseAsyncFileHandle">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base class for sync file handles.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncFileHandle" title="Source for panpath.clients.SyncFileHandle">&lt;/&gt;</a></span></li>
 
 
 </ul></div>
@@ -2976,6 +2988,10 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Synchronous S3 client implementation using boto3.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client" title="Source for panpath.s3_client.S3Client">&lt;/&gt;</a></span></li>
 
+<li class="class"><code class="mkapi-item-name"><a href="../panpath.s3_client#panpath.s3_client.S3SyncFileHandle">S3SyncFileHandle</a></code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Sync file handle for S3 with chunked streaming support.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3SyncFileHandle" title="Source for panpath.s3_client.S3SyncFileHandle">&lt;/&gt;</a></span></li>
+
 
 </ul></div>
     </div>
@@ -3017,6 +3033,10 @@
 <li class="function"><code class="mkapi-item-name"><a href="../panpath.registry#panpath.registry.register_path_class">register_path_class</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">scheme</code>, <code class="mkapi-object-signature">path_class</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Register a path class implementation for a URI scheme.<a class="mkapi-src-link" href="../source/panpath.registry/#panpath.registry.register_path_class" title="Source for panpath.registry.register_path_class">&lt;/&gt;</a></span></li>
+
+<li class="function"><code class="mkapi-item-name"><a href="../panpath.registry#panpath.registry.restore_registry">restore_registry</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">snapshot</code><code class="mkapi-object-parenthesis">)</code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Restore the registry from a snapshot (for testing).<a class="mkapi-src-link" href="../source/panpath.registry/#panpath.registry.restore_registry" title="Source for panpath.registry.restore_registry">&lt;/&gt;</a></span></li>
 
 <li class="function"><code class="mkapi-item-name"><a href="../panpath.registry#panpath.registry.swap_implementation">swap_implementation</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">scheme</code>, <code class="mkapi-object-signature">path_class</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(Type)</span>

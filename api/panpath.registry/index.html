@@ -1832,6 +1832,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#panpathregistryrestore_registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        restore_registry
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2201,6 +2212,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#panpathregistryrestore_registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        restore_registry
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2329,6 +2351,10 @@
 <li class="function"><code class="mkapi-item-name"><a href="#panpath.registry.register_path_class">register_path_class</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">scheme</code>, <code class="mkapi-object-signature">path_class</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Register a path class implementation for a URI scheme.<a class="mkapi-src-link" href="../source/panpath.registry/#panpath.registry.register_path_class" title="Source for panpath.registry.register_path_class">&lt;/&gt;</a></span></li>
+
+<li class="function"><code class="mkapi-item-name"><a href="#panpath.registry.restore_registry">restore_registry</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">snapshot</code><code class="mkapi-object-parenthesis">)</code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Restore the registry from a snapshot (for testing).<a class="mkapi-src-link" href="../source/panpath.registry/#panpath.registry.restore_registry" title="Source for panpath.registry.restore_registry">&lt;/&gt;</a></span></li>
 
 <li class="function"><code class="mkapi-item-name"><a href="#panpath.registry.swap_implementation">swap_implementation</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">scheme</code>, <code class="mkapi-object-signature">path_class</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(Type)</span>
@@ -2494,6 +2520,36 @@
           <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(Type)</span>
         </div>
       <div class="mkapi-section-body returns"><p>Old path class (or None if not previously registered)</p></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="mkapi-node" id="panpath.registry.restore_registry">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object function code top">
+    <div class="mkapi-object-kind function top">function</div>
+    <h2 id="panpathregistryrestore_registry" class="mkapi-object-body function top"><code class="mkapi-object-prefix">panpath.registry.</code><code class="mkapi-object-name">restore_registry</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">snapshot</code><code class="mkapi-object-parenthesis">)</code></h2>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.registry/#panpath.registry.restore_registry" title="Source for panpath.registry.restore_registry">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Restore the registry from a snapshot (for testing).</p></div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">snapshot</code>
+<span class="mkapi-item-type">(Dict)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Registry snapshot to restore</span></li>
+
+
+</ul></div>
     </div>
   </div>
 

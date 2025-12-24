@@ -2057,25 +2057,36 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Google Cloud Storage client implementation.&quot;&quot;&quot;</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span><span class="p">,</span> <span class="n">StringIO</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoSuchFileError</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.clients</span><span class="w"> </span><span class="kn">import</span> <span class="n">SyncClient</span><span class="p">,</span> <span class="n">SyncFileHandle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span><span class="p">,</span> <span class="n">NoStatError</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">google.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">storage</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">google.api_core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFound</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">google.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">storage</span>
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="ne">FutureWarning</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">google.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">storage</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">google.api_core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFound</span>
 
     <span class="n">HAS_GCS</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">HAS_GCS</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">storage</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore</span>
     <span class="n">NotFound</span> <span class="o">=</span> <span class="ne">Exception</span>  <span class="c1"># type: ignore</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">GSClient</span><span class="p">(</span><span class="n">Client</span><span class="p">):</span><span id="panpath.gs_client.GSClient"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient" href="../../panpath.gs_client/#panpath.gs_client.GSClient">DOCS</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GSClient</span><span class="p">(</span><span class="n">SyncClient</span><span class="p">):</span><span id="panpath.gs_client.GSClient"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient" href="../../panpath.gs_client/#panpath.gs_client.GSClient">DOCS</a>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous Google Cloud Storage client implementation.&quot;&quot;&quot;</span>
+
+    <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;gs&quot;</span><span class="p">,)</span>
+    <span class="n">symlink_target_metaname</span> <span class="o">=</span> <span class="s2">&quot;gcsfuse_symlink_target&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize GCS client.</span>
@@ -2091,107 +2102,92 @@
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_parse_gs_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Parse GCS path into bucket and blob name.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            path: GCS URI like &#39;gs://bucket/blob/path&#39;</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Tuple of (bucket_name, blob_name)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;gs://&quot;</span><span class="p">):</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">bucket</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">blob</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">blob</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.gs_client.GSClient.exists"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.exists" href="../../panpath.gs_client/#panpath.gs_client.GSClient.exists">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if GCS blob exists.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
             <span class="c1"># Check if bucket exists</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">bucket</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="k">return</span> <span class="kc">False</span>
 
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
-        <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">blob</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+        <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">get_blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">blob</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">get_blob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">blob</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">blob</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span><span id="panpath.gs_client.GSClient.read_bytes"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.read_bytes" href="../../panpath.gs_client/#panpath.gs_client.GSClient.read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read GCS blob as bytes.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">blob</span><span class="o">.</span><span class="n">download_as_bytes</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.gs_client.GSClient.read_text"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.read_text" href="../../panpath.gs_client/#panpath.gs_client.GSClient.read_text">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read GCS blob as text.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.write_bytes"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.write_bytes" href="../../panpath.gs_client/#panpath.gs_client.GSClient.write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to GCS blob.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.write_text"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.write_text" href="../../panpath.gs_client/#panpath.gs_client.GSClient.write_text">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write text to GCS blob.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.delete"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.delete" href="../../panpath.gs_client/#panpath.gs_client.GSClient.delete">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete GCS blob.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span><span id="panpath.gs_client.GSClient.list_dir"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.list_dir" href="../../panpath.gs_client/#panpath.gs_client.GSClient.list_dir">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span><span id="panpath.gs_client.GSClient.list_dir"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.list_dir" href="../../panpath.gs_client/#panpath.gs_client.GSClient.list_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List GCS blobs with prefix.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
             <span class="n">prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
         <span class="n">blobs</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
-        <span class="c1"># List &quot;subdirectories&quot;</span>
-        <span class="k">for</span> <span class="n">prefix_item</span> <span class="ow">in</span> <span class="n">blobs</span><span class="o">.</span><span class="n">prefixes</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;gs://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prefix_item</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-
-        <span class="c1"># List files</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># List files first - this populates the prefixes attribute</span>
         <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">prefix</span><span class="p">:</span>  <span class="c1"># Skip the prefix itself</span>
-                <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;gs://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># List &quot;subdirectories&quot; - access prefixes after iterating over blobs</span>
+        <span class="k">for</span> <span class="n">prefix_item</span> <span class="ow">in</span> <span class="n">blobs</span><span class="o">.</span><span class="n">prefixes</span><span class="p">:</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prefix_item</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.gs_client.GSClient.is_dir"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.is_dir" href="../../panpath.gs_client/#panpath.gs_client.GSClient.is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if GCS path is a directory (has blobs with prefix).&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># Bucket root is a directory</span>
 
         <span class="n">prefix</span> <span class="o">=</span> <span class="n">blob_name</span> <span class="k">if</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_name</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
         <span class="n">blobs</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">max_results</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># Try to get first item</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.gs_client.GSClient.is_file"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.is_file" href="../../panpath.gs_client/#panpath.gs_client.GSClient.is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if GCS path is a file.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
 
@@ -2201,14 +2197,29 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span><span id="panpath.gs_client.GSClient.stat"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.stat" href="../../panpath.gs_client/#panpath.gs_client.GSClient.stat">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get GCS blob metadata.&quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
-        <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">blob</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
-            <span class="k">return</span> <span class="n">blob</span>
-        <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get_bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
+        <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">get_blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">blob</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">get_blob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">blob</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoStatError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No stats available for </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">(</span>
+            <span class="p">(</span>  <span class="c1"># type: ignore[arg-type]</span>
+                <span class="kc">None</span><span class="p">,</span>  <span class="c1"># mode</span>
+                <span class="kc">None</span><span class="p">,</span>  <span class="c1"># ino</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://&quot;</span><span class="p">,</span>  <span class="c1"># dev,</span>
+                <span class="kc">None</span><span class="p">,</span>  <span class="c1"># nlink,</span>
+                <span class="kc">None</span><span class="p">,</span>  <span class="c1"># uid,</span>
+                <span class="kc">None</span><span class="p">,</span>  <span class="c1"># gid,</span>
+                <span class="n">blob</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>  <span class="c1"># size,</span>
+                <span class="n">blob</span><span class="o">.</span><span class="n">updated</span><span class="p">,</span>  <span class="c1"># atime,</span>
+                <span class="n">blob</span><span class="o">.</span><span class="n">updated</span><span class="p">,</span>  <span class="c1"># mtime,</span>
+                <span class="n">blob</span><span class="o">.</span><span class="n">time_created</span><span class="p">,</span>  <span class="c1"># ctime,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span id="panpath.gs_client.GSClient.open"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.open" href="../../panpath.gs_client/#panpath.gs_client.GSClient.open">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
@@ -2216,48 +2227,32 @@
         <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
         <span class="n">encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">BinaryIO</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open GCS blob for reading/writing.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="s2">&quot;r&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">text</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
-                <span class="k">return</span> <span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="s2">&quot;w&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="ow">or</span> <span class="s2">&quot;a&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
-            <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
-            <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open GCS blob for reading/writing with streaming support.</span>
 
-            <span class="k">class</span><span class="w"> </span><span class="nc">GSWriteBuffer</span><span class="p">:</span>
-                <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blob</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">binary</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span> <span class="o">=</span> <span class="n">blob</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_binary</span> <span class="o">=</span> <span class="n">binary</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">if</span> <span class="n">binary</span> <span class="k">else</span> <span class="n">StringIO</span><span class="p">()</span>
+<span class="sd">        Args:</span>
+<span class="sd">            path: GCS path (gs://bucket/blob)</span>
+<span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, &#39;a&#39;, &#39;ab&#39;)</span>
+<span class="sd">            encoding: Text encoding (for text modes)</span>
+<span class="sd">            **kwargs: Additional arguments (chunk_size supported)</span>
 
-                <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binary</span><span class="p">:</span>
-                            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="bp">self</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-            <span class="k">return</span> <span class="n">GSWriteBuffer</span><span class="p">(</span><span class="n">blob</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-        <span class="k">else</span><span class="p">:</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            GSSyncFileHandle with streaming support</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Validate mode</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;ab&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported mode: </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">bucket</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">GSSyncFileHandle</span><span class="p">(</span>
+            <span class="n">client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span>
+            <span class="n">blob</span><span class="o">=</span><span class="n">blob_name</span><span class="p">,</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">parents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.mkdir"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.mkdir" href="../../panpath.gs_client/#panpath.gs_client.GSClient.mkdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a directory marker (empty blob with trailing slash).</span>
@@ -2267,11 +2262,11 @@
 <span class="sd">            parents: If True, create parent directories as needed (ignored for GCS)</span>
 <span class="sd">            exist_ok: If True, don&#39;t raise error if directory already exists</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure path ends with / for directory marker</span>
-        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
 
@@ -2280,6 +2275,21 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">exist_ok</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span>
+
+        <span class="c1"># check parents</span>
+        <span class="k">if</span> <span class="n">blob_name</span><span class="p">:</span>  <span class="c1"># not bucket root</span>
+            <span class="n">parent_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">blob_name</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">parent_path</span><span class="p">:</span>
+                <span class="n">parent_exists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parent_path</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">parent_exists</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">parents</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parent directory does not exist: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># Create parent directories recursively</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parent_path</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+                        <span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
 
         <span class="c1"># Create empty directory marker</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -2293,7 +2303,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Dictionary of metadata key-value pairs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">blob</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
@@ -2305,13 +2315,27 @@
 <span class="sd">            path: GCS path</span>
 <span class="sd">            metadata: Dictionary of metadata key-value pairs</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.symlink_to"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.symlink_to" href="../../panpath.gs_client/#panpath.gs_client.GSClient.symlink_to">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink by storing target in metadata.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path: GCS path for the symlink</span>
+<span class="sd">            target: Target path the symlink should point to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+
+        <span class="c1"># Create empty blob with symlink metadata</span>
+        <span class="n">blob</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">:</span> <span class="n">target</span><span class="p">}</span>
+        <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.gs_client.GSClient.is_symlink"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.is_symlink" href="../../panpath.gs_client/#panpath.gs_client.GSClient.is_symlink">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if blob is a symlink (has gcsfuse_symlink_target metadata).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if blob is a symlink (has symlink_target metadata).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: GCS path</span>
@@ -2321,8 +2345,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">return</span> <span class="s2">&quot;gcsfuse_symlink_target&quot;</span> <span class="ow">in</span> <span class="n">metadata</span>
-        <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span> <span class="ow">in</span> <span class="n">metadata</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.gs_client.GSClient.readlink"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.readlink" href="../../panpath.gs_client/#panpath.gs_client.GSClient.readlink">DOCS</a>
@@ -2335,39 +2359,32 @@
 <span class="sd">            Symlink target path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gcsfuse_symlink_target&quot;</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a symlink: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">target</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.symlink_to"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.symlink_to" href="../../panpath.gs_client/#panpath.gs_client.GSClient.symlink_to">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink by storing target in metadata.</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">://&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">prefix</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">target</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            path: GCS path for the symlink</span>
-<span class="sd">            target: Target path the symlink should point to</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+        <span class="c1"># relative path</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span>
 
-        <span class="c1"># Create empty blob with symlink metadata</span>
-        <span class="n">blob</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;gcsfuse_symlink_target&quot;</span><span class="p">:</span> <span class="n">target</span><span class="p">}</span>
-        <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;Any&quot;</span><span class="p">]:</span><span id="panpath.gs_client.GSClient.glob"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.glob" href="../../panpath.gs_client/#panpath.gs_client.GSClient.glob">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">_return_panpath</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;Any&quot;</span><span class="p">]:</span><span id="panpath.gs_client.GSClient.glob"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.glob" href="../../panpath.gs_client/#panpath.gs_client.GSClient.glob">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Glob for files matching pattern.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Base GCS path</span>
 <span class="sd">            pattern: Glob pattern (e.g., &quot;*.txt&quot;, &quot;**/*.py&quot;)</span>
+<span class="sd">            _return_panpath: If True, return PanPath objects; if False, return strings</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            List of matching CloudPath objects</span>
+<span class="sd">            List of matching paths (as PanPath objects or strings)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">fnmatch</span><span class="w"> </span><span class="kn">import</span> <span class="n">fnmatch</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
 
         <span class="c1"># Handle recursive patterns</span>
@@ -2386,17 +2403,27 @@
             <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;*</span><span class="si">{</span><span class="n">file_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;gs://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+                    <span class="n">path_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="k">if</span> <span class="n">_return_panpath</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">results</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Non-recursive - list blobs with delimiter</span>
-            <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_prefix</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">if</span> <span class="n">blob_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_prefix</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blob_prefix</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">if</span> <span class="n">blob_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">blob_prefix</span>
+            <span class="p">)</span>
             <span class="n">blobs</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
             <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;gs://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+                    <span class="n">path_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="k">if</span> <span class="n">_return_panpath</span><span class="p">:</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">results</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span><span id="panpath.gs_client.GSClient.walk"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.walk" href="../../panpath.gs_client/#panpath.gs_client.GSClient.walk">DOCS</a>
@@ -2408,7 +2435,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            List of (dirpath, dirnames, filenames) tuples</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
 
         <span class="c1"># List all blobs under prefix</span>
@@ -2423,7 +2450,7 @@
 
         <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
             <span class="c1"># Get relative path from prefix</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">):]</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">blob</span><span class="o">.</span><span class="n">name</span>
 
             <span class="c1"># Split into directory and filename</span>
             <span class="n">parts</span> <span class="o">=</span> <span class="n">rel_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
@@ -2435,17 +2462,19 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># File in subdirectory</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                    <span class="n">dir_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">dir_path</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                    <span class="p">)</span>
                     <span class="k">if</span> <span class="n">dir_path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
                         <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
 
                     <span class="c1"># Add subdirectory if not last part</span>
-                    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                        <span class="n">dirs</span><span class="p">[</span><span class="n">dir_path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
 
                 <span class="c1"># Add file to its parent directory</span>
                 <span class="n">parent_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                     <span class="n">dirs</span><span class="p">[</span><span class="n">parent_dir</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
                 <span class="n">dirs</span><span class="p">[</span><span class="n">parent_dir</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
@@ -2462,7 +2491,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">exist_ok</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
         <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 
@@ -2474,8 +2503,8 @@
 <span class="sd">            target: Target GCS path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Copy to new location</span>
-        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="n">src_bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">src_bucket_name</span><span class="p">)</span>
         <span class="n">tgt_bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">tgt_bucket_name</span><span class="p">)</span>
@@ -2494,18 +2523,22 @@
 <span class="sd">        Args:</span>
 <span class="sd">            path: GCS path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure path ends with / for directory marker</span>
-        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">blob_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">blob_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">blob_name</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+
+        <span class="c1"># Check if it is empty</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not empty: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoSuchFileError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSClient.rmtree"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSClient.rmtree" href="../../panpath.gs_client/#panpath.gs_client.GSClient.rmtree">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove directory and all its contents recursively.</span>
@@ -2515,11 +2548,23 @@
 <span class="sd">            ignore_errors: If True, errors are ignored</span>
 <span class="sd">            onerror: Callable that accepts (function, path, excinfo)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a directory: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">bucket_name</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="c1"># Ensure prefix ends with / for directory listing</span>
-        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
@@ -2528,11 +2573,10 @@
             <span class="c1"># Delete all blobs with this prefix</span>
             <span class="k">for</span> <span class="n">blob</span> <span class="ow">in</span> <span class="n">blobs</span><span class="p">:</span>
                 <span class="n">blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">if</span> <span class="n">ignore_errors</span><span class="p">:</span>
                 <span class="k">return</span>
             <span class="k">if</span> <span class="n">onerror</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
                 <span class="n">onerror</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">delete</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span>
@@ -2545,8 +2589,17 @@
 <span class="sd">            target: Target GCS path</span>
 <span class="sd">            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source not found: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IsADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source is a directory: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="n">src_bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">src_bucket_name</span><span class="p">)</span>
         <span class="n">src_blob</span> <span class="o">=</span> <span class="n">src_bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">src_blob_name</span><span class="p">)</span>
@@ -2563,14 +2616,20 @@
 <span class="sd">            target: Target GCS path</span>
 <span class="sd">            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_gs_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source not found: </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="n">src_bucket_name</span><span class="p">,</span> <span class="n">src_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">tgt_bucket_name</span><span class="p">,</span> <span class="n">tgt_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
         <span class="c1"># Ensure prefixes end with / for directory operations</span>
-        <span class="k">if</span> <span class="n">src_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">src_prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
-        <span class="k">if</span> <span class="n">tgt_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tgt_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
-            <span class="n">tgt_prefix</span> <span class="o">+=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="n">src_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">src_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">src_prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
+        <span class="k">if</span> <span class="n">tgt_prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tgt_prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="n">tgt_prefix</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
 
         <span class="n">src_bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">src_bucket_name</span><span class="p">)</span>
         <span class="n">tgt_bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">tgt_bucket_name</span><span class="p">)</span>
@@ -2578,11 +2637,54 @@
         <span class="c1"># List all blobs with source prefix</span>
         <span class="k">for</span> <span class="n">src_blob</span> <span class="ow">in</span> <span class="n">src_bucket</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">src_prefix</span><span class="p">):</span>
             <span class="c1"># Calculate relative path and target blob name</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">src_blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">src_prefix</span><span class="p">):]</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">src_blob</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">src_prefix</span><span class="p">)</span> <span class="p">:]</span>
             <span class="n">tgt_blob_name</span> <span class="o">=</span> <span class="n">tgt_prefix</span> <span class="o">+</span> <span class="n">rel_path</span>
 
             <span class="c1"># Copy blob</span>
             <span class="n">src_bucket</span><span class="o">.</span><span class="n">copy_blob</span><span class="p">(</span><span class="n">src_blob</span><span class="p">,</span> <span class="n">tgt_bucket</span><span class="p">,</span> <span class="n">tgt_blob_name</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GSSyncFileHandle</span><span class="p">(</span><span class="n">SyncFileHandle</span><span class="p">):</span><span id="panpath.gs_client.GSSyncFileHandle"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSSyncFileHandle" href="../../panpath.gs_client/#panpath.gs_client.GSSyncFileHandle">DOCS</a>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sync file handle for GCS with chunked streaming support.</span>
+
+<span class="sd">    Uses google-cloud-storage&#39;s streaming API for efficient reading of large files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">:</span> <span class="n">storage</span><span class="o">.</span><span class="n">Blob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">)</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if exception is GCS NotFound and convert to FileNotFoundError.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exception</span><span class="p">,</span> <span class="n">NotFound</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSSyncFileHandle.reset_stream"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSSyncFileHandle.reset_stream" href="../../panpath.gs_client/#panpath.gs_client.GSSyncFileHandle.reset_stream">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset streaming reader/writer.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">reset_stream</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSSyncFileHandle.__del__"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSSyncFileHandle.__del__" href="../../panpath.gs_client/#panpath.gs_client.GSSyncFileHandle.__del__">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Destructor to ensure stream is closed.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>  <span class="c1"># type: storage.client.Client</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create streaming reader/writer.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush buffered writes to GCS.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </code></pre></div>
 </div>
 </div>

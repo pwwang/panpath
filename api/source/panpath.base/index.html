@@ -2057,6 +2057,7 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Base class for all PanPath path implementations.&quot;&quot;&quot;</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">PathlibPath</span><span class="p">,</span> <span class="n">PurePosixPath</span>
@@ -2083,14 +2084,7 @@
         <span class="n">scheme</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="c1"># Special handling for file:// URLs - strip to local path</span>
         <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
-            <span class="c1"># Handle file:/// (8 chars, use [7:] to keep leading /)</span>
-            <span class="c1"># and file:// (7 chars, use [7:])</span>
-            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;file:///&quot;</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="mi">7</span><span class="p">:]</span>  <span class="c1"># Keeps /path from file:///path</span>
-            <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;file://&quot;</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="mi">7</span><span class="p">:]</span>  <span class="c1"># Keeps path from file://path</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>  <span class="c1"># file: is 5 chars</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="mi">7</span><span class="p">:]</span>  <span class="c1"># Keeps path from file://path</span>
         <span class="k">return</span> <span class="n">scheme</span><span class="p">,</span> <span class="n">path</span>
     <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">path</span>
 
@@ -2137,7 +2131,7 @@
         <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">PanPath</span><span class="p">:</span>
             <span class="c1"># For CloudPath and its subclasses, we need special handling</span>
             <span class="c1"># since they inherit from PurePosixPath behavior</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;_is_cloud_path&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_is_cloud_path</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">&quot;_is_cloud_path&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_is_cloud_path</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="c1"># CloudPath subclasses use PurePosixPath-like behavior</span>
                 <span class="c1"># Create via PurePosixPath mechanism</span>
                 <span class="k">return</span> <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
@@ -2147,7 +2141,7 @@
         <span class="c1"># PanPath factory logic - only when called as PanPath(...) directly</span>
         <span class="c1"># Extract the first argument as the path</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;PanPath() missing required argument: &#39;path&#39;&quot;</span><span class="p">)</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,)</span>  <span class="c1"># Default to empty path if no args provided</span>
 
         <span class="n">path</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">PanPath</span><span class="p">):</span>
@@ -2163,6 +2157,7 @@
             <span class="c1"># Local path - create a new args tuple with the clean path</span>
             <span class="c1"># This will be passed to LocalPath.__new__ and __init__</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.local_path</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalPath</span>
+
             <span class="n">new_args</span> <span class="o">=</span> <span class="p">(</span><span class="n">clean_path</span><span class="p">,)</span> <span class="o">+</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
             <span class="c1"># Use PathlibPath.__new__() to properly initialize the path object</span>
             <span class="n">instance</span> <span class="o">=</span> <span class="n">PathlibPath</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">LocalPath</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">)</span>
@@ -2170,7 +2165,7 @@
             <span class="c1"># In Python 3.12+, __init__ needs the arguments</span>
             <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
                 <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">instance</span>
 

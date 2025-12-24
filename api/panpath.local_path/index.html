@@ -2093,10 +2093,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathlocal_pathlocalpatheq" class="md-nav__link">
+  <a href="#panpathlocal_pathlocalpatha_touch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        eq
+        a_touch
       
     </span>
   </a>
@@ -2104,10 +2104,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathlocal_pathlocalpathhash" class="md-nav__link">
+  <a href="#panpathlocal_pathlocalpatha_copy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        hash
+        a_copy
       
     </span>
   </a>
@@ -3452,10 +3452,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathlocal_pathlocalpatheq" class="md-nav__link">
+  <a href="#panpathlocal_pathlocalpatha_touch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        eq
+        a_touch
       
     </span>
   </a>
@@ -3463,10 +3463,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathlocal_pathlocalpathhash" class="md-nav__link">
+  <a href="#panpathlocal_pathlocalpatha_copy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        hash
+        a_copy
       
     </span>
   </a>
@@ -3839,14 +3839,6 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Return the bytes representation of the path.  This is onlyrecommended to use under Unix.
 <a class="mkapi-src-link" href="../source/pathlib/#pathlib.PurePath.__bytes__" title="Source for pathlib.PurePath.__bytes__">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.__eq__">__eq__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">other</code><code class="mkapi-object-parenthesis">)</code>
-
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check equality.<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.__eq__" title="Source for panpath.local_path.LocalPath.__eq__">&lt;/&gt;</a></span></li>
-
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.__hash__">__hash__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(int)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Return hash of path.<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.__hash__" title="Source for panpath.local_path.LocalPath.__hash__">&lt;/&gt;</a></span></li>
-
 <li class="staticmethod"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.__new__">__new__</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">cls</code>, <code class="mkapi-object-signature">*args</code>, <code class="mkapi-object-signature">**kwargs</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create and return the appropriate path instance.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.__new__" title="Source for panpath.base.PanPath.__new__">&lt;/&gt;</a></span></li>
@@ -3855,6 +3847,10 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Return the string representation of the path, suitable forpassing to system calls.
 <a class="mkapi-src-link" href="../source/pathlib/#pathlib.PurePath.__str__" title="Source for pathlib.PurePath.__str__">&lt;/&gt;</a></span></li>
+
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_copy">a_copy</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">follow_symlinks</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Copy file to target.<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_copy" title="Source for panpath.local_path.LocalPath.a_copy">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_exists">a_exists</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(bool)</span>
@@ -3869,7 +3865,7 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Check if path is a file (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_is_file" title="Source for panpath.local_path.LocalPath.a_is_file">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_iterdir">a_iterdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+<span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">List directory contents (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_iterdir" title="Source for panpath.local_path.LocalPath.a_iterdir">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_mkdir">a_mkdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">parents</code>, <code class="mkapi-object-signature">exist_ok</code><code class="mkapi-object-parenthesis">)</code>
@@ -3895,6 +3891,10 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_stat">a_stat</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(stat_result)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Get file stats (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_stat" title="Source for panpath.local_path.LocalPath.a_stat">&lt;/&gt;</a></span></li>
+
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_touch">a_touch</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">exist_ok</code><code class="mkapi-object-parenthesis">)</code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create the file if it does not exist or update the modification time (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_touch" title="Source for panpath.local_path.LocalPath.a_touch">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_unlink">a_unlink</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">missing_ok</code><code class="mkapi-object-parenthesis">)</code>
 
@@ -5250,19 +5250,19 @@ Use <code>hardlink_to()</code> instead.</p>
     </div>
   
     <div class="mkapi-member">
-      <div class="mkapi-node" id="panpath.local_path.LocalPath.__eq__">
+      <div class="mkapi-node" id="panpath.local_path.LocalPath.a_touch">
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathlocal_pathlocalpatheq" class="mkapi-object-body method"><code class="mkapi-object-name">__eq__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">other</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathlocal_pathlocalpatha_touch" class="mkapi-object-body method"><code class="mkapi-object-name">a_touch</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode=438</code>, <code class="mkapi-object-signature">exist_ok=True</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.__eq__" title="Source for panpath.local_path.LocalPath.__eq__">&lt;/&gt;</a>
+    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_touch" title="Source for panpath.local_path.LocalPath.a_touch">&lt;/&gt;</a>
   </div>
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Check equality.</p></div>
+      <div class="mkapi-section-body"><p>Create the file if it does not exist or update the modification time (async).</p></div>
     </div>
   </div>
 
@@ -5270,19 +5270,39 @@ Use <code>hardlink_to()</code> instead.</p>
     </div>
   
     <div class="mkapi-member">
-      <div class="mkapi-node" id="panpath.local_path.LocalPath.__hash__">
+      <div class="mkapi-node" id="panpath.local_path.LocalPath.a_copy">
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathlocal_pathlocalpathhash" class="mkapi-object-body method"><code class="mkapi-object-name">__hash__</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; int</span></h3>
+    <h3 id="panpathlocal_pathlocalpatha_copy" class="mkapi-object-body method"><code class="mkapi-object-name">a_copy</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">follow_symlinks=True</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.__hash__" title="Source for panpath.local_path.LocalPath.__hash__">&lt;/&gt;</a>
+    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_copy" title="Source for panpath.local_path.LocalPath.a_copy">&lt;/&gt;</a>
   </div>
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Return hash of path.</p></div>
+      <div class="mkapi-section-body"><p>Copy file to target.</p><p>Can copy between cloud and local paths.</p>
+</div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">target</code>
+<span class="mkapi-item-type">(Union)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Destination path (can be cloud or local)</span></li>
+
+
+
+</ul></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>Target path instance</p></div>
     </div>
   </div>
 
@@ -5494,7 +5514,7 @@ Use <code>hardlink_to()</code> instead.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathlocal_pathlocalpatha_iterdir" class="mkapi-object-body method"><code class="mkapi-object-name">a_iterdir</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; list</span></h3>
+    <h3 id="panpathlocal_pathlocalpatha_iterdir" class="mkapi-object-body method"><code class="mkapi-object-name">a_iterdir</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; AsyncGenerator</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_iterdir" title="Source for panpath.local_path.LocalPath.a_iterdir">&lt;/&gt;</a>

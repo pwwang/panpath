@@ -863,6 +863,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#advanced-file-handle-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced File Handle Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced File Handle Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#seek-and-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seek and Tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-cases-for-seektell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Cases for Seek/Tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#available-async-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -870,6 +909,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Available Async Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#async-file-handle-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async File Handle Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2219,6 +2275,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#advanced-file-handle-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced File Handle Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced File Handle Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#seek-and-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seek and Tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-cases-for-seektell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Cases for Seek/Tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#available-async-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2226,6 +2321,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Available Async Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#async-file-handle-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async File Handle Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2378,6 +2490,85 @@
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">process_file</span><span class="p">())</span>
 </span></code></pre></div>
+<h2 id="advanced-file-handle-operations">Advanced File Handle Operations<a class="headerlink" href="#advanced-file-handle-operations" title="Permanent link">&para;</a></h2>
+<p>For cloud storage providers (S3, GCS, Azure), async file handles support advanced positioning methods:</p>
+<h3 id="seek-and-tell">Seek and Tell<a class="headerlink" href="#seek-and-tell" title="Permanent link">&para;</a></h3>
+<p>The <code>seek()</code> and <code>tell()</code> methods allow you to control the file position during async operations:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">panpath</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">read_partial_file</span><span class="p">():</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="s2">&quot;s3://bucket/large-file.txt&quot;</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">a_open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="c1"># Get current position</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="n">position</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current position: </span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># 0</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="c1"># Read first 100 bytes</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="n">chunk1</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>        <span class="c1"># Check new position</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>        <span class="n">position</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Position after read: </span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># 100</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>        <span class="c1"># Seek to a specific position</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="n">position</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Position after seek: </span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># 50</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="c1"># Read from new position</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>        <span class="n">chunk2</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>
+</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>        <span class="c1"># Seek relative to current position</span>
+</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>        <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Move 10 bytes forward from current</span>
+</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>
+</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>        <span class="c1"># Seek relative to end</span>
+</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>        <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># Move to 100 bytes before end</span>
+</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>
+</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">read_partial_file</span><span class="p">())</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Seek Modes</p>
+<p>The <code>seek()</code> method supports three modes:</p>
+<ul>
+<li><code>0</code> (default): Seek from beginning of file</li>
+<li><code>1</code>: Seek relative to current position</li>
+<li><code>2</code>: Seek relative to end of file</li>
+</ul>
+</div>
+<h3 id="use-cases-for-seektell">Use Cases for Seek/Tell<a class="headerlink" href="#use-cases-for-seektell" title="Permanent link">&para;</a></h3>
+<p>These methods are particularly useful for:</p>
+<ul>
+<li><strong>Large file processing</strong>: Read specific chunks without loading the entire file</li>
+<li><strong>Resume operations</strong>: Track position for resumable downloads/uploads</li>
+<li><strong>Random access</strong>: Jump to specific offsets in structured files</li>
+<li><strong>Partial reads</strong>: Read file headers or specific sections</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">panpath</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">read_file_header</span><span class="p">():</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read only the header of a large binary file.&quot;&quot;&quot;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="s2">&quot;gs://bucket/binary-data.bin&quot;</span><span class="p">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">a_open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="c1"># Read magic number (first 4 bytes)</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="n">magic</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="c1"># Read version (next 2 bytes)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="n">version</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="c1"># Skip metadata section (1000 bytes)</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="c1"># Read data from offset 1006</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="k">return</span> <span class="n">magic</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">data</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">read_file_header</span><span class="p">())</span>
+</span></code></pre></div>
 <h2 id="available-async-methods">Available Async Methods<a class="headerlink" href="#available-async-methods" title="Permanent link">&para;</a></h2>
 <p>All async methods use the <code>a_</code> prefix:</p>
 <ul>
@@ -2386,6 +2577,17 @@
 <li><strong>Metadata</strong>: <code>a_stat()</code></li>
 <li><strong>Directory Operations</strong>: <code>a_iterdir()</code>, <code>a_mkdir()</code>, <code>a_rmdir()</code></li>
 <li><strong>File Operations</strong>: <code>a_unlink()</code></li>
+</ul>
+<h3 id="async-file-handle-methods">Async File Handle Methods<a class="headerlink" href="#async-file-handle-methods" title="Permanent link">&para;</a></h3>
+<p>When using <code>a_open()</code> with cloud storage (S3, GCS, Azure), the returned file handle supports:</p>
+<ul>
+<li><strong><code>read(size=-1)</code></strong>: Read up to <code>size</code> bytes (all if -1)</li>
+<li><strong><code>readline()</code></strong>: Read a single line</li>
+<li><strong><code>readlines()</code></strong>: Read all lines</li>
+<li><strong><code>write(data)</code></strong>: Write data to file</li>
+<li><strong><code>seek(offset, whence=0)</code></strong>: Move to a specific position in the file</li>
+<li><strong><code>tell()</code></strong>: Get the current position in the file</li>
+<li><strong>Async iteration</strong>: Use <code>async for line in f:</code> to iterate over lines</li>
 </ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2415,7 +2617,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="December 19, 2025 04:55:08 UTC"><span class="timeago" datetime="2025-12-19T04:55:08+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="December 19, 2025 04:55:08 UTC">2025-12-19</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="December 24, 2025 02:24:05 UTC"><span class="timeago" datetime="2025-12-24T02:24:05+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="December 24, 2025 02:24:05 UTC">2025-12-24</span>
   </span>
 
     
