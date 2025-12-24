@@ -1,11 +1,16 @@
 """Base class for all PanPath path implementations."""
 
+import os
 import re
 import sys
+from abc import abstractmethod
 from pathlib import Path as PathlibPath, PurePosixPath
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, List, Union
 
 from panpath.registry import get_path_class
+
+if TYPE_CHECKING:
+    from panpath.clients import AsyncFileHandle
 
 
 # URI scheme pattern
@@ -119,3 +124,256 @@ class PanPath(PathlibPath):
             return path_class(*args, **kwargs)  # type: ignore[no-any-return]
         except KeyError:
             raise ValueError(f"Unsupported URI scheme: {scheme!r}")
+
+    @abstractmethod
+    async def a_exists(self) -> bool:
+        """Asynchronously check if the path exists.
+
+        Returns:
+            True if the path exists, False otherwise.
+        """
+
+    @abstractmethod
+    async def a_read_bytes(self) -> bytes:
+        """Asynchronously read the file's bytes.
+
+        Returns:
+            File content as bytes.
+        """
+
+    @abstractmethod
+    async def a_read_text(self, encoding: str = "utf-8") -> str:
+        """Asynchronously read the file's text content.
+
+        Args:
+            encoding: Text encoding to use (default: 'utf-8')
+
+        Returns:
+            File content as string.
+        """
+
+    @abstractmethod
+    async def a_write_bytes(self, data: bytes) -> int:
+        """Asynchronously write bytes to the file.
+
+        Args:
+            data: Bytes to write to the file.
+
+        Returns:
+            Number of bytes written.
+        """
+
+    @abstractmethod
+    async def a_write_text(self, data: str, encoding: str = "utf-8") -> int:
+        """Asynchronously write text to the file.
+
+        Args:
+            data: Text to write to the file.
+            encoding: Text encoding to use (default: 'utf-8')
+
+        Returns:
+            Number of characters written.
+        """
+
+    @abstractmethod
+    async def a_unlink(self) -> None:
+        """Asynchronously remove (delete) the file or empty directory."""
+
+    @abstractmethod
+    async def a_resolve(self) -> "PanPath":
+        """Asynchronously resolve the path to its absolute form.
+
+        Returns:
+            Resolved absolute path.
+        """
+
+    @abstractmethod
+    async def a_iterdir(self) -> AsyncGenerator["PanPath", None]:
+        """Asynchronously iterate over directory contents.
+
+        Yields:
+            PanPath instances for each item in the directory.
+        """
+
+    @abstractmethod
+    async def a_is_dir(self) -> bool:
+        """Asynchronously check if the path is a directory.
+
+        Returns:
+            True if the path is a directory, False otherwise.
+        """
+
+    @abstractmethod
+    async def a_is_file(self) -> bool:
+        """Asynchronously check if the path is a file.
+
+        Returns:
+            True if the path is a file, False otherwise.
+        """
+
+    @abstractmethod
+    async def a_stat(self) -> os.stat_result:
+        """Asynchronously get the file or directory's status information.
+
+        Returns:
+            An object containing file status information (platform-dependent).
+        """
+
+    @abstractmethod
+    async def a_mkdir(self, mode: int = 0o777, parents: bool = False) -> None:
+        """Asynchronously create a directory at this path.
+
+        Args:
+            mode: Directory mode (permissions) to set.
+            parents: If True, create parent directories as needed.
+        """
+
+    @abstractmethod
+    async def a_glob(self, pattern: str) -> List["PanPath"]:
+        """Asynchronously yield paths matching a glob pattern.
+
+        Args:
+            pattern: Glob pattern to match.
+
+        Returns:
+            List of PanPath instances matching the pattern.
+        """
+
+    @abstractmethod
+    async def a_rglob(self, pattern: str) -> List["PanPath"]:
+        """Asynchronously yield paths matching a recursive glob pattern.
+
+        Args:
+            pattern: Recursive glob pattern to match.
+
+        Returns:
+            List of PanPath instances matching the pattern.
+        """
+
+    @abstractmethod
+    async def a_walk(self) -> AsyncGenerator[tuple["PanPath", List[str], List[str]], None]:
+        """Asynchronously walk the directory tree.
+
+        Yields:
+            Tuples of (current_path, dirnames, filenames) at each level.
+        """
+
+    @abstractmethod
+    async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
+        """Asynchronously create the file if it does not exist.
+
+        Args:
+            mode: File mode (permissions) to set if creating the file.
+            exist_ok: If False, raises an error if the file already exists.
+        """
+
+    @abstractmethod
+    async def a_rename(self, target: Union[str, "PanPath"]) -> "PanPath":
+        """Asynchronously rename this path to the target path.
+
+        Args:
+            target: New path to rename to.
+
+        Returns:
+            The renamed PanPath instance.
+        """
+
+    @abstractmethod
+    async def a_replace(self, target: Union[str, "PanPath"]) -> "PanPath":
+        """Asynchronously replace this path with the target path.
+
+        Args:
+            target: New path to replace with.
+
+        Returns:
+            The replaced PanPath instance.
+        """
+
+    @abstractmethod
+    async def a_rmdir(self) -> None:
+        """Asynchronously remove the directory and its contents recursively."""
+
+    @abstractmethod
+    async def a_is_symlink(self) -> bool:
+        """Asynchronously check if the path is a symbolic link.
+
+        For local path, this checks if the path is a symlink.
+        For cloud paths, this will check if the object has a metdata flag indicating it's a symlink.
+        Note that it is not a real symlink like in local filesystems.
+        But for example, gcsfuse supports symlink-like behavior via metadata.
+
+        Returns:
+            True if the path is a symlink, False otherwise.
+        """
+
+    @abstractmethod
+    async def a_readlink(self) -> "PanPath":
+        """Asynchronously read the target of the symbolic link.
+
+        For local path, this reads the symlink target.
+        For cloud paths, this reads the metadata flag indicating the symlink target.
+
+        Returns:
+            The target PanPath of the symlink.
+        """
+
+    @abstractmethod
+    async def a_symlink_to(self, target: Union[str, "PanPath"]) -> None:
+        """Asynchronously create a symbolic link pointing to the target path.
+
+        For local path, this creates a real symlink.
+        For cloud paths, this sets a metadata flag indicating the symlink target.
+
+        Args:
+            target: The target PanPath the symlink points to.
+        """
+
+    @abstractmethod
+    async def a_rmtree(self, ignore_errors: bool = False, onerror: Any = None) -> None:
+        """Asynchronously remove the directory and all its contents recursively.
+
+        Args:
+            ignore_errors: If True, ignores errors during removal.
+            onerror: Optional function to call on errors.
+        """
+
+    @abstractmethod
+    async def a_copy(self, target: Union[str, "PanPath"]) -> "PanPath":
+        """Asynchronously copy this path to the target path.
+
+        Args:
+            target: Destination PanPath to copy to.
+
+        Returns:
+            The copied PanPath instance.
+        """
+
+    @abstractmethod
+    async def a_copytree(
+        self,
+        target: Union[str, "PanPath"],
+        ignore: Any = None,
+    ) -> "PanPath":
+        """Asynchronously copy the directory and all its contents recursively to the target path.
+
+        Args:
+            target: Destination PanPath to copy to.
+            ignore: Optional callable that takes a directory path and a list of its contents,
+                and returns a list of names to ignore.
+
+        Returns:
+            The copied PanPath instance.
+        """
+
+    @abstractmethod
+    def a_open(self, mode: str = "r", encoding: str = "utf-8", **kwargs: Any) -> "AsyncFileHandle":
+        """Asynchronously open the file and return an async file handle.
+
+        Args:
+            mode: Mode to open the file (e.g., 'r', 'rb', 'w', 'wb').
+            encoding: Text encoding to use (default: 'utf-8').
+            **kwargs: Additional arguments to pass to the underlying open method.
+
+        Returns:
+            An async file handle.
+        """
