@@ -2189,9 +2189,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>  <span class="c1"># type: ignore[return-value]</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="s2">&quot;weakref.ref[Any]&quot;</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="s2">&quot;weakref.ref[Any]&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Called when storage is garbage collected.&quot;&quot;&quot;</span>
         <span class="n">_active_clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
 
@@ -2305,7 +2303,8 @@
             <span class="c1"># If no marker, check if any objects exist with this prefix</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">storage</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span>
-                    <span class="n">bucket_name</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;prefix&quot;</span><span class="p">:</span> <span class="n">blob_name</span><span class="p">,</span> <span class="s2">&quot;maxResults&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>  <span class="c1"># type: ignore[dict-item]</span>
+                    <span class="n">bucket_name</span><span class="p">,</span>
+                    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;prefix&quot;</span><span class="p">:</span> <span class="n">blob_name</span><span class="p">,</span> <span class="s2">&quot;maxResults&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>  <span class="c1"># type: ignore[dict-item]</span>
                 <span class="p">)</span>
                 <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">,</span> <span class="p">[]))</span> <span class="o">&gt;</span> <span class="mi">0</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
@@ -2474,7 +2473,9 @@
 <span class="sd">            Symlink target path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">metadata</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">)</span>  <span class="c1"># type: ignore[union-attr, call-overload]</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>  <span class="c1"># type: ignore[union-attr, call-overload]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a symlink: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">target</span>  <span class="c1"># type: ignore[no-any-return]</span>
@@ -2535,7 +2536,11 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_return_panpath</span><span class="p">:</span>
                         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>  <span class="c1"># type: ignore[arg-type]</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">PanPath</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+                        <span class="p">)</span>
             <span class="k">return</span> <span class="n">results</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Non-recursive - list blobs with delimiter</span>
@@ -2555,10 +2560,17 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">_return_panpath</span><span class="p">:</span>
                         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PanPath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>  <span class="c1"># type: ignore[arg-type]</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">PanPath</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">blob_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+                        <span class="p">)</span>
             <span class="k">return</span> <span class="n">results</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.gs_async_client.AsyncGSClient.walk"></span><a class="mkapi-docs-link" title="panpath.gs_async_client.AsyncGSClient.walk" href="../../panpath.gs_async_client/#panpath.gs_async_client.AsyncGSClient.walk">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.gs_async_client.AsyncGSClient.walk"></span><a class="mkapi-docs-link" title="panpath.gs_async_client.AsyncGSClient.walk" href="../../panpath.gs_async_client/#panpath.gs_async_client.AsyncGSClient.walk">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.</span>
 
 <span class="sd">        Args:</span>
@@ -2627,7 +2639,12 @@
         <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="p">(</span><span class="n">subdirs</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
             <span class="k">yield</span> <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">subdirs</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># type: ignore[no-untyped-def, override]</span><span id="panpath.gs_async_client.AsyncGSClient.touch"></span><a class="mkapi-docs-link" title="panpath.gs_async_client.AsyncGSClient.touch" href="../../panpath.gs_async_client/#panpath.gs_async_client.AsyncGSClient.touch">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">touch</span><span class="p">(</span>  <span class="c1"># type: ignore[no-untyped-def, override]</span><span id="panpath.gs_async_client.AsyncGSClient.touch"></span><a class="mkapi-docs-link" title="panpath.gs_async_client.AsyncGSClient.touch" href="../../panpath.gs_async_client/#panpath.gs_async_client.AsyncGSClient.touch">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create empty file.</span>
 
 <span class="sd">        Args:</span>
@@ -2815,7 +2832,10 @@
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_create_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># type: ignore[no-untyped-def]</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a GSAsyncReadStream for this file handle.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">download_stream</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">)</span>  <span class="c1"># type: ignore[union-attr]</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">download_stream</span><span class="p">(</span>  <span class="c1"># type: ignore[union-attr]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

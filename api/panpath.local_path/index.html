@@ -2126,6 +2126,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathlocal_pathlocalpatha_rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_rename
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathlocal_pathlocalpatha_copy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2240,6 +2251,17 @@
     <span class="md-ellipsis">
       
         a_rmdir
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panpathlocal_pathlocalpatha_rmtree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_rmtree
       
     </span>
   </a>
@@ -3507,6 +3529,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathlocal_pathlocalpatha_rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_rename
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathlocal_pathlocalpatha_copy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3621,6 +3654,17 @@
     <span class="md-ellipsis">
       
         a_rmdir
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panpathlocal_pathlocalpatha_rmtree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_rmtree
       
     </span>
   </a>
@@ -3938,9 +3982,17 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 <span class="mkapi-item-type">(str)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Read file as text (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_read_text" title="Source for panpath.local_path.LocalPath.a_read_text">&lt;/&gt;</a></span></li>
 
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_rename">a_rename</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Rename the file or directory to target.<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_rename" title="Source for panpath.local_path.LocalPath.a_rename">&lt;/&gt;</a></span></li>
+
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_rmdir">a_rmdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Remove empty directory (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_rmdir" title="Source for panpath.local_path.LocalPath.a_rmdir">&lt;/&gt;</a></span></li>
+
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_rmtree">a_rmtree</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
+
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Recursively remove directory and its contents (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_rmtree" title="Source for panpath.local_path.LocalPath.a_rmtree">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_stat">a_stat</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(stat_result)</span>
@@ -5372,6 +5424,44 @@ directory of the Path object.</p>
     </div>
   
     <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.local_path.LocalPath.a_rename">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object method code">
+    <div class="mkapi-object-kind method">method</div>
+    <h3 id="panpathlocal_pathlocalpatha_rename" class="mkapi-object-body method"><code class="mkapi-object-name">a_rename</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_rename" title="Source for panpath.local_path.LocalPath.a_rename">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Rename the file or directory to target.</p></div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">target</code>
+<span class="mkapi-item-type">(Union)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">New path</span></li>
+
+
+</ul></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>New path instance</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.local_path.LocalPath.a_copy">
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
@@ -5605,6 +5695,26 @@ directory of the Path object.</p>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Remove empty directory (async).</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.local_path.LocalPath.a_rmtree">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object method code">
+    <div class="mkapi-object-kind method">method</div>
+    <h3 id="panpathlocal_pathlocalpatha_rmtree" class="mkapi-object-body method"><code class="mkapi-object-name">a_rmtree</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_rmtree" title="Source for panpath.local_path.LocalPath.a_rmtree">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Recursively remove directory and its contents (async).</p></div>
     </div>
   </div>
 

@@ -2057,6 +2057,7 @@
 
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Async S3 client implementation.&quot;&quot;&quot;</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
@@ -2182,9 +2183,7 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="s2">&quot;weakref.ref[Any]&quot;</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_on_client_deleted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="s2">&quot;weakref.ref[Any]&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Called when client is garbage collected.&quot;&quot;&quot;</span>
         <span class="n">_active_clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
 
@@ -2564,7 +2563,10 @@
                         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
             <span class="k">return</span> <span class="n">results</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.s3_async_client.AsyncS3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client.walk" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client.walk">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.s3_async_client.AsyncS3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_async_client.AsyncS3Client.walk" href="../../panpath.s3_async_client/#panpath.s3_async_client.AsyncS3Client.walk">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.</span>
 
 <span class="sd">        Args:</span>
@@ -2838,7 +2840,11 @@
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer to S3 (no-op for S3).&quot;&quot;&quot;</span>
-        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">Body</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore[union-attr]</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span>  <span class="c1"># type: ignore[union-attr]</span>
+            <span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="p">,</span>
+            <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span>
+            <span class="n">Body</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="p">)</span>
 </code></pre></div>
 </div>
 </div>
