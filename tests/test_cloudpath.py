@@ -1007,10 +1007,19 @@ async def test_cloudpath_async_rename_dir():
     src_base = MockCloudPath("mock://bucket/async-rename-dir-src/", async_client=client)
     dst_base = MockCloudPath("mock://bucket/async-rename-dir-dst/", async_client=client)
 
+    with pytest.raises(FileNotFoundError):
+        await src_base.a_rename(dst_base)
+
     # Create directory structure
     await src_base.a_mkdir(exist_ok=True)
     file1 = src_base / "file1.txt"
     await file1.a_write_text("content1")
+
+    with pytest.raises(NotADirectoryError):
+        await src_base.a_rename(file1)
+
+    with pytest.raises(IsADirectoryError):
+        await file1.a_rename(src_base)
 
     # Rename directory
     await src_base.a_rename(dst_base)

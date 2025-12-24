@@ -626,11 +626,29 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             New path instance
         """
+        if not await self.a_exists():
+            raise FileNotFoundError(f"Source path does not exist: {self}")
+
         target_str = str(target)
         if not isinstance(target, PanPath):  # pragma: no cover
             target = PanPath(target_str)
 
-        if await self.a_is_dir():
+        source_is_dir = await self.a_is_dir()
+        target_is_dir = await target.a_is_dir()
+        target_exists = await target.a_exists()
+        if source_is_dir and not target_is_dir and target_exists:
+            raise NotADirectoryError(
+                f"Cannot rename directory {self} to non-directory target {target}"
+            )
+        if not source_is_dir and target_is_dir and target_exists:
+            raise IsADirectoryError(
+                f"Cannot rename file {self} to directory target {target}"
+            )
+
+        if source_is_dir:
+            if not target_exists:
+                await target.a_mkdir(parents=True, exist_ok=True)
+
             # Support renaming directories by copying contents
             async for item in self.a_iterdir():
                 relative_path = item.relative_to(self)
