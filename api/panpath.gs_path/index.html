@@ -2314,17 +2314,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathcloudcloudpatha_resolve" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        a_resolve
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#panpathcloudcloudpatha_iterdir" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2439,6 +2428,17 @@
     <span class="md-ellipsis">
       
         a_replace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panpathcloudcloudpatha_resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_resolve
       
     </span>
   </a>
@@ -3837,17 +3837,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#panpathcloudcloudpatha_resolve" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        a_resolve
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#panpathcloudcloudpatha_iterdir" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3962,6 +3951,17 @@
     <span class="md-ellipsis">
       
         a_replace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panpathcloudcloudpatha_resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_resolve
       
     </span>
   </a>
@@ -4386,7 +4386,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Replace file at target (overwriting if exists).<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_replace" title="Source for panpath.cloud.CloudPath.a_replace">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_resolve">a_resolve</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
+<span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Resolve to absolute path (no-op for cloud paths).<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_resolve" title="Source for panpath.cloud.CloudPath.a_resolve">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_rglob">a_rglob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code>
@@ -4405,7 +4405,7 @@
 <span class="mkapi-item-type">(Any)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Get file stats.<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_stat" title="Source for panpath.cloud.CloudPath.a_stat">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_symlink_to">a_symlink_to</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code>
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.cloud.CloudPath.a_symlink_to">a_symlink_to</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">target_is_directory</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create symlink pointing to target (via metadata).<a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_symlink_to" title="Source for panpath.cloud.CloudPath.a_symlink_to">&lt;/&gt;</a></span></li>
 
@@ -6307,32 +6307,6 @@ the key portion of the path (excluding scheme and bucket).</p>
     </div>
   
     <div class="mkapi-member">
-      <div class="mkapi-node" id="panpath.cloud.CloudPath.a_resolve">
-<div class='mkapi-object-container'>
-  <div class="mkapi-object method code">
-    <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathcloudcloudpatha_resolve" class="mkapi-object-body method"><code class="mkapi-object-name">a_resolve</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
-  </div>
-  <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_resolve" title="Source for panpath.cloud.CloudPath.a_resolve">&lt;/&gt;</a>
-  </div>
-</div>
-<div class="mkapi-docstring">
-<div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Resolve to absolute path (no-op for cloud paths).</p></div>
-    </div>
-  <div class="mkapi-section returns">
-      <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="../panpath.cloud/#panpath.cloud.CloudPath">CloudPath</a>)</span>
-        </div>
-      <div class="mkapi-section-body returns"><p>Self (cloud paths are already absolute)</p></div>
-    </div>
-  </div>
-
-</div>
-    </div>
-  
-    <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.cloud.CloudPath.a_iterdir">
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
@@ -6666,6 +6640,32 @@ creates an empty object with a trailing slash to serve as a directory marker.</p
     </div>
   
     <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.cloud.CloudPath.a_resolve">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object method code">
+    <div class="mkapi-object-kind method">method</div>
+    <h3 id="panpathcloudcloudpatha_resolve" class="mkapi-object-body method"><code class="mkapi-object-name">a_resolve</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_resolve" title="Source for panpath.cloud.CloudPath.a_resolve">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Resolve to absolute path (no-op for cloud paths).</p></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="../panpath.base/#panpath.base.PanPath">PanPath</a>)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>Self (cloud paths are already absolute)</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.cloud.CloudPath.a_rmdir">
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
@@ -6742,7 +6742,7 @@ creates an empty object with a trailing slash to serve as a directory marker.</p
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathcloudcloudpatha_symlink_to" class="mkapi-object-body method"><code class="mkapi-object-name">a_symlink_to</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathcloudcloudpatha_symlink_to" class="mkapi-object-body method"><code class="mkapi-object-name">a_symlink_to</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">target_is_directory=False</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.cloud/#panpath.cloud.CloudPath.a_symlink_to" title="Source for panpath.cloud.CloudPath.a_symlink_to">&lt;/&gt;</a>
@@ -6760,6 +6760,10 @@ creates an empty object with a trailing slash to serve as a directory marker.</p
 <li><code class="mkapi-item-name">target</code>
 <span class="mkapi-item-type">(Union)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Path this symlink should point to (absolute with scheme or relative)</span></li>
+
+<li><code class="mkapi-item-name">target_is_directory</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Ignored (for compatibility with pathlib)</span></li>
 
 
 </ul></div>

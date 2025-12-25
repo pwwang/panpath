@@ -4404,7 +4404,7 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create empty file or update metadata.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient.touch" title="Source for panpath.clients.SyncClient.touch">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.SyncClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(Iterator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Walk directory tree.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient.walk" title="Source for panpath.clients.SyncClient.walk">&lt;/&gt;</a></span></li>
 
@@ -4678,7 +4678,7 @@
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathclientssyncclientwalk" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; Iterator</span></h3>
+    <h3 id="panpathclientssyncclientwalk" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; Iterator</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.SyncClient.walk" title="Source for panpath.clients.SyncClient.walk">&lt;/&gt;</a>
@@ -5053,7 +5053,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Get object metadata.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.get_metadata" title="Source for panpath.clients.AsyncClient.get_metadata">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.glob">glob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+<span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Find all paths matching pattern.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.glob" title="Source for panpath.clients.AsyncClient.glob">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.is_dir">is_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
@@ -5120,8 +5120,8 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create empty file or update metadata.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.touch" title="Source for panpath.clients.AsyncClient.touch">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Walk directory tree.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.walk" title="Source for panpath.clients.AsyncClient.walk">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncClient.write_bytes">write_bytes</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code>
@@ -5394,7 +5394,7 @@
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathclientsasyncclientglob" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">glob</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; list</span></h3>
+    <h3 id="panpathclientsasyncclientglob" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">glob</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; AsyncGenerator</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.glob" title="Source for panpath.clients.AsyncClient.glob">&lt;/&gt;</a>
@@ -5414,7 +5414,7 @@
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathclientsasyncclientwalk" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; list</span></h3>
+    <h3 id="panpathclientsasyncclientwalk" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath=True</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; AsyncGenerator</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncClient.walk" title="Source for panpath.clients.AsyncClient.walk">&lt;/&gt;</a>

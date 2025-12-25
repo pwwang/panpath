@@ -2423,6 +2423,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathbasepanpatha_resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathbasepanpatha_exists" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2482,17 +2493,6 @@
     <span class="md-ellipsis">
       
         a_unlink
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#panpathbasepanpatha_resolve" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        a_resolve
       
     </span>
   </a>
@@ -3617,6 +3617,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#panpathbasepanpatha_resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        a_resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#panpathbasepanpatha_exists" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3676,17 +3687,6 @@
     <span class="md-ellipsis">
       
         a_unlink
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#panpathbasepanpatha_resolve" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        a_resolve
       
     </span>
   </a>
@@ -4162,7 +4162,7 @@
 <span class="mkapi-item-type">(<a href="./#panpath.base.PanPath">PanPath</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously copy this path to the target path.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_copy" title="Source for panpath.base.PanPath.a_copy">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_copytree">a_copytree</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">ignore</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_copytree">a_copytree</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">follow_symlinks</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(<a href="./#panpath.base.PanPath">PanPath</a>)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously copy the directory and all its contents recursively to the target path.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_copytree" title="Source for panpath.base.PanPath.a_copytree">&lt;/&gt;</a></span></li>
 
@@ -4220,7 +4220,7 @@
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_resolve">a_resolve</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(<a href="./#panpath.base.PanPath">PanPath</a>)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously resolve the path to its absolute form.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_resolve" title="Source for panpath.base.PanPath.a_resolve">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Resolve to absolute path (no-op for cloud paths).<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_resolve" title="Source for panpath.base.PanPath.a_resolve">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_rglob">a_rglob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(List)</span>
@@ -4238,7 +4238,7 @@
 <span class="mkapi-item-type">(stat_result)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously get the file or directory's status information.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_stat" title="Source for panpath.base.PanPath.a_stat">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_symlink_to">a_symlink_to</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_symlink_to">a_symlink_to</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">target_is_directory</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously create a symbolic link pointing to the target path.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_symlink_to" title="Source for panpath.base.PanPath.a_symlink_to">&lt;/&gt;</a></span></li>
 
@@ -5652,6 +5652,32 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
     </div>
   
     <div class="mkapi-member">
+      <div class="mkapi-node" id="panpath.base.PanPath.a_resolve">
+<div class='mkapi-object-container'>
+  <div class="mkapi-object abstract-method code">
+    <div class="mkapi-object-kind abstract-method">abstract method</div>
+    <h3 id="panpathbasepanpatha_resolve" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_resolve</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
+  </div>
+  <div class="mkapi-src-link">
+    <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_resolve" title="Source for panpath.base.PanPath.a_resolve">&lt;/&gt;</a>
+  </div>
+</div>
+<div class="mkapi-docstring">
+<div class="mkapi-section">
+      <div class="mkapi-section-body"><p>Resolve to absolute path (no-op for cloud paths).</p></div>
+    </div>
+  <div class="mkapi-section returns">
+      <div class="mkapi-section-name returns">
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="./#panpath.base.PanPath">PanPath</a>)</span>
+        </div>
+      <div class="mkapi-section-body returns"><p>Self (cloud paths are already absolute)</p></div>
+    </div>
+  </div>
+
+</div>
+    </div>
+  
+    <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.base.PanPath.a_exists">
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
@@ -5835,32 +5861,6 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Asynchronously remove (delete) the file or empty directory.</p></div>
-    </div>
-  </div>
-
-</div>
-    </div>
-  
-    <div class="mkapi-member">
-      <div class="mkapi-node" id="panpath.base.PanPath.a_resolve">
-<div class='mkapi-object-container'>
-  <div class="mkapi-object abstract-method code">
-    <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathbasepanpatha_resolve" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_resolve</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
-  </div>
-  <div class="mkapi-src-link">
-    <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_resolve" title="Source for panpath.base.PanPath.a_resolve">&lt;/&gt;</a>
-  </div>
-</div>
-<div class="mkapi-docstring">
-<div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Asynchronously resolve the path to its absolute form.</p></div>
-    </div>
-  <div class="mkapi-section returns">
-      <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(<a href="./#panpath.base.PanPath">PanPath</a>)</span>
-        </div>
-      <div class="mkapi-section-body returns"><p>Resolved absolute path.</p></div>
     </div>
   </div>
 
@@ -6304,7 +6304,7 @@ For cloud paths, this reads the metadata flag indicating the symlink target.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathbasepanpatha_symlink_to" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_symlink_to</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathbasepanpatha_symlink_to" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_symlink_to</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">target_is_directory=False</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_symlink_to" title="Source for panpath.base.PanPath.a_symlink_to">&lt;/&gt;</a>
@@ -6324,6 +6324,10 @@ For cloud paths, this sets a metadata flag indicating the symlink target.</p>
 <li><code class="mkapi-item-name">target</code>
 <span class="mkapi-item-type">(Union)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">The target PanPath the symlink points to.</span></li>
+
+<li><code class="mkapi-item-name">target_is_directory</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Whether the target is a directory (ignored for cloud paths).</span></li>
 
 
 </ul></div>
@@ -6412,7 +6416,7 @@ For cloud paths, this sets a metadata flag indicating the symlink target.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathbasepanpatha_copytree" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_copytree</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">ignore=None</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathbasepanpatha_copytree" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_copytree</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">target</code>, <code class="mkapi-object-signature">follow_symlinks=True</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_copytree" title="Source for panpath.base.PanPath.a_copytree">&lt;/&gt;</a>
@@ -6431,10 +6435,9 @@ For cloud paths, this sets a metadata flag indicating the symlink target.</p>
 <span class="mkapi-item-type">(Union)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Destination PanPath to copy to.</span></li>
 
-<li><code class="mkapi-item-name">ignore</code>
-<span class="mkapi-item-type">(Any, optional)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Optional callable that takes a directory path and a list of its contents,and returns a list of names to ignore.
-</span></li>
+<li><code class="mkapi-item-name">follow_symlinks</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, copies the contents of symlinks.</span></li>
 
 
 </ul></div>

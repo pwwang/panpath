@@ -2169,9 +2169,7 @@
             <span class="c1"># In Python 3.10, __init__ doesn&#39;t accept arguments</span>
             <span class="c1"># In Python 3.12+, __init__ needs the arguments</span>
             <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
-                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># type: ignore[no-untyped-call]</span>
-                    <span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-                <span class="p">)</span>
+                <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">new_args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># type: ignore[no-untyped-call]</span>
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="n">LocalPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>  <span class="c1"># type: ignore[no-untyped-call]</span>
             <span class="k">return</span> <span class="n">instance</span>
@@ -2182,6 +2180,26 @@
             <span class="k">return</span> <span class="n">path_class</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># type: ignore[no-any-return]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported URI scheme: </span><span class="si">{</span><span class="n">scheme</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_resolve" href="../../panpath.base/#panpath.base.PanPath.a_resolve">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Self (cloud paths are already absolute)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Replace file at target (overwriting if exists).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target: Target path</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            New path instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># For cloud storage, replace is same as rename (always overwrites)</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_exists"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_exists" href="../../panpath.base/#panpath.base.PanPath.a_exists">DOCS</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -2236,14 +2254,6 @@
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_unlink" href="../../panpath.base/#panpath.base.PanPath.a_unlink">DOCS</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove (delete) the file or empty directory.&quot;&quot;&quot;</span>
-
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_resolve" href="../../panpath.base/#panpath.base.PanPath.a_resolve">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously resolve the path to its absolute form.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Resolved absolute path.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_iterdir" href="../../panpath.base/#panpath.base.PanPath.a_iterdir">DOCS</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
@@ -2326,7 +2336,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rename"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rename" href="../../panpath.base/#panpath.base.PanPath.a_rename">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously rename this path to the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2337,7 +2347,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_replace"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_replace" href="../../panpath.base/#panpath.base.PanPath.a_replace">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously replace this path with the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2376,7 +2386,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_symlink_to" href="../../panpath.base/#panpath.base.PanPath.a_symlink_to">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
+        <span class="n">target_is_directory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously create a symbolic link pointing to the target path.</span>
 
 <span class="sd">        For local path, this creates a real symlink.</span>
@@ -2384,6 +2398,7 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            target: The target PanPath the symlink points to.</span>
+<span class="sd">            target_is_directory: Whether the target is a directory (ignored for cloud paths).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rmtree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rmtree" href="../../panpath.base/#panpath.base.PanPath.a_rmtree">DOCS</a>
@@ -2396,7 +2411,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copy" href="../../panpath.base/#panpath.base.PanPath.a_copy">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously copy this path to the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2409,15 +2424,14 @@
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copytree" href="../../panpath.base/#panpath.base.PanPath.a_copytree">DOCS</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">],</span>
-        <span class="n">ignore</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously copy the directory and all its contents recursively to the target path.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            target: Destination PanPath to copy to.</span>
-<span class="sd">            ignore: Optional callable that takes a directory path and a list of its contents,</span>
-<span class="sd">                and returns a list of names to ignore.</span>
+<span class="sd">            follow_symlinks: If True, copies the contents of symlinks.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            The copied PanPath instance.</span>

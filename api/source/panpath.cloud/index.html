@@ -2058,6 +2058,8 @@
 <div class="mkapi-code">
 <div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Base classes for cloud path implementations.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">PurePosixPath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -2109,8 +2111,6 @@
         <span class="c1"># Python version compatibility for PurePosixPath.__init__():</span>
         <span class="c1"># - Python 3.9-3.11: Fully initialized in __new__()</span>
         <span class="c1"># - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-
         <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
             <span class="c1"># Python 3.12+ requires calling __init__ with args to set internal properties</span>
             <span class="n">PurePosixPath</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -2595,14 +2595,6 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">missing_ok</span><span class="p">:</span>
                 <span class="k">raise</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_resolve" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_resolve">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Self (cloud paths are already absolute)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span> <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span>
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;CloudPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.cloud.CloudPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_iterdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_iterdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List directory contents (async version returns list).&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
@@ -2699,9 +2691,7 @@
                 <span class="sa">f</span><span class="s2">&quot;Cannot rename directory </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> to non-directory target </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_is_dir</span> <span class="ow">and</span> <span class="n">target_is_dir</span> <span class="ow">and</span> <span class="n">target_exists</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">IsADirectoryError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Cannot rename file </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> to directory target </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IsADirectoryError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot rename file </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> to directory target </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">source_is_dir</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">target_exists</span><span class="p">:</span>
@@ -2738,6 +2728,14 @@
         <span class="c1"># For cloud storage, replace is same as rename (always overwrites)</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_rename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_resolve" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_resolve">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Self (cloud paths are already absolute)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span> <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span>
+
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_rmdir"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_rmdir" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_rmdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove empty directory marker.&quot;&quot;&quot;</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">async_client</span><span class="o">.</span><span class="n">rmdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
@@ -2760,11 +2758,16 @@
 
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_symlink_to" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_symlink_to">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span id="panpath.cloud.CloudPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_symlink_to" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_symlink_to">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;CloudPath&quot;</span><span class="p">],</span>
+        <span class="n">target_is_directory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create symlink pointing to target (via metadata).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            target: Path this symlink should point to (absolute with scheme or relative)</span>
+<span class="sd">            target_is_directory: Ignored (for compatibility with pathlib)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># If target doesn&#39;t have a scheme prefix, treat as relative path</span>

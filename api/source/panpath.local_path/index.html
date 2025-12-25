@@ -2061,9 +2061,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PosixPath</span><span class="p">,</span> <span class="n">WindowsPath</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">CloudPath</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
 
 <span class="c1"># Determine the concrete Path class for the current platform</span>
 <span class="n">_ConcretePath</span> <span class="o">=</span> <span class="n">WindowsPath</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;nt&quot;</span> <span class="k">else</span> <span class="n">PosixPath</span>
@@ -2105,8 +2106,6 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o666</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_touch"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_touch" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_touch">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the file if it does not exist or update the modification time (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
@@ -2129,9 +2128,35 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            New path instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;Path&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_replace"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_replace" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_replace">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rename the file or directory to target, overwriting if target exists.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target: New path</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            New path instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_rename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_resolve" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_resolve">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Self (cloud paths are already absolute)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span> <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;Path&quot;</span><span class="p">],</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_copy" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_copy">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file to target.</span>
@@ -2144,6 +2169,13 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Target path instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation</span>
         <span class="k">if</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
@@ -2159,12 +2191,165 @@
 
         <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target_str</span><span class="p">)</span>
 
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span><span id="panpath.local_path.LocalPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_copytree" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_copytree">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;Path&quot;</span><span class="p">],</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursively copy the directory and all its contents to the target path.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target: Destination PanPath to copy to.</span>
+<span class="sd">            follow_symlinks: If True, copies the contents of symlinks.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The copied PanPath instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">target</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">target</span><span class="o">.</span><span class="n">a_mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">async</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_iterdir</span><span class="p">():</span>
+            <span class="n">src_path</span> <span class="o">=</span> <span class="n">entry</span>
+            <span class="n">dest_path</span> <span class="o">=</span> <span class="n">target</span> <span class="o">/</span> <span class="n">entry</span><span class="o">.</span><span class="n">name</span>
+
+            <span class="k">if</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_is_dir</span><span class="p">():</span>
+                <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_copytree</span><span class="p">(</span><span class="n">dest_path</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_copy</span><span class="p">(</span><span class="n">dest_path</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">target</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_walk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="s2">&quot;LocalPath&quot;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.local_path.LocalPath.a_walk"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_walk" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_walk">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously walk the directory tree.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list of tuples (dirpath, dirnames, filenames)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">dirnames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">filenames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span> <span class="o">/</span> <span class="n">entry</span>
+            <span class="k">if</span> <span class="k">await</span> <span class="n">path</span><span class="o">.</span><span class="n">a_is_dir</span><span class="p">():</span>
+                <span class="n">dirnames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="k">async</span> <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">a_walk</span><span class="p">():</span>
+                    <span class="k">yield</span> <span class="n">sub</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;LocalPath&quot;</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_readlink"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_readlink" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_readlink">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously read the target of a symbolic link.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The path to which the symbolic link points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PanPath</span><span class="p">(</span><span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span id="panpath.local_path.LocalPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_symlink_to" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_symlink_to">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;Path&quot;</span><span class="p">],</span>
+        <span class="n">target_is_directory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously create a symbolic link pointing to target.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target: The target path the symbolic link points to.</span>
+<span class="sd">            target_is_directory: Whether the target is a directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_is_directory</span><span class="o">=</span><span class="n">target_is_directory</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;LocalPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.local_path.LocalPath.a_glob"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_glob" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_glob">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously yield paths matching the glob pattern.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pattern: Glob pattern (relative)</span>
+
+<span class="sd">        Yields:</span>
+<span class="sd">            Matching LocalPath instances</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">fnmatch</span><span class="w"> </span><span class="kn">import</span> <span class="n">fnmatch</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pattern</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unacceptable pattern: </span><span class="si">{!r}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pattern</span><span class="p">))</span>
+
+        <span class="c1"># aiofiles does not support globbing natively</span>
+        <span class="c1"># let&#39;s implement it with walk</span>
+        <span class="k">if</span> <span class="s2">&quot;**&quot;</span> <span class="ow">in</span> <span class="n">pattern</span><span class="p">:</span>
+            <span class="n">pattern_parts</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;**/&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pattern_parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">file_pattern</span> <span class="o">=</span> <span class="n">pattern_parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                <span class="n">file_pattern</span> <span class="o">=</span> <span class="s2">&quot;*&quot;</span>
+            <span class="k">async</span> <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_walk</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">file_pattern</span><span class="p">):</span>
+                        <span class="k">yield</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">filename</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_iterdir</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pattern</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="n">entry</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rglob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;LocalPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.local_path.LocalPath.a_rglob"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_rglob" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_rglob">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursively yield all existing files matching the given pattern.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pattern: Glob pattern (relative)</span>
+
+<span class="sd">        Yields:</span>
+<span class="sd">            Matching LocalPath instances</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pattern</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unacceptable pattern: </span><span class="si">{!r}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pattern</span><span class="p">))</span>
+
+        <span class="c1"># use a_glob to implement rglob</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;**/</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">path</span>
+
     <span class="c1"># Async I/O operations (prefixed with a_)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_exists"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_exists" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_exists">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path exists (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
@@ -2175,89 +2360,93 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_is_file"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_is_file" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a file (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_is_dir"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_is_dir" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a directory (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_read_bytes"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_read_bytes" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as bytes (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_read_text"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_read_text" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_read_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as text (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_write_bytes"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_write_bytes" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to file (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_write_text"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_write_text" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_write_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write text to file (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_is_symlink"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_is_symlink" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_is_symlink">DOCS</a>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a symlink (async).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
+                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
+                <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">islink</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_unlink" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_unlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete file (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">try</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
         <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
@@ -2269,13 +2458,12 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create directory (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">if</span> <span class="n">parents</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="n">exist_ok</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -2288,20 +2476,17 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_rmdir"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_rmdir" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_rmdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove empty directory (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">rmdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_rmtree"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_rmtree" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_rmtree">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursively remove directory and its contents (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
@@ -2319,26 +2504,24 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;LocalPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.local_path.LocalPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_iterdir" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_iterdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List directory contents (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
             <span class="k">yield</span> <span class="bp">self</span> <span class="o">/</span> <span class="n">item</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_stat" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_stat">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get file stats (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span><span id="panpath.local_path.LocalPath.a_open"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_open" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_open">DOCS</a>
@@ -2355,13 +2538,12 @@
 <span class="sd">            Async file handle from aiofiles</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MissingDependencyError</span>
-
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
                 <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;async local paths&quot;</span><span class="p">,</span>
                 <span class="n">package</span><span class="o">=</span><span class="s2">&quot;aiofiles&quot;</span><span class="p">,</span>
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
+
         <span class="k">return</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
             <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>

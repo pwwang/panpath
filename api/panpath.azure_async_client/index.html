@@ -3273,7 +3273,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Get blob metadata.<a class="mkapi-src-link" href="../source/panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.get_metadata" title="Source for panpath.azure_async_client.AsyncAzureBlobClient.get_metadata">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.azure_async_client.AsyncAzureBlobClient.glob">glob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Glob for files matching pattern.<a class="mkapi-src-link" href="../source/panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.glob" title="Source for panpath.azure_async_client.AsyncAzureBlobClient.glob">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.azure_async_client.AsyncAzureBlobClient.is_dir">is_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
@@ -3340,7 +3340,7 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create empty file.<a class="mkapi-src-link" href="../source/panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.touch" title="Source for panpath.azure_async_client.AsyncAzureBlobClient.touch">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.azure_async_client.AsyncAzureBlobClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
+<li class="method"><code class="mkapi-item-name"><a href="#panpath.azure_async_client.AsyncAzureBlobClient.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Walk directory tree.<a class="mkapi-src-link" href="../source/panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.walk" title="Source for panpath.azure_async_client.AsyncAzureBlobClient.walk">&lt;/&gt;</a></span></li>
 
@@ -3923,11 +3923,11 @@ This method returns a file-like object that supports the standard file API.</p>
 
 </ul></div>
     </div>
-  <div class="mkapi-section returns">
-      <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(list)</span>
+  <div class="mkapi-section yields">
+      <div class="mkapi-section-name yields">
+          <span class="mkapi-section-name-body yields">Yields</span> 
         </div>
-      <div class="mkapi-section-body returns"><p>List of matching AsyncCloudPath objects</p></div>
+      <div class="mkapi-section-body yields"><p>Matching paths as strings or PanPath objects</p></div>
     </div>
   </div>
 
@@ -3939,7 +3939,7 @@ This method returns a file-like object that supports the standard file API.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathazure_async_clientasyncazureblobclientwalk" class="mkapi-object-body method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathazure_async_clientasyncazureblobclientwalk" class="mkapi-object-body method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">_return_panpath=True</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.azure_async_client/#panpath.azure_async_client.AsyncAzureBlobClient.walk" title="Source for panpath.azure_async_client.AsyncAzureBlobClient.walk">&lt;/&gt;</a>
@@ -3957,6 +3957,7 @@ This method returns a file-like object that supports the standard file API.</p>
 <li><code class="mkapi-item-name">path</code>
 <span class="mkapi-item-type">(str)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Base Azure path</span></li>
+
 
 
 </ul></div>
