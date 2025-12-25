@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.0]
+
+- fix: correct async file read method in README example
+- feat: refactor async client methods and enhance LocalPath functionality
+
 ## [0.3.0]
 
 ### 🚀 New Features
