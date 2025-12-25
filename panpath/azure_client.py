@@ -7,6 +7,7 @@ from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
+    from panpath.base import PanPath
     from azure.storage.blob import BlobServiceClient  # type: ignore[import-not-found]
     from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
 
@@ -284,7 +285,7 @@ class AzureBlobClient(SyncClient):
         path: str,
         pattern: str,
         _return_panpath: bool = True,
-    ) -> list["Any"]:
+    ) -> Iterator[Union[str, "PanPath"]]:
         """Glob for files matching pattern.
 
         Args:
@@ -312,20 +313,14 @@ class AzureBlobClient(SyncClient):
             else:
                 file_pattern = "*"
 
-            results = []
             for blob in blobs:
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     # Determine scheme from original path
                     scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
                     if not _return_panpath:
-                        results.append(f"{scheme}://{container_name}/{blob.name}")
+                        yield f"{scheme}://{container_name}/{blob.name}"
                     else:
-                        results.append(
-                            PanPath(
-                                f"{scheme}://{container_name}/{blob.name}"
-                            )  # type: ignore[arg-type]
-                        )
-            return results
+                        yield PanPath(f"{scheme}://{container_name}/{blob.name}")
         else:
             # Non-recursive - list blobs with prefix
             prefix_with_slash = (
@@ -333,23 +328,21 @@ class AzureBlobClient(SyncClient):
             )
             blobs = container_client.list_blobs(name_starts_with=prefix_with_slash)
 
-            results = []
             for blob in blobs:
                 # Only include direct children (no additional slashes)
                 rel_name = blob.name[len(prefix_with_slash) :]
                 if "/" not in rel_name and fnmatch(blob.name, f"{prefix_with_slash}{pattern}"):
                     scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
                     if not _return_panpath:
-                        results.append(f"{scheme}://{container_name}/{blob.name}")
+                        yield f"{scheme}://{container_name}/{blob.name}"
                     else:
-                        results.append(
-                            PanPath(
-                                f"{scheme}://{container_name}/{blob.name}"
-                            )  # type: ignore[arg-type]
-                        )
-            return results
+                        yield PanPath(f"{scheme}://{container_name}/{blob.name}")
 
-    def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
+    def walk(
+        self,
+        path: str,
+        _return_panpath: bool = True,
+    ) -> Iterator[tuple[Union[str, "PanPath"], list[str], list[str]]]:
         """Walk directory tree.
 
         Args:
@@ -358,6 +351,8 @@ class AzureBlobClient(SyncClient):
         Yields:
             Tuples of (dirpath, dirnames, filenames)
         """
+        from panpath.base import PanPath
+
         container_name, blob_prefix = self.__class__._parse_path(path)
         container_client = self._client.get_container_client(container_name)
 
@@ -409,7 +404,7 @@ class AzureBlobClient(SyncClient):
 
         # Yield each directory tuple
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (d, sorted(subdirs), sorted(files))
+            yield (PanPath(d) if _return_panpath else d, sorted(subdirs), sorted(files))
 
     def touch(  # type: ignore[no-untyped-def, override]
         self,

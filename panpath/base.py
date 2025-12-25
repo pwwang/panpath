@@ -111,9 +111,7 @@ class PanPath(PathlibPath):
             # In Python 3.10, __init__ doesn't accept arguments
             # In Python 3.12+, __init__ needs the arguments
             if sys.version_info >= (3, 12):
-                LocalPath.__init__(  # type: ignore[no-untyped-call]
-                    instance, *new_args, **kwargs
-                )
+                LocalPath.__init__(instance, *new_args, **kwargs)  # type: ignore[no-untyped-call]
             else:  # pragma: no cover
                 LocalPath.__init__(instance)  # type: ignore[no-untyped-call]
             return instance
@@ -124,6 +122,26 @@ class PanPath(PathlibPath):
             return path_class(*args, **kwargs)  # type: ignore[no-any-return]
         except KeyError:
             raise ValueError(f"Unsupported URI scheme: {scheme!r}")
+
+    @abstractmethod
+    async def a_resolve(self) -> "PanPath":
+        """Resolve to absolute path (no-op for cloud paths).
+
+        Returns:
+            Self (cloud paths are already absolute)
+        """
+
+    @abstractmethod
+    async def a_replace(self, target: Union[str, "PathlibPath"]) -> "PanPath":
+        """Replace file at target (overwriting if exists).
+
+        Args:
+            target: Target path
+
+        Returns:
+            New path instance
+        """
+        # For cloud storage, replace is same as rename (always overwrites)
 
     @abstractmethod
     async def a_exists(self) -> bool:
@@ -178,14 +196,6 @@ class PanPath(PathlibPath):
     @abstractmethod
     async def a_unlink(self) -> None:
         """Asynchronously remove (delete) the file or empty directory."""
-
-    @abstractmethod
-    async def a_resolve(self) -> "PanPath":
-        """Asynchronously resolve the path to its absolute form.
-
-        Returns:
-            Resolved absolute path.
-        """
 
     @abstractmethod
     async def a_iterdir(self) -> AsyncGenerator["PanPath", None]:
@@ -268,7 +278,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_rename(self, target: Union[str, "PanPath"]) -> "PanPath":
+    async def a_rename(self, target: Union[str, "PathlibPath"]) -> "PanPath":
         """Asynchronously rename this path to the target path.
 
         Args:
@@ -279,7 +289,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_replace(self, target: Union[str, "PanPath"]) -> "PanPath":
+    async def a_replace(self, target: Union[str, "PathlibPath"]) -> "PanPath":
         """Asynchronously replace this path with the target path.
 
         Args:
@@ -318,7 +328,11 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_symlink_to(self, target: Union[str, "PanPath"]) -> None:
+    async def a_symlink_to(
+        self,
+        target: Union[str, "PathlibPath"],
+        target_is_directory: bool = False,
+    ) -> None:
         """Asynchronously create a symbolic link pointing to the target path.
 
         For local path, this creates a real symlink.
@@ -326,6 +340,7 @@ class PanPath(PathlibPath):
 
         Args:
             target: The target PanPath the symlink points to.
+            target_is_directory: Whether the target is a directory (ignored for cloud paths).
         """
 
     @abstractmethod
@@ -338,7 +353,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_copy(self, target: Union[str, "PanPath"]) -> "PanPath":
+    async def a_copy(self, target: Union[str, "PathlibPath"]) -> "PanPath":
         """Asynchronously copy this path to the target path.
 
         Args:
@@ -351,15 +366,14 @@ class PanPath(PathlibPath):
     @abstractmethod
     async def a_copytree(
         self,
-        target: Union[str, "PanPath"],
-        ignore: Any = None,
+        target: Union[str, "PathlibPath"],
+        follow_symlinks: bool = True,
     ) -> "PanPath":
         """Asynchronously copy the directory and all its contents recursively to the target path.
 
         Args:
             target: Destination PanPath to copy to.
-            ignore: Optional callable that takes a directory path and a list of its contents,
-                and returns a list of names to ignore.
+            follow_symlinks: If True, copies the contents of symlinks.
 
         Returns:
             The copied PanPath instance.

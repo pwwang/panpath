@@ -1,5 +1,7 @@
 """Base classes for cloud path implementations."""
 
+import sys
+
 from abc import ABC, abstractmethod
 from pathlib import PurePosixPath
 from typing import (
@@ -51,8 +53,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # Python version compatibility for PurePosixPath.__init__():
         # - Python 3.9-3.11: Fully initialized in __new__()
         # - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.
-        import sys
-
         if sys.version_info >= (3, 12):
             # Python 3.12+ requires calling __init__ with args to set internal properties
             PurePosixPath.__init__(self, *args)  # type: ignore
@@ -537,14 +537,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             if not missing_ok:
                 raise
 
-    async def a_resolve(self) -> "CloudPath":
-        """Resolve to absolute path (no-op for cloud paths).
-
-        Returns:
-            Self (cloud paths are already absolute)
-        """
-        return await self.a_readlink() if await self.a_is_symlink() else self
-
     async def a_iterdir(self) -> AsyncGenerator["CloudPath", None]:
         """List directory contents (async version returns list)."""
         for item in await self.async_client.list_dir(str(self)):
@@ -641,9 +633,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
                 f"Cannot rename directory {self} to non-directory target {target}"
             )
         if not source_is_dir and target_is_dir and target_exists:
-            raise IsADirectoryError(
-                f"Cannot rename file {self} to directory target {target}"
-            )
+            raise IsADirectoryError(f"Cannot rename file {self} to directory target {target}")
 
         if source_is_dir:
             if not target_exists:
@@ -680,6 +670,14 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # For cloud storage, replace is same as rename (always overwrites)
         return await self.a_rename(target)
 
+    async def a_resolve(self) -> "PanPath":
+        """Resolve to absolute path (no-op for cloud paths).
+
+        Returns:
+            Self (cloud paths are already absolute)
+        """
+        return await self.a_readlink() if await self.a_is_symlink() else self
+
     async def a_rmdir(self) -> None:
         """Remove empty directory marker."""
         await self.async_client.rmdir(str(self))
@@ -702,11 +700,16 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         return PanPath(target)  # type: ignore
 
-    async def a_symlink_to(self, target: Union[str, "CloudPath"]) -> None:
+    async def a_symlink_to(
+        self,
+        target: Union[str, "CloudPath"],
+        target_is_directory: bool = False,
+    ) -> None:
         """Create symlink pointing to target (via metadata).
 
         Args:
             target: Path this symlink should point to (absolute with scheme or relative)
+            target_is_directory: Ignored (for compatibility with pathlib)
         """
         target_str = str(target)
         # If target doesn't have a scheme prefix, treat as relative path

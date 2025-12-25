@@ -149,6 +149,113 @@ class TestLocalPath:
         content = await dest_path.a_read_text()
         assert content == "rename_content"
 
+        # use replace
+        await dest_path.a_replace(src_path)
+        assert src_path.exists()
+        assert not dest_path.exists()
+        assert await src_path.a_read_text() == "rename_content"
+
+    async def test_async_symlink(self, tmp_path):
+        """Test async symlink creation and reading."""
+        target_path = LocalPath(tmp_path / "target.txt")
+        symlink_path = LocalPath(tmp_path / "symlink.txt")
+
+        await target_path.a_write_text("symlink_target_content")
+
+        await symlink_path.a_symlink_to(target_path)
+
+        assert await symlink_path.a_is_symlink()
+
+        resolved_path = await symlink_path.a_resolve()
+        assert resolved_path == target_path
+
+        readlink_path = await symlink_path.a_readlink()
+        assert readlink_path == target_path
+
+        content = await symlink_path.a_read_text()
+        assert content == "symlink_target_content"
+
+    async def test_async_glob(self, tmp_path):
+        """Test async glob method."""
+        dir_path = LocalPath(tmp_path / "glob_dir")
+        await dir_path.a_mkdir()
+
+        # Create some files
+        for i in range(5):
+            await (dir_path / f"file_{i}.txt").a_write_text(f"content_{i}")
+
+        with pytest.raises(ValueError):
+            await dir_path.a_glob("").__anext__()
+
+        matched_files = []
+        async for p in dir_path.a_glob("file_*.txt"):
+            matched_files.append(p.name)
+
+        assert set(matched_files) == {f"file_{i}.txt" for i in range(5)}
+
+    async def test_async_rglob(self, tmp_path):
+        """Test async rglob method."""
+        dir_path = LocalPath(tmp_path / "rglob_dir")
+        await dir_path.a_mkdir()
+        await (dir_path / "subdir").a_mkdir()
+
+        # Create some files
+        for i in range(3):
+            await (dir_path / f"file_{i}.txt").a_write_text(f"content_{i}")
+            await (dir_path / "subdir" / f"file_{i}.txt").a_write_text(f"sub_content_{i}")
+
+        with pytest.raises(ValueError):
+            await dir_path.a_rglob("").__anext__()
+
+        matched_files = []
+        async for p in dir_path.a_rglob("file_*.txt"):
+            matched_files.append(p.relative_to(dir_path).as_posix())
+
+        expected_files = {f"file_{i}.txt" for i in range(3)} | {
+            f"subdir/file_{i}.txt" for i in range(3)
+        }
+        assert set(matched_files) == expected_files
+
+    async def test_async_walk(self, tmp_path):
+        """Test async walk method."""
+        dir_path = LocalPath(tmp_path / "walk_dir")
+        await dir_path.a_mkdir()
+        await (dir_path / "subdir1").a_mkdir()
+        await (dir_path / "subdir2").a_mkdir()
+
+        # Create some files
+        await (dir_path / "file_root.txt").a_write_text("root_content")
+        await (dir_path / "subdir1" / "file1.txt").a_write_text("sub1_content")
+        await (dir_path / "subdir2" / "file2.txt").a_write_text("sub2_content")
+
+        walked_paths = []
+        async for root, dirs, files in dir_path.a_walk():
+            for name in files:
+                walked_paths.append((root / name).relative_to(dir_path).as_posix())
+
+        expected_paths = {
+            "file_root.txt",
+            "subdir1/file1.txt",
+            "subdir2/file2.txt",
+        }
+        assert set(walked_paths) == expected_paths
+
+    async def test_async_copytree(self, tmp_path):
+        """Test async copytree method."""
+        src_dir = LocalPath(tmp_path / "src_tree")
+        dest_dir = LocalPath(tmp_path / "dest_tree")
+
+        await src_dir.a_mkdir()
+        await (src_dir / "subdir").a_mkdir()
+        await (src_dir / "subdir" / "file.txt").a_write_text("tree_content")
+
+        await src_dir.a_copytree(dest_dir)
+
+        assert dest_dir.exists()
+        assert (dest_dir / "subdir").exists()
+        content = await (dest_dir / "subdir" / "file.txt").a_read_text()
+        assert content == "tree_content"
+
     async def test_async_rename_dir(self, tmp_path):
         """Test async rename method for directories."""
         src_dir = LocalPath(tmp_path / "src_dir")

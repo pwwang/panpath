@@ -3,9 +3,10 @@
 from pathlib import Path, PosixPath, WindowsPath
 import os
 import sys
-from typing import Any, AsyncGenerator, Optional, Union
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
 from panpath.base import PanPath
 from panpath.cloud import CloudPath
+from panpath.exceptions import MissingDependencyError
 
 # Determine the concrete Path class for the current platform
 _ConcretePath = WindowsPath if os.name == "nt" else PosixPath
@@ -47,8 +48,6 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
         """Create the file if it does not exist or update the modification time (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -71,9 +70,35 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             New path instance
         """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
         target_str = str(target)
         await aiofiles.os.rename(str(self), target_str)
         return PanPath(target_str)
+
+    async def a_replace(self, target: Union[str, "Path"]) -> "PanPath":
+        """Rename the file or directory to target, overwriting if target exists.
+
+        Args:
+            target: New path
+
+        Returns:
+            New path instance
+        """
+        return await self.a_rename(target)
+
+    async def a_resolve(self) -> "PanPath":
+        """Resolve to absolute path (no-op for cloud paths).
+
+        Returns:
+            Self (cloud paths are already absolute)
+        """
+        return await self.a_readlink() if await self.a_is_symlink() else self
 
     async def a_copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
@@ -86,6 +111,13 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             Target path instance
         """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
         target_str = str(target)
         # Check if cross-storage operation
         if CloudPath._is_cross_storage_op(str(self), target_str):  # pragma: no cover
@@ -101,12 +133,165 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         return PanPath(target_str)
 
+    async def a_copytree(
+        self,
+        target: Union[str, "Path"],
+        follow_symlinks: bool = True,
+    ) -> "PanPath":
+        """Recursively copy the directory and all its contents to the target path.
+
+        Args:
+            target: Destination PanPath to copy to.
+            follow_symlinks: If True, copies the contents of symlinks.
+
+        Returns:
+            The copied PanPath instance.
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        target = PanPath(target)
+        await target.a_mkdir(parents=True, exist_ok=True)
+
+        async for entry in self.a_iterdir():
+            src_path = entry
+            dest_path = target / entry.name
+
+            if await src_path.a_is_dir():
+                await src_path.a_copytree(dest_path, follow_symlinks=follow_symlinks)
+            else:
+                await src_path.a_copy(dest_path, follow_symlinks=follow_symlinks)
+
+        return target
+
+    async def a_walk(self) -> AsyncGenerator[Tuple["LocalPath", List[str], List[str]], None]:
+        """Asynchronously walk the directory tree.
+
+        Returns:
+            A list of tuples (dirpath, dirnames, filenames)
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+        dirnames = []
+        filenames = []
+        for entry in await aiofiles.os.listdir(str(self)):
+            path = self / entry
+            if await path.a_is_dir():
+                dirnames.append(entry)
+                async for sub in path.a_walk():
+                    yield sub
+            else:
+                filenames.append(entry)
+        yield (self, dirnames, filenames)
+
+    async def a_readlink(self) -> "LocalPath":
+        """Asynchronously read the target of a symbolic link.
+
+        Returns:
+            The path to which the symbolic link points.
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        return PanPath(await aiofiles.os.readlink(str(self)))
+
+    async def a_symlink_to(
+        self,
+        target: Union[str, "Path"],
+        target_is_directory: bool = False,
+    ) -> None:
+        """Asynchronously create a symbolic link pointing to target.
+
+        Args:
+            target: The target path the symbolic link points to.
+            target_is_directory: Whether the target is a directory.
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        await aiofiles.os.symlink(str(target), str(self), target_is_directory=target_is_directory)
+
+    async def a_glob(self, pattern: str) -> AsyncGenerator["LocalPath", None]:
+        """Asynchronously yield paths matching the glob pattern.
+
+        Args:
+            pattern: Glob pattern (relative)
+
+        Yields:
+            Matching LocalPath instances
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        from fnmatch import fnmatch
+
+        if not pattern:
+            raise ValueError("Unacceptable pattern: {!r}".format(pattern))
+
+        # aiofiles does not support globbing natively
+        # let's implement it with walk
+        if "**" in pattern:
+            pattern_parts = pattern.split("**/")
+            if len(pattern_parts) > 1:
+                file_pattern = pattern_parts[1]
+            else:  # pragma: no cover
+                file_pattern = "*"
+            async for dirpath, _, filenames in self.a_walk():
+                for filename in filenames:
+                    if fnmatch(filename, file_pattern):
+                        yield dirpath / filename
+        else:
+            async for entry in self.a_iterdir():
+                if fnmatch(entry.name, pattern):
+                    yield entry
+
+    async def a_rglob(self, pattern: str) -> AsyncGenerator["LocalPath", None]:
+        """Recursively yield all existing files matching the given pattern.
+
+        Args:
+            pattern: Glob pattern (relative)
+
+        Yields:
+            Matching LocalPath instances
+        """
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        if not pattern:
+            raise ValueError("Unacceptable pattern: {!r}".format(pattern))
+
+        # use a_glob to implement rglob
+        async for path in self.a_glob(f"**/{pattern}"):
+            yield path
+
     # Async I/O operations (prefixed with a_)
     async def a_exists(self) -> bool:
         """Check if path exists (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -117,89 +302,93 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     async def a_is_file(self) -> bool:
         """Check if path is a file (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         return await aiofiles.os.path.isfile(str(self))  # type: ignore[no-any-return]
 
     async def a_is_dir(self) -> bool:
         """Check if path is a directory (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         return await aiofiles.os.path.isdir(str(self))  # type: ignore[no-any-return]
 
     async def a_read_bytes(self) -> bytes:
         """Read file as bytes (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         async with aiofiles.open(str(self), mode="rb") as f:
             return await f.read()  # type: ignore[no-any-return]
 
     async def a_read_text(self, encoding: str = "utf-8") -> str:
         """Read file as text (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         async with aiofiles.open(str(self), mode="r", encoding=encoding) as f:
             return await f.read()  # type: ignore[no-any-return]
 
     async def a_write_bytes(self, data: bytes) -> None:
         """Write bytes to file (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         async with aiofiles.open(str(self), mode="wb") as f:
             await f.write(data)
 
     async def a_write_text(self, data: str, encoding: str = "utf-8") -> None:
         """Write text to file (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         async with aiofiles.open(str(self), mode="w", encoding=encoding) as f:
             await f.write(data)
+
+    async def a_is_symlink(self) -> bool:
+        """Check if path is a symlink (async)."""
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+
+        return await aiofiles.os.path.islink(str(self))  # type: ignore[no-any-return]
 
     async def a_unlink(self, missing_ok: bool = False) -> None:
         """Delete file (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         try:
             await aiofiles.os.remove(str(self))
         except FileNotFoundError:
@@ -211,13 +400,12 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     ) -> None:
         """Create directory (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         if parents:
             await aiofiles.os.makedirs(str(self), mode=mode, exist_ok=exist_ok)
         else:
@@ -230,20 +418,17 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     async def a_rmdir(self) -> None:
         """Remove empty directory (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         await aiofiles.os.rmdir(str(self))
 
     async def a_rmtree(self) -> None:
         """Recursively remove directory and its contents (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
@@ -261,26 +446,24 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     async def a_iterdir(self) -> AsyncGenerator["LocalPath", None]:
         """List directory contents (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         for item in await aiofiles.os.listdir(str(self)):
             yield self / item
 
     async def a_stat(self) -> os.stat_result:
         """Get file stats (async)."""
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         return await aiofiles.os.stat(str(self))  # type: ignore[no-any-return]
 
     def a_open(
@@ -297,13 +480,12 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             Async file handle from aiofiles
         """
         if not HAS_AIOFILES:
-            from panpath.exceptions import MissingDependencyError
-
             raise MissingDependencyError(
                 backend="async local paths",
                 package="aiofiles",
                 extra="all-async",
             )
+
         return aiofiles.open(
             str(self),
             mode=mode,

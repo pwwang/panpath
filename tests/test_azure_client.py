@@ -200,7 +200,7 @@ def test_azureblobclient_glob(testdir):
     log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
-    files = client.glob(dirpath, "**", _return_panpath=False)
+    files = list(client.glob(dirpath, "**", _return_panpath=False))
     assert len(files) == 5
 
 
@@ -216,7 +216,7 @@ def test_azureblobclient_walk(testdir):
         client.write_text(f"{dirpath}/{name}", "data", encoding="utf-8")
 
     all_items = []
-    for root, dirs, files in client.walk(dirpath):
+    for root, dirs, files in client.walk(dirpath, _return_panpath=False):
         all_items.append((root, dirs, files))
 
     all_roots = [item[0].split("/")[-1] for item in all_items]

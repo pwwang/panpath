@@ -1,9 +1,23 @@
 """Base client classes for sync and async cloud storage operations."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Union, Awaitable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Callable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    Awaitable,
+)
 
 import re
+
+if TYPE_CHECKING:
+    from panpath.base import PanPath
 
 
 class Client(ABC):
@@ -98,7 +112,11 @@ class SyncClient(Client, ABC):
         """Find all paths matching pattern."""
 
     @abstractmethod
-    def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
+    def walk(
+        self,
+        path: str,
+        _return_panpath: True,
+    ) -> Iterator[tuple[Union[str, "PanPath"], list[str], list[str]]]:
         """Walk directory tree."""
 
     @abstractmethod
@@ -232,11 +250,15 @@ class AsyncClient(Client, ABC):
         """Create a directory marker (empty blob with trailing slash)."""
 
     @abstractmethod
-    async def glob(self, path: str, pattern: str) -> list[str]:
+    async def glob(self, path: str, pattern: str) -> AsyncGenerator[str, None]:
         """Find all paths matching pattern."""
 
     @abstractmethod
-    async def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:
+    async def walk(
+        self,
+        path: str,
+        _return_panpath: bool = True,
+    ) -> AsyncGenerator[tuple[Union[str, "PanPath"], list[str], list[str]], None]:
         """Walk directory tree."""
 
     @abstractmethod
@@ -827,8 +849,8 @@ class SyncFileHandle(ABC):
         if size == -1:
             # Check if this is a boto3/botocore stream (wraps HTTPResponse)
             # These don't accept -1 in Python 3.9
-            stream_module = getattr(self._stream.__class__, '__module__', '')
-            if 'botocore' in stream_module or 'urllib3' in stream_module:
+            stream_module = getattr(self._stream.__class__, "__module__", "")
+            if "botocore" in stream_module or "urllib3" in stream_module:
                 size = None  # type: ignore
 
         chunk = self._stream.read(size)
