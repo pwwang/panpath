@@ -194,8 +194,12 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_unlink(self) -> None:
-        """Asynchronously remove (delete) the file or empty directory."""
+    async def a_unlink(self, missing_ok: bool = False) -> None:
+        """Asynchronously remove (delete) the file or empty directory.
+
+        Args:
+            missing_ok: If True, does not raise an error if the file does not exist.
+        """
 
     @abstractmethod
     async def a_iterdir(self) -> AsyncGenerator["PanPath", None]:
