@@ -263,7 +263,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # Use PurePosixPath's match which handles ** correctly
         return key_path.match(pattern)
 
-    def glob(self, pattern: str) -> List["CloudPath"]:  # type: ignore[override]
+    def glob(self, pattern: str) -> Iterator["CloudPath"]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
@@ -272,9 +272,9 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths
         """
-        return self.client.glob(str(self), pattern)  # type: ignore[return-value]
+        yield from self.client.glob(str(self), pattern)  # type: ignore[return-value]
 
-    def rglob(self, pattern: str) -> List["CloudPath"]:  # type: ignore[override]
+    def rglob(self, pattern: str) -> Iterator["CloudPath"]:  # type: ignore[override]
         """Recursively glob for files matching pattern.
 
         Args:
@@ -283,15 +283,15 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths (recursive)
         """
-        return self.glob(f"**/{pattern}")
+        yield from self.glob(f"**/{pattern}")
 
-    def walk(self) -> List[Tuple[str, List[str], List[str]]]:
+    def walk(self) -> Iterator[Tuple["CloudPath", List[str], List[str]]]:
         """Walk directory tree (like os.walk).
 
         Returns:
             List of (dirpath, dirnames, filenames) tuples
         """
-        return self.client.walk(str(self))  # type: ignore[return-value]
+        yield from self.client.walk(str(self))  # type: ignore[return-value]
 
     def touch(self, exist_ok: bool = True) -> None:  # type: ignore[override]
         """Create empty file.
@@ -578,9 +578,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths
         """
-        return await self.async_client.glob(str(self), pattern)  # type: ignore[return-value]
+        async for p in self.async_client.glob(str(self), pattern):
+            yield self._new_cloudpath(p)
 
-    async def a_rglob(self, pattern: str) -> List["CloudPath"]:
+    async def a_rglob(self, pattern: str) -> AsyncGenerator["CloudPath", None]:
         """Recursively glob for files matching pattern.
 
         Args:
@@ -589,15 +590,17 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             List of matching paths (recursive)
         """
-        return await self.a_glob(f"**/{pattern}")
+        async for p in self.a_glob(f"**/{pattern}"):
+            yield p
 
-    async def a_walk(self) -> List[Tuple[str, List[str], List[str]]]:
+    async def a_walk(self) -> AsyncGenerator[Tuple[str, List[str], List[str]], None]:
         """Walk directory tree (like os.walk).
 
         Returns:
             List of (dirpath, dirnames, filenames) tuples
         """
-        return await self.async_client.walk(str(self))
+        async for d, subdirs, files in self.async_client.walk(str(self)):
+            yield self._new_cloudpath(d), subdirs, files
 
     async def a_touch(self, exist_ok: bool = True) -> None:
         """Create empty file.

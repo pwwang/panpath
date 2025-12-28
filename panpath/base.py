@@ -254,7 +254,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_rglob(self, pattern: str) -> List["PanPath"]:
+    async def a_rglob(self, pattern: str) -> AsyncGenerator["PanPath", None]:
         """Asynchronously yield paths matching a recursive glob pattern.
 
         Args:

@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from typing import (
-    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     Callable,
@@ -15,9 +14,6 @@ from typing import (
 )
 
 import re
-
-if TYPE_CHECKING:
-    from panpath.base import PanPath
 
 
 class Client(ABC):
@@ -112,11 +108,7 @@ class SyncClient(Client, ABC):
         """Find all paths matching pattern."""
 
     @abstractmethod
-    def walk(
-        self,
-        path: str,
-        _return_panpath: True,
-    ) -> Iterator[tuple[Union[str, "PanPath"], list[str], list[str]]]:
+    def walk(self, path: str) -> Iterator[tuple[str, list[str], list[str]]]:
         """Walk directory tree."""
 
     @abstractmethod
@@ -257,8 +249,7 @@ class AsyncClient(Client, ABC):
     async def walk(
         self,
         path: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[tuple[Union[str, "PanPath"], list[str], list[str]], None]:
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree."""
 
     @abstractmethod

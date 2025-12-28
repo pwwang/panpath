@@ -23,10 +23,12 @@ external dependencies.
 import os
 import pytest
 from unittest.mock import MagicMock, Mock
-from typing import Any, List, Tuple, Optional
+from typing import Any, AsyncGenerator, Iterator, List, Tuple, Optional
 from panpath.cloud import CloudPath
 from panpath.clients import SyncClient, AsyncClient, AsyncFileHandle
 from panpath.registry import register_path_class
+
+from .utils import async_generator_to_list
 
 
 class MockSyncClient(SyncClient):
@@ -146,27 +148,24 @@ class MockSyncClient(SyncClient):
             raise FileExistsError(f"Directory exists: {path}")
         self._dirs.add(full_path)
 
-    def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> List[Any]:
+    def glob(self, path: str, pattern: str) -> Iterator[str]:
         """Find all paths matching pattern."""
         import fnmatch
 
         bucket, prefix = self._parse_path(path)
         full_prefix = f"{bucket}/{prefix}" if prefix else f"{bucket}/"
 
-        results = []
         for p in self._storage:
             if p.startswith(full_prefix):
                 rel = p[len(full_prefix) :]
                 if fnmatch.fnmatch(rel, pattern):
-                    results.append(f"mock://{p}")
-        return results
+                    yield f"mock://{p}"
 
-    def walk(self, path: str) -> List[Tuple[str, List[str], List[str]]]:
+    def walk(self, path: str) -> Iterator[Tuple[str, List[str], List[str]]]:
         """Walk directory tree."""
-        results = []
         bucket, prefix = self._parse_path(path)
         # Simplified implementation
-        return results
+        yield (path, [], [])
 
     def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file."""
@@ -298,13 +297,15 @@ class MockAsyncClient(AsyncClient):
         """Create a directory."""
         self._sync_client.mkdir(path, parents, exist_ok)
 
-    async def glob(self, path: str, pattern: str, _return_panpath: bool = False) -> List[Any]:
+    async def glob(self, path: str, pattern: str) -> AsyncGenerator[str, None]:
         """Find all paths matching pattern."""
-        return self._sync_client.glob(path, pattern, _return_panpath)
+        for p in self._sync_client.glob(path, pattern):
+            yield p
 
-    async def walk(self, path: str) -> List[Tuple[str, List[str], List[str]]]:
+    async def walk(self, path: str) -> AsyncGenerator[Tuple[str, List[str], List[str]], None]:
         """Walk directory tree."""
-        return self._sync_client.walk(path)
+        for path in self._sync_client.walk(path):
+            yield path
 
     async def touch(self, path: str, exist_ok: bool = True, mode: Optional[int] = None) -> None:
         """Create empty file."""
@@ -916,7 +917,8 @@ async def test_cloudpath_async_walk():
     await file3.a_write_text("content3")
 
     # Walk directory
-    await base.a_walk()
+    async for _ in base.a_walk():
+        pass
     # Since walk is simplified, we won't assert on its content here
 
 
@@ -937,7 +939,7 @@ async def test_cloudpath_async_rglob():
     await file3.a_write_text("content3")
 
     # Rglob for *.txt files
-    txt_files = await base.a_rglob("*.txt")
+    txt_files = await async_generator_to_list(base.a_rglob("*.txt"))
     txt_file_paths = [str(f) for f in txt_files]
     assert str(file1) in txt_file_paths
     assert str(file3) in txt_file_paths
@@ -971,7 +973,7 @@ async def test_cloudpath_async_glob():
     await file2.a_write_text("content2")
 
     # Glob for *.txt files
-    txt_files = await base.a_glob("*.txt")
+    txt_files = await async_generator_to_list(base.a_glob("*.txt"))
     txt_file_paths = [str(f) for f in txt_files]
     assert str(file1) in txt_file_paths
     assert str(file2) not in txt_file_paths
