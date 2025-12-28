@@ -2252,8 +2252,12 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_unlink" href="../../panpath.base/#panpath.base.PanPath.a_unlink">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove (delete) the file or empty directory.&quot;&quot;&quot;</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove (delete) the file or empty directory.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            missing_ok: If True, does not raise an error if the file does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_iterdir" href="../../panpath.base/#panpath.base.PanPath.a_iterdir">DOCS</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>

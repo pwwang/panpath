@@ -4246,7 +4246,7 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously create the file if it does not exist.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_touch" title="Source for panpath.base.PanPath.a_touch">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_unlink">a_unlink</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_unlink">a_unlink</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">missing_ok</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously remove (delete) the file or empty directory.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_unlink" title="Source for panpath.base.PanPath.a_unlink">&lt;/&gt;</a></span></li>
 
@@ -5852,7 +5852,7 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathbasepanpatha_unlink" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_unlink</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathbasepanpatha_unlink" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_unlink</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">missing_ok=False</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_unlink" title="Source for panpath.base.PanPath.a_unlink">&lt;/&gt;</a>
@@ -5861,6 +5861,18 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
       <div class="mkapi-section-body"><p>Asynchronously remove (delete) the file or empty directory.</p></div>
+    </div>
+  <div class="mkapi-section parameters">
+      <div class="mkapi-section-name parameters">
+          <span class="mkapi-section-name-body parameters">Parameters</span> 
+        </div>
+      <div class="mkapi-section-body parameters"><ul class="mkapi-items">
+<li><code class="mkapi-item-name">missing_ok</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, does not raise an error if the file does not exist.</span></li>
+
+
+</ul></div>
     </div>
   </div>
 

@@ -3194,8 +3194,8 @@
 <span class="mkapi-item-type">(dict)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Get object metadata.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.get_metadata" title="Source for panpath.s3_client.S3Client.get_metadata">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.glob">glob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+<li class="generator"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.glob">glob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code>, <code class="mkapi-object-signature">_return_panpath</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(Iterator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Glob for files matching pattern.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.glob" title="Source for panpath.s3_client.S3Client.glob">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.is_dir">is_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
@@ -3262,8 +3262,8 @@
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Create empty file.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.touch" title="Source for panpath.s3_client.S3Client.touch">&lt;/&gt;</a></span></li>
 
-<li class="method"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(list)</span>
+<li class="generator"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.walk">walk</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code>
+<span class="mkapi-item-type">(Iterator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Walk directory tree.<a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.walk" title="Source for panpath.s3_client.S3Client.walk">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.s3_client.S3Client.write_bytes">write_bytes</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code>
@@ -3760,9 +3760,9 @@
     <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.s3_client.S3Client.glob">
 <div class='mkapi-object-container'>
-  <div class="mkapi-object method code">
-    <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpaths3_clients3clientglob" class="mkapi-object-body method"><code class="mkapi-object-name">glob</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code>, <code class="mkapi-object-signature">_return_panpath=False</code><code class="mkapi-object-parenthesis">)</code></h3>
+  <div class="mkapi-object generator code">
+    <div class="mkapi-object-kind generator">generator</div>
+    <h3 id="panpaths3_clients3clientglob" class="mkapi-object-body generator"><code class="mkapi-object-name">glob</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code>, <code class="mkapi-object-signature">pattern</code>, <code class="mkapi-object-signature">_return_panpath=False</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.glob" title="Source for panpath.s3_client.S3Client.glob">&lt;/&gt;</a>
@@ -3794,7 +3794,7 @@
     </div>
   <div class="mkapi-section returns">
       <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(list)</span>
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(Iterator)</span>
         </div>
       <div class="mkapi-section-body returns"><p>List of matching paths (as PanPath objects or strings)</p></div>
     </div>
@@ -3806,9 +3806,9 @@
     <div class="mkapi-member">
       <div class="mkapi-node" id="panpath.s3_client.S3Client.walk">
 <div class='mkapi-object-container'>
-  <div class="mkapi-object method code">
-    <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpaths3_clients3clientwalk" class="mkapi-object-body method"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code></h3>
+  <div class="mkapi-object generator code">
+    <div class="mkapi-object-kind generator">generator</div>
+    <h3 id="panpaths3_clients3clientwalk" class="mkapi-object-body generator"><code class="mkapi-object-name">walk</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">path</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.s3_client/#panpath.s3_client.S3Client.walk" title="Source for panpath.s3_client.S3Client.walk">&lt;/&gt;</a>
@@ -3832,7 +3832,7 @@
     </div>
   <div class="mkapi-section returns">
       <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(list)</span>
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(Iterator)</span>
         </div>
       <div class="mkapi-section-body returns"><p>List of (dirpath, dirnames, filenames) tuples</p></div>
     </div>
