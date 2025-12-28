@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.1]
+
+- chore: add missing_ok parameter to a_unlink method for optional error handling
+- feat: update typing hints to use Iterator for glob and walk methods in GSClient and S3Client
+
 ## [0.4.0]
 
 - fix: correct async file read method in README example
