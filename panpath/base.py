@@ -159,14 +159,14 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_write_bytes(self, data: bytes) -> int:
+    async def a_write_bytes(self, data: bytes) -> Union[int, None]:
         """Asynchronously write bytes to the file.
 
         Args:
             data: Bytes to write to the file.
 
         Returns:
-            Number of bytes written.
+            Number of bytes written. For some cloud paths, may return None.
         """
 
     @abstractmethod
@@ -222,12 +222,18 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_mkdir(self, mode: int = 0o777, parents: bool = False) -> None:
+    async def a_mkdir(
+        self,
+        mode: int = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
+    ) -> None:
         """Asynchronously create a directory at this path.
 
         Args:
             mode: Directory mode (permissions) to set.
             parents: If True, create parent directories as needed.
+            exist_ok: If True, does not raise an error if the directory already exists.
         """
 
     @abstractmethod

@@ -105,7 +105,7 @@ def test_azureblobclient_mkdir(request):
         # exist_ok test
         client.mkdir(f"{path}/subdir", exist_ok=True)
 
-        # exists_ok test
+        # exist_ok test
         with pytest.raises(FileExistsError):
             client.mkdir(f"{path}/subdir", exist_ok=False)
 

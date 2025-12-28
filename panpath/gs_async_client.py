@@ -183,7 +183,11 @@ class AsyncGSClient(AsyncClient):
         except Exception as e:
             raise FileNotFoundError(f"GCS blob not found: {path}") from e
 
-    async def write_bytes(self, path: str, data: bytes) -> None:
+    async def write_bytes(  # type: ignore[override]
+        self,
+        path: str,
+        data: bytes,
+    ) -> None:
         """Write bytes to GCS blob."""
         storage = await self._get_client()
         bucket_name, blob_name = self.__class__._parse_path(path)
@@ -440,7 +444,11 @@ class AsyncGSClient(AsyncClient):
         # Then set the symlink metadata
         await self.set_metadata(path, {self.__class__.symlink_target_metaname: target})
 
-    async def glob(self, path: str, pattern: str) -> AsyncGenerator[str, None]:
+    async def glob(  # type: ignore[override]
+        self,
+        path: str,
+        pattern: str,
+    ) -> AsyncGenerator[str, None]:
         """Glob for files matching pattern.
 
         Args:

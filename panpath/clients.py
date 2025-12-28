@@ -214,7 +214,7 @@ class AsyncClient(Client, ABC):
         """Read file as bytes."""
 
     @abstractmethod
-    async def write_bytes(self, path: str, data: bytes) -> None:
+    async def write_bytes(self, path: str, data: bytes) -> int:
         """Write bytes to file."""
 
     @abstractmethod
@@ -303,9 +303,9 @@ class AsyncClient(Client, ABC):
         data = await self.read_bytes(path)
         return data.decode(encoding)
 
-    async def write_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
+    async def write_text(self, path: str, data: str, encoding: str = "utf-8") -> int:
         """Write text to Azure blob."""
-        await self.write_bytes(path, data.encode(encoding))
+        return await self.write_bytes(path, data.encode(encoding))
 
     async def is_symlink(self, path: str) -> bool:
         """Check if path is a symlink (has symlink metadata).

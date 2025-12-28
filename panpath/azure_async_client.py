@@ -189,7 +189,11 @@ class AsyncAzureBlobClient(AsyncClient):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
-    async def write_bytes(self, path: str, data: bytes) -> None:
+    async def write_bytes(  # type: ignore[override]
+        self,
+        path: str,
+        data: bytes,
+    ) -> None:
         """Write bytes to Azure blob."""
         client = await self._get_client()
         container_name, blob_name = self.__class__._parse_path(path)
@@ -402,7 +406,7 @@ class AsyncAzureBlobClient(AsyncClient):
         # Set symlink metadata
         await blob_client.set_blob_metadata({self.__class__.symlink_target_metaname: target})
 
-    async def glob(
+    async def glob(  # type: ignore[override]
         self,
         path: str,
         pattern: str,

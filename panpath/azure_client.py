@@ -279,7 +279,7 @@ class AzureBlobClient(SyncClient):
         # Set symlink metadata
         blob_client.set_blob_metadata({self.__class__.symlink_target_metaname: target})
 
-    def glob(self, path: str, pattern: str) -> Iterator[str]:  # type: ignore[override]
+    def glob(self, path: str, pattern: str) -> Iterator[str]:
         """Glob for files matching pattern.
 
         Args:

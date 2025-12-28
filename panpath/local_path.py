@@ -79,7 +79,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         target_str = str(target)
         await aiofiles.os.rename(str(self), target_str)
-        return PanPath(target_str)
+        return PanPath(target_str)  # type: ignore[abstract]
 
     async def a_replace(self, target: Union[str, "Path"]) -> "PanPath":
         """Rename the file or directory to target, overwriting if target exists.
@@ -131,7 +131,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                             break
                         await df.write(chunk)
 
-        return PanPath(target_str)
+        return PanPath(target_str)  # type: ignore[abstract]
 
     async def a_copytree(
         self,
@@ -154,7 +154,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        target = PanPath(target)
+        target = PanPath(target)  # type: ignore[abstract]
         await target.a_mkdir(parents=True, exist_ok=True)
 
         async for entry in self.a_iterdir():
@@ -168,7 +168,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         return target
 
-    async def a_walk(self) -> AsyncGenerator[Tuple["LocalPath", List[str], List[str]], None]:
+    async def a_walk(  # type: ignore[override]
+        self,
+    ) -> AsyncGenerator[Tuple["LocalPath", List[str], List[str]], None]:
         """Asynchronously walk the directory tree.
 
         Returns:
@@ -205,7 +207,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return PanPath(await aiofiles.os.readlink(str(self)))
+        return PanPath(  # type: ignore[return-value, abstract]
+            await aiofiles.os.readlink(str(self))
+        )
 
     async def a_symlink_to(
         self,
@@ -227,7 +231,10 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         await aiofiles.os.symlink(str(target), str(self), target_is_directory=target_is_directory)
 
-    async def a_glob(self, pattern: str) -> AsyncGenerator["LocalPath", None]:
+    async def a_glob(  # type: ignore[override]
+        self,
+        pattern: str,
+    ) -> AsyncGenerator["LocalPath", None]:
         """Asynchronously yield paths matching the glob pattern.
 
         Args:
@@ -265,7 +272,10 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 if fnmatch(entry.name, pattern):
                     yield entry
 
-    async def a_rglob(self, pattern: str) -> AsyncGenerator["LocalPath", None]:
+    async def a_rglob(  # type: ignore[override]
+        self,
+        pattern: str,
+    ) -> AsyncGenerator["LocalPath", None]:
         """Recursively yield all existing files matching the given pattern.
 
         Args:
@@ -345,7 +355,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         async with aiofiles.open(str(self), mode="r", encoding=encoding) as f:
             return await f.read()  # type: ignore[no-any-return]
 
-    async def a_write_bytes(self, data: bytes) -> None:
+    async def a_write_bytes(self, data: bytes) -> int:
         """Write bytes to file (async)."""
         if not HAS_AIOFILES:
             raise MissingDependencyError(
@@ -355,9 +365,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             )
 
         async with aiofiles.open(str(self), mode="wb") as f:
-            await f.write(data)
+            return await f.write(data)  # type: ignore[no-any-return]
 
-    async def a_write_text(self, data: str, encoding: str = "utf-8") -> None:
+    async def a_write_text(self, data: str, encoding: str = "utf-8") -> int:
         """Write text to file (async)."""
         if not HAS_AIOFILES:
             raise MissingDependencyError(
@@ -367,7 +377,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             )
 
         async with aiofiles.open(str(self), mode="w", encoding=encoding) as f:
-            await f.write(data)
+            return await f.write(data)  # type: ignore[no-any-return]
 
     async def a_is_symlink(self) -> bool:
         """Check if path is a symlink (async)."""
@@ -396,7 +406,10 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 raise
 
     async def a_mkdir(
-        self, mode: int = 0o777, parents: bool = False, exist_ok: bool = False
+        self,
+        mode: int = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
     ) -> None:
         """Create directory (async)."""
         if not HAS_AIOFILES:
@@ -426,7 +439,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         await aiofiles.os.rmdir(str(self))
 
-    async def a_rmtree(self) -> None:
+    async def a_rmtree(self) -> None:  # type: ignore[override]
         """Recursively remove directory and its contents (async)."""
         if not HAS_AIOFILES:
             raise MissingDependencyError(
@@ -443,7 +456,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 await aiofiles.os.remove(str(path))
         await aiofiles.os.rmdir(str(self))
 
-    async def a_iterdir(self) -> AsyncGenerator["LocalPath", None]:
+    async def a_iterdir(  # type: ignore[override]
+        self,
+    ) -> AsyncGenerator["LocalPath", None]:
         """List directory contents (async)."""
         if not HAS_AIOFILES:
             raise MissingDependencyError(
@@ -466,7 +481,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         return await aiofiles.os.stat(str(self))  # type: ignore[no-any-return]
 
-    def a_open(
+    def a_open(  # type: ignore[override]
         self,
         mode: str = "r",
         buffering: int = -1,

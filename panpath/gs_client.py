@@ -312,7 +312,7 @@ class GSClient(SyncClient):
         path = path.rstrip("/").rsplit("/", 1)[0]
         return f"{path}/{target}"
 
-    def glob(self, path: str, pattern: str) -> Iterator[str]:  # type: ignore[override]
+    def glob(self, path: str, pattern: str) -> Iterator[str]:
         """Glob for files matching pattern.
 
         Args:
@@ -356,7 +356,7 @@ class GSClient(SyncClient):
                     path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
                     yield path_str
 
-    def walk(  # type: ignore[override]
+    def walk(
         self,
         path: str,
     ) -> Iterator[tuple[str, list[str], list[str]]]:

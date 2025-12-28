@@ -115,7 +115,7 @@ def test_gsclient_mkdir(testdir):
     # exist_ok test
     client.mkdir(f"{testdir}/subdir", exist_ok=True)
 
-    # exists_ok test
+    # exist_ok test
     with pytest.raises(FileExistsError):
         client.mkdir(f"{testdir}/subdir", exist_ok=False)
 

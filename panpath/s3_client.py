@@ -334,7 +334,7 @@ class S3Client(SyncClient):
             Metadata={self.__class__.symlink_target_metaname: target},
         )
 
-    def glob(self, path: str, pattern: str) -> Iterator[str]:  # type: ignore[override]
+    def glob(self, path: str, pattern: str) -> Iterator[str]:
         """Glob for files matching pattern.
 
         Args:
@@ -380,7 +380,7 @@ class S3Client(SyncClient):
                     path_str = f"{self.prefix[0]}://{bucket}/{key}"
                     yield path_str
 
-    def walk(  # type: ignore[override]
+    def walk(
         self, path: str
     ) -> Iterator[tuple[str, list[str], list[str]]]:
         """Walk directory tree.

@@ -120,7 +120,7 @@ async def test_asyncs3client_mkdir(testdir):
     # exist_ok test
     await client.mkdir(f"{testdir}/subdir", exist_ok=True)
 
-    # exists_ok test
+    # exist_ok test
     with pytest.raises(FileExistsError):
         await client.mkdir(f"{testdir}/subdir", exist_ok=False)
 
