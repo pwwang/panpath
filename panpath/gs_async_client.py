@@ -496,7 +496,7 @@ class AsyncGSClient(AsyncClient):
 
             for item in items:
                 blob_name = item["name"]
-                if fnmatch(blob_name, f"{prefix}{pattern}"):
+                if fnmatch(blob_name, f"{blob_prefix}{pattern}"):
                     yield f"{self.prefix[0]}://{bucket_name}/{blob_name}"
 
     async def walk(  # type: ignore[override]
