@@ -56,7 +56,7 @@ except ImportError:
     # Azure dependencies not installed
     pass
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 __all__ = [
     "PanPath",

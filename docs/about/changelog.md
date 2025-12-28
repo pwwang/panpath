@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.3]
+
+- fix: correct variable name in fnmatch condition for blob retrieval in AsyncGSClient
+
 ## [0.4.2]
 
 - chore: update a_glob method to return AsyncGenerator for asynchronous path matching
