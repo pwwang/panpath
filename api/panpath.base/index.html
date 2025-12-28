@@ -4171,7 +4171,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously check if the path exists.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_exists" title="Source for panpath.base.PanPath.a_exists">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_glob">a_glob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(List)</span>
+<span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously yield paths matching a glob pattern.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_glob" title="Source for panpath.base.PanPath.a_glob">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_is_dir">a_is_dir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
@@ -4190,7 +4190,7 @@
 <span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously iterate over directory contents.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_iterdir" title="Source for panpath.base.PanPath.a_iterdir">&lt;/&gt;</a></span></li>
 
-<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_mkdir">a_mkdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">parents</code><code class="mkapi-object-parenthesis">)</code>
+<li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_mkdir">a_mkdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode</code>, <code class="mkapi-object-signature">parents</code>, <code class="mkapi-object-signature">exist_ok</code><code class="mkapi-object-parenthesis">)</code>
 
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously create a directory at this path.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_mkdir" title="Source for panpath.base.PanPath.a_mkdir">&lt;/&gt;</a></span></li>
 
@@ -4223,7 +4223,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Resolve to absolute path (no-op for cloud paths).<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_resolve" title="Source for panpath.base.PanPath.a_resolve">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_rglob">a_rglob</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">pattern</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(List)</span>
+<span class="mkapi-item-type">(AsyncGenerator)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously yield paths matching a recursive glob pattern.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_rglob" title="Source for panpath.base.PanPath.a_rglob">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_rmdir">a_rmdir</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
@@ -4255,7 +4255,7 @@
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously walk the directory tree.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_walk" title="Source for panpath.base.PanPath.a_walk">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_write_bytes">a_write_bytes</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code>
-<span class="mkapi-item-type">(int)</span>
+<span class="mkapi-item-type">(Optional)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously write bytes to the file.<a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_write_bytes" title="Source for panpath.base.PanPath.a_write_bytes">&lt;/&gt;</a></span></li>
 
 <li class="abstract-method"><code class="mkapi-item-name"><a href="#panpath.base.PanPath.a_write_text">a_write_text</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code>, <code class="mkapi-object-signature">encoding</code><code class="mkapi-object-parenthesis">)</code>
@@ -5796,9 +5796,9 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
     </div>
   <div class="mkapi-section returns">
       <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(int)</span>
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(Optional)</span>
         </div>
-      <div class="mkapi-section-body returns"><p>Number of bytes written.</p></div>
+      <div class="mkapi-section-body returns"><p>Number of bytes written. For some cloud paths, may return None.</p></div>
     </div>
   </div>
 
@@ -5988,7 +5988,7 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object abstract-method code">
     <div class="mkapi-object-kind abstract-method">abstract method</div>
-    <h3 id="panpathbasepanpatha_mkdir" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_mkdir</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode=511</code>, <code class="mkapi-object-signature">parents=False</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathbasepanpatha_mkdir" class="mkapi-object-body abstract-method"><code class="mkapi-object-name">a_mkdir</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">mode=511</code>, <code class="mkapi-object-signature">parents=False</code>, <code class="mkapi-object-signature">exist_ok=False</code><code class="mkapi-object-parenthesis">)</code></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.base/#panpath.base.PanPath.a_mkdir" title="Source for panpath.base.PanPath.a_mkdir">&lt;/&gt;</a>
@@ -6010,6 +6010,10 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
 <li><code class="mkapi-item-name">parents</code>
 <span class="mkapi-item-type">(bool, optional)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, create parent directories as needed.</span></li>
+
+<li><code class="mkapi-item-name">exist_ok</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, does not raise an error if the directory already exists.</span></li>
 
 
 </ul></div>
@@ -6048,7 +6052,7 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
     </div>
   <div class="mkapi-section returns">
       <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(List)</span>
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(AsyncGenerator)</span>
         </div>
       <div class="mkapi-section-body returns"><p>List of PanPath instances matching the pattern.</p></div>
     </div>
@@ -6086,7 +6090,7 @@ If called on PanPath itself, routes to the appropriate concrete class.</p>
     </div>
   <div class="mkapi-section returns">
       <div class="mkapi-section-name returns">
-          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(List)</span>
+          <span class="mkapi-section-name-body returns">Returns</span> <span class="mkapi-item-type">(AsyncGenerator)</span>
         </div>
       <div class="mkapi-section-body returns"><p>List of PanPath instances matching the pattern.</p></div>
     </div>

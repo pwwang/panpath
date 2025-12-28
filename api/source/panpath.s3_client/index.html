@@ -2068,7 +2068,6 @@
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>  <span class="c1"># type: ignore[import-untyped]</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">botocore.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientError</span>  <span class="c1"># type: ignore[import-untyped]</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
@@ -2393,21 +2392,17 @@
             <span class="n">Metadata</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">symlink_target_metaname</span><span class="p">:</span> <span class="n">target</span><span class="p">},</span>
         <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.s3_client.S3Client.glob"></span><a class="mkapi-docs-link" title="panpath.s3_client.S3Client.glob" href="../../panpath.s3_client/#panpath.s3_client.S3Client.glob">DOCS</a>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">_return_panpath</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span><span id="panpath.s3_client.S3Client.glob"></span><a class="mkapi-docs-link" title="panpath.s3_client.S3Client.glob" href="../../panpath.s3_client/#panpath.s3_client.S3Client.glob">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Glob for files matching pattern.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Base S3 path</span>
 <span class="sd">            pattern: Glob pattern (e.g., &quot;*.txt&quot;, &quot;**/*.py&quot;)</span>
-<span class="sd">            _return_panpath: If True, return PanPath objects; if False, return strings</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            List of matching paths (as PanPath objects or strings)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">fnmatch</span><span class="w"> </span><span class="kn">import</span> <span class="n">fnmatch</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 
         <span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
@@ -2429,10 +2424,7 @@
                     <span class="n">key</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;*</span><span class="si">{</span><span class="n">file_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
                         <span class="n">path_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span>
-                        <span class="k">if</span> <span class="n">_return_panpath</span><span class="p">:</span>
-                            <span class="k">yield</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
-                        <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                            <span class="k">yield</span> <span class="n">path_str</span>
+                        <span class="k">yield</span> <span class="n">path_str</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Non-recursive - list objects with delimiter</span>
             <span class="n">prefix_with_slash</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">if</span> <span class="n">prefix</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">prefix</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">prefix</span>
@@ -2444,12 +2436,9 @@
                 <span class="n">key</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">fnmatch</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix_with_slash</span><span class="si">}{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
                     <span class="n">path_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span>
-                    <span class="k">if</span> <span class="n">_return_panpath</span><span class="p">:</span>
-                        <span class="k">yield</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">path_str</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                        <span class="k">yield</span> <span class="n">path_str</span>
+                    <span class="k">yield</span> <span class="n">path_str</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.s3_client.S3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_client.S3Client.walk" href="../../panpath.s3_client/#panpath.s3_client.S3Client.walk">DOCS</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span id="panpath.s3_client.S3Client.walk"></span><a class="mkapi-docs-link" title="panpath.s3_client.S3Client.walk" href="../../panpath.s3_client/#panpath.s3_client.S3Client.walk">DOCS</a>
         <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.</span>

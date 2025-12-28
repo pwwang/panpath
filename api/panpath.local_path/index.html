@@ -4241,11 +4241,11 @@ Includes both sync methods (from Path) and async methods with a</em> prefix.</p>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Asynchronously walk the directory tree.<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_walk" title="Source for panpath.local_path.LocalPath.a_walk">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_write_bytes">a_write_bytes</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code>
-
+<span class="mkapi-item-type">(int)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Write bytes to file (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_write_bytes" title="Source for panpath.local_path.LocalPath.a_write_bytes">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.local_path.LocalPath.a_write_text">a_write_text</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code>, <code class="mkapi-object-signature">encoding</code><code class="mkapi-object-parenthesis">)</code>
-
+<span class="mkapi-item-type">(int)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Write text to file (async).<a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_write_text" title="Source for panpath.local_path.LocalPath.a_write_text">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#pathlib.Path.absolute">absolute</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
@@ -6138,7 +6138,7 @@ directory of the Path object.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathlocal_pathlocalpatha_write_bytes" class="mkapi-object-body method"><code class="mkapi-object-name">a_write_bytes</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathlocal_pathlocalpatha_write_bytes" class="mkapi-object-body method"><code class="mkapi-object-name">a_write_bytes</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; int</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_write_bytes" title="Source for panpath.local_path.LocalPath.a_write_bytes">&lt;/&gt;</a>
@@ -6170,7 +6170,7 @@ directory of the Path object.</p>
 <div class='mkapi-object-container'>
   <div class="mkapi-object method code">
     <div class="mkapi-object-kind method">method</div>
-    <h3 id="panpathlocal_pathlocalpatha_write_text" class="mkapi-object-body method"><code class="mkapi-object-name">a_write_text</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code>, <code class="mkapi-object-signature">encoding=&#39;utf-8&#39;</code><code class="mkapi-object-parenthesis">)</code></h3>
+    <h3 id="panpathlocal_pathlocalpatha_write_text" class="mkapi-object-body method"><code class="mkapi-object-name">a_write_text</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">data</code>, <code class="mkapi-object-signature">encoding=&#39;utf-8&#39;</code><code class="mkapi-object-parenthesis">)</code><span class="mkapi-item-type"> &#x2192; int</span></h3>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.local_path/#panpath.local_path.LocalPath.a_write_text" title="Source for panpath.local_path.LocalPath.a_write_text">&lt;/&gt;</a>
@@ -6281,6 +6281,9 @@ directory of the Path object.</p>
 <span class="mkapi-item-type">(bool, optional)</span>
 <span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, create parent directories as needed.</span></li>
 
+<li><code class="mkapi-item-name">exist_ok</code>
+<span class="mkapi-item-type">(bool, optional)</span>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">If True, does not raise an error if the directory already exists.</span></li>
 
 
 </ul></div>

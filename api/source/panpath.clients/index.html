@@ -2060,7 +2060,6 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
     <span class="n">Any</span><span class="p">,</span>
     <span class="n">AsyncGenerator</span><span class="p">,</span>
     <span class="n">Callable</span><span class="p">,</span>
@@ -2073,9 +2072,6 @@
 <span class="p">)</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-
-<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">panpath.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">PanPath</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">Client</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span><span id="panpath.clients.Client"></span><a class="mkapi-docs-link" title="panpath.clients.Client" href="../../panpath.clients/#panpath.clients.Client">DOCS</a>
@@ -2170,11 +2166,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Find all paths matching pattern.&quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.clients.SyncClient.walk"></span><a class="mkapi-docs-link" title="panpath.clients.SyncClient.walk" href="../../panpath.clients/#panpath.clients.SyncClient.walk">DOCS</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">_return_panpath</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.&quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.clients.SyncClient.touch"></span><a class="mkapi-docs-link" title="panpath.clients.SyncClient.touch" href="../../panpath.clients/#panpath.clients.SyncClient.touch">DOCS</a>
@@ -2280,7 +2272,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file as bytes.&quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.clients.AsyncClient.write_bytes"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.write_bytes" href="../../panpath.clients/#panpath.clients.AsyncClient.write_bytes">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write bytes to file.&quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.clients.AsyncClient.delete"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.delete" href="../../panpath.clients/#panpath.clients.AsyncClient.delete">DOCS</a>
@@ -2315,8 +2307,7 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">_return_panpath</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk directory tree.&quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.clients.AsyncClient.touch"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.touch" href="../../panpath.clients/#panpath.clients.AsyncClient.touch">DOCS</a>
@@ -2370,9 +2361,9 @@
         <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.AsyncClient.write_text"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.write_text" href="../../panpath.clients/#panpath.clients.AsyncClient.write_text">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span><span id="panpath.clients.AsyncClient.write_text"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.write_text" href="../../panpath.clients/#panpath.clients.AsyncClient.write_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write text to Azure blob.&quot;&quot;&quot;</span>
-        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.clients.AsyncClient.is_symlink"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncClient.is_symlink" href="../../panpath.clients/#panpath.clients.AsyncClient.is_symlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path is a symlink (has symlink metadata).</span>
