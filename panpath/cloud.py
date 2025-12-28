@@ -569,7 +569,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         await self.async_client.mkdir(str(self), parents=parents, exist_ok=exist_ok)
 
-    async def a_glob(self, pattern: str) -> List["CloudPath"]:
+    async def a_glob(self, pattern: str) -> AsyncGenerator["CloudPath", None]:
         """Glob for files matching pattern.
 
         Args:

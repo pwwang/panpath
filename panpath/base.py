@@ -243,7 +243,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_glob(self, pattern: str) -> List["PanPath"]:
+    async def a_glob(self, pattern: str) -> AsyncGenerator["PanPath", None]:
         """Asynchronously yield paths matching a glob pattern.
 
         Args:
