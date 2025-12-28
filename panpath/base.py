@@ -132,18 +132,6 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_replace(self, target: Union[str, "PathlibPath"]) -> "PanPath":
-        """Replace file at target (overwriting if exists).
-
-        Args:
-            target: Target path
-
-        Returns:
-            New path instance
-        """
-        # For cloud storage, replace is same as rename (always overwrites)
-
-    @abstractmethod
     async def a_exists(self) -> bool:
         """Asynchronously check if the path exists.
 
