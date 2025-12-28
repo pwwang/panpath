@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2]
+
+- chore: update a_glob method to return AsyncGenerator for asynchronous path matching
+- refactor: remove _return_panpath parameter from glob and walk methods in Azure, GS, and S3 clients
+- fix: update return types to use AsyncGenerator and Iterator for async methods in path classes
+- fix: remove redundant a_replace abstract method from PanPath class
+- style: update method signatures to include additional parameters and return types across various clients
+
 ## [0.4.1]
 
 - chore: add missing_ok parameter to a_unlink method for optional error handling
