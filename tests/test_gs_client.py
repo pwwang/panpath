@@ -1,9 +1,7 @@
 import pytest
 import sys
-import os
 from panpath.exceptions import NoStatError
 from panpath.gs_client import GSClient
-from google.api_core.exceptions import NotFound
 
 
 # Get GCS bucket from environment or use default
@@ -49,7 +47,7 @@ def test_gsclient_exists():
     exists = client.exists("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
     assert exists is False
 
-    assert not client.exists(f"gs://nonexistent-bucket-12345")
+    assert not client.exists("gs://nonexistent-bucket-12345")
 
     exists = client.exists(f"gs://{GCS_BUCKET}/readonly.txt")
     assert exists is True
@@ -215,7 +213,7 @@ def test_gsclient_glob(testdir):
     assert log_file_names2 == sorted(["file2.log"])
 
     files = client.glob(dirpath, "**", _return_panpath=True)
-    assert len(files) >= 4  # At least the files we created
+    assert len(list(files)) >= 4  # At least the files we created
 
 
 def test_gsclient_walk(testdir):
@@ -230,7 +228,7 @@ def test_gsclient_walk(testdir):
         client.write_text(f"{dirpath}/{name}", "data", encoding="utf-8")
 
     # Test walking
-    walk_results = client.walk(dirpath)
+    walk_results = list(client.walk(dirpath))
     assert isinstance(walk_results, list)
     assert len(walk_results) >= 1
 

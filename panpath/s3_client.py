@@ -2,7 +2,7 @@
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Union
 
 from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError
@@ -10,6 +10,7 @@ from panpath.exceptions import MissingDependencyError
 if TYPE_CHECKING:
     import boto3  # type: ignore[import-untyped]
     from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+    from panpath.base import PanPath
 
 try:
     import boto3
@@ -336,7 +337,7 @@ class S3Client(SyncClient):
 
     def glob(  # type: ignore[override]
         self, path: str, pattern: str, _return_panpath: bool = False
-    ) -> list["Any"]:
+    ) -> Iterator[Union[str, "PanPath"]]:
         """Glob for files matching pattern.
 
         Args:
@@ -348,6 +349,7 @@ class S3Client(SyncClient):
             List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
+        from panpath.base import PanPath
 
         bucket, prefix = self.__class__._parse_path(path)
 
@@ -364,19 +366,15 @@ class S3Client(SyncClient):
             else:
                 file_pattern = "*"
 
-            results = []
             for page in pages:
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
                         path_str = f"{self.prefix[0]}://{bucket}/{key}"
                         if _return_panpath:
-                            from panpath.base import PanPath
-
-                            results.append(PanPath(path_str))
+                            yield PanPath(path_str)
                         else:  # pragma: no cover
-                            results.append(path_str)  # type: ignore[arg-type]
-            return results
+                            yield path_str
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
@@ -384,22 +382,18 @@ class S3Client(SyncClient):
                 Bucket=bucket, Prefix=prefix_with_slash, Delimiter="/"
             )
 
-            results = []
             for obj in response.get("Contents", []):
                 key = obj["Key"]
                 if fnmatch(key, f"{prefix_with_slash}{pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket}/{key}"
                     if _return_panpath:
-                        from panpath.base import PanPath
-
-                        results.append(PanPath(path_str))
+                        yield PanPath(path_str)
                     else:  # pragma: no cover
-                        results.append(path_str)  # type: ignore[arg-type]
-            return results
+                        yield path_str
 
     def walk(  # type: ignore[override]
         self, path: str
-    ) -> list[tuple[str, list[str], list[str]]]:
+    ) -> Iterator[tuple[str, list[str], list[str]]]:
         """Walk directory tree.
 
         Args:
@@ -462,8 +456,8 @@ class S3Client(SyncClient):
                     if parts[-1]:  # Skip empty strings
                         dirs[parent_dir][1].add(parts[-1])
 
-        # Convert to list of tuples
-        return [(d, sorted(subdirs), sorted(files)) for d, (subdirs, files) in sorted(dirs.items())]
+        for d, (subdirs, files) in dirs.items():
+            yield d, sorted(subdirs), sorted(files)
 
     def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file.

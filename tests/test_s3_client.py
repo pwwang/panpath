@@ -1,7 +1,5 @@
 import pytest
 import sys
-import os
-from panpath.exceptions import NoStatError
 from panpath.s3_client import S3Client, ClientError
 
 
@@ -48,7 +46,7 @@ def test_s3client_exists():
     exists = client.exists("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     assert exists is False
 
-    assert not client.exists(f"s3://nonexistent-bucket-12345")
+    assert not client.exists("s3://nonexistent-bucket-12345")
 
     exists = client.exists(f"s3://{S3_BUCKET}/readonly.txt")
     assert exists is True
@@ -190,7 +188,7 @@ def test_s3client_glob(testdir):
     assert log_file_names2 == sorted(["file2.log"])
 
     files = client.glob(dirpath, "**", _return_panpath=True)
-    assert len(files) >= 4  # At least the files we created
+    assert len(list(files)) >= 4  # At least the files we created
 
 
 def test_s3client_walk(testdir):

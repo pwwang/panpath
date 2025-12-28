@@ -3,7 +3,7 @@
 import warnings
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, Iterator
 
 from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
@@ -11,6 +11,7 @@ from panpath.exceptions import MissingDependencyError, NoStatError
 if TYPE_CHECKING:
     from google.cloud import storage  # type: ignore[import-untyped, unused-ignore]
     from google.api_core.exceptions import NotFound
+    from panpath.base import PanPath
 
 try:
     with warnings.catch_warnings():
@@ -317,7 +318,7 @@ class GSClient(SyncClient):
         path: str,
         pattern: str,
         _return_panpath: bool = False,
-    ) -> list["Any"]:
+    ) -> Iterator[Union[str, "PanPath"]]:
         """Glob for files matching pattern.
 
         Args:
@@ -347,15 +348,13 @@ class GSClient(SyncClient):
             else:
                 file_pattern = "*"
 
-            results = []
             for blob in blobs:
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
                     if _return_panpath:
-                        results.append(PanPath(path_str))
+                        yield PanPath(path_str)
                     else:  # pragma: no cover
-                        results.append(path_str)  # type: ignore[arg-type]
-            return results
+                        yield path_str
         else:
             # Non-recursive - list blobs with delimiter
             prefix = (
@@ -363,17 +362,18 @@ class GSClient(SyncClient):
             )
             blobs = bucket.list_blobs(prefix=prefix, delimiter="/")
 
-            results = []
             for blob in blobs:
                 if fnmatch(blob.name, f"{prefix}{pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
                     if _return_panpath:
-                        results.append(PanPath(path_str))
+                        yield PanPath(path_str)
                     else:  # pragma: no cover
-                        results.append(path_str)  # type: ignore[arg-type]
-            return results
+                        yield path_str
 
-    def walk(self, path: str) -> list[tuple[str, list[str], list[str]]]:  # type: ignore[override]
+    def walk(  # type: ignore[override]
+        self,
+        path: str,
+    ) -> Iterator[tuple[str, list[str], list[str]]]:
         """Walk directory tree.
 
         Args:
@@ -425,8 +425,8 @@ class GSClient(SyncClient):
                     dirs[parent_dir] = (set(), set())
                 dirs[parent_dir][1].add(parts[-1])
 
-        # Convert to list of tuples
-        return [(d, sorted(subdirs), sorted(files)) for d, (subdirs, files) in sorted(dirs.items())]
+        for d, (subdirs, files) in dirs.items():
+            yield d, sorted(subdirs), sorted(files)
 
     def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file.
