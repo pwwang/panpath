@@ -11,7 +11,6 @@ from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from panpath.base import PanPath
     from azure.storage.blob.aio import BlobServiceClient  # type: ignore[import-not-found]
     from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
 
@@ -407,8 +406,7 @@ class AsyncAzureBlobClient(AsyncClient):
         self,
         path: str,
         pattern: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[Union[str, "PanPath"], None]:
+    ) -> AsyncGenerator[str, None]:
         """Glob for files matching pattern.
 
         Args:
@@ -419,7 +417,6 @@ class AsyncAzureBlobClient(AsyncClient):
             Matching paths as strings or PanPath objects
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
         client = await self._get_client()
         container_name, blob_prefix = self.__class__._parse_path(path)
@@ -438,10 +435,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     # Determine scheme from original path
                     scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
-                    if not _return_panpath:
-                        yield f"{scheme}://{container_name}/{blob.name}"
-                    else:
-                        yield PanPath(f"{scheme}://{container_name}/{blob.name}")
+                    yield f"{scheme}://{container_name}/{blob.name}"
 
         else:
             # Non-recursive - list blobs with prefix
@@ -454,18 +448,12 @@ class AsyncAzureBlobClient(AsyncClient):
                 rel_name = blob.name[len(prefix_with_slash) :]
                 if "/" not in rel_name and fnmatch(blob.name, f"{prefix_with_slash}{pattern}"):
                     scheme = "az" if path.startswith(f"{self.prefix[0]}://") else "azure"
-                    if not _return_panpath:
-                        yield f"{scheme}://{container_name}/{blob.name}"
-                    else:
-                        yield PanPath(
-                            f"{scheme}://{container_name}/{blob.name}"
-                        )
+                    yield f"{scheme}://{container_name}/{blob.name}"
 
     async def walk(  # type: ignore[override]
         self,
         path: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[tuple[Union[str, "PanPath"], list[str], list[str]], None]:
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -474,7 +462,6 @@ class AsyncAzureBlobClient(AsyncClient):
         Yields:
             Tuples of (dirpath, dirnames, filenames)
         """
-        from panpath.base import PanPath
 
         client = await self._get_client()
         container_name, blob_prefix = self.__class__._parse_path(path)
@@ -528,7 +515,7 @@ class AsyncAzureBlobClient(AsyncClient):
 
         # Yield each directory tuple
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (PanPath(d) if _return_panpath else d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(files))
 
     async def touch(  # type: ignore[no-untyped-def, override]
         self,

@@ -10,7 +10,6 @@ from panpath.exceptions import MissingDependencyError
 if TYPE_CHECKING:
     import boto3  # type: ignore[import-untyped]
     from botocore.exceptions import ClientError  # type: ignore[import-untyped]
-    from panpath.base import PanPath
 
 try:
     import boto3
@@ -335,21 +334,17 @@ class S3Client(SyncClient):
             Metadata={self.__class__.symlink_target_metaname: target},
         )
 
-    def glob(  # type: ignore[override]
-        self, path: str, pattern: str, _return_panpath: bool = False
-    ) -> Iterator[Union[str, "PanPath"]]:
+    def glob(self, path: str, pattern: str) -> Iterator[str]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
             path: Base S3 path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
-            _return_panpath: If True, return PanPath objects; if False, return strings
 
         Returns:
             List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
         bucket, prefix = self.__class__._parse_path(path)
 
@@ -371,10 +366,7 @@ class S3Client(SyncClient):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
                         path_str = f"{self.prefix[0]}://{bucket}/{key}"
-                        if _return_panpath:
-                            yield PanPath(path_str)
-                        else:  # pragma: no cover
-                            yield path_str
+                        yield path_str
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
@@ -386,10 +378,7 @@ class S3Client(SyncClient):
                 key = obj["Key"]
                 if fnmatch(key, f"{prefix_with_slash}{pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket}/{key}"
-                    if _return_panpath:
-                        yield PanPath(path_str)
-                    else:  # pragma: no cover
-                        yield path_str
+                    yield path_str
 
     def walk(  # type: ignore[override]
         self, path: str

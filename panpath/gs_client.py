@@ -11,7 +11,6 @@ from panpath.exceptions import MissingDependencyError, NoStatError
 if TYPE_CHECKING:
     from google.cloud import storage  # type: ignore[import-untyped, unused-ignore]
     from google.api_core.exceptions import NotFound
-    from panpath.base import PanPath
 
 try:
     with warnings.catch_warnings():
@@ -313,24 +312,17 @@ class GSClient(SyncClient):
         path = path.rstrip("/").rsplit("/", 1)[0]
         return f"{path}/{target}"
 
-    def glob(  # type: ignore[override]
-        self,
-        path: str,
-        pattern: str,
-        _return_panpath: bool = False,
-    ) -> Iterator[Union[str, "PanPath"]]:
+    def glob(self, path: str, pattern: str) -> Iterator[str]:  # type: ignore[override]
         """Glob for files matching pattern.
 
         Args:
             path: Base GCS path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
-            _return_panpath: If True, return PanPath objects; if False, return strings
 
         Returns:
             List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
         bucket_name, blob_prefix = self.__class__._parse_path(path)
         bucket = self._client.bucket(bucket_name)
@@ -351,10 +343,7 @@ class GSClient(SyncClient):
             for blob in blobs:
                 if fnmatch(blob.name, f"*{file_pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
-                    if _return_panpath:
-                        yield PanPath(path_str)
-                    else:  # pragma: no cover
-                        yield path_str
+                    yield path_str
         else:
             # Non-recursive - list blobs with delimiter
             prefix = (
@@ -365,10 +354,7 @@ class GSClient(SyncClient):
             for blob in blobs:
                 if fnmatch(blob.name, f"{prefix}{pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket_name}/{blob.name}"
-                    if _return_panpath:
-                        yield PanPath(path_str)
-                    else:  # pragma: no cover
-                        yield path_str
+                    yield path_str
 
     def walk(  # type: ignore[override]
         self,

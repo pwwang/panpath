@@ -13,7 +13,6 @@ from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from panpath.base import PanPath
     from gcloud.aio.storage import Storage
 
 try:
@@ -441,24 +440,17 @@ class AsyncGSClient(AsyncClient):
         # Then set the symlink metadata
         await self.set_metadata(path, {self.__class__.symlink_target_metaname: target})
 
-    async def glob(
-        self,
-        path: str,
-        pattern: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[Union[str, "PanPath"], None]:
+    async def glob(self, path: str, pattern: str) -> AsyncGenerator[str, None]:
         """Glob for files matching pattern.
 
         Args:
             path: Base GCS path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
-            _return_panpath: If True, return PanPath objects; otherwise return strings
 
         Returns:
             List of matching PanPath objects or strings
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
         bucket_name, prefix = self.__class__._parse_path(path)
         storage = await self._get_client()
@@ -482,10 +474,7 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"*{file_pattern}"):
-                    if not _return_panpath:
-                        yield f"{self.prefix[0]}://{bucket_name}/{blob_name}"
-                    else:
-                        yield PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
+                    yield f"{self.prefix[0]}://{bucket_name}/{blob_name}"
         else:
             # Non-recursive - list blobs with delimiter
             blob_prefix = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
@@ -500,16 +489,12 @@ class AsyncGSClient(AsyncClient):
             for item in items:
                 blob_name = item["name"]
                 if fnmatch(blob_name, f"{prefix}{pattern}"):
-                    if not _return_panpath:
-                        yield f"{self.prefix[0]}://{bucket_name}/{blob_name}"
-                    else:
-                        yield PanPath(f"{self.prefix[0]}://{bucket_name}/{blob_name}")
+                    yield f"{self.prefix[0]}://{bucket_name}/{blob_name}"
 
     async def walk(  # type: ignore[override]
         self,
         path: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[tuple[Union[str, "PanPath"], list[str], list[str]], None]:
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -518,7 +503,6 @@ class AsyncGSClient(AsyncClient):
         Yields:
             Tuples of (dirpath, dirnames, filenames)
         """
-        from panpath.base import PanPath
 
         bucket_name, blob_prefix = self.__class__._parse_path(path)
         storage = await self._get_client()
@@ -578,7 +562,7 @@ class AsyncGSClient(AsyncClient):
 
         # Yield each directory tuple
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (PanPath(d) if _return_panpath else d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(files))
 
     async def touch(  # type: ignore[no-untyped-def, override]
         self,

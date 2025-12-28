@@ -13,7 +13,6 @@ from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
     import aioboto3  # type: ignore[import-not-found]
-    from panpath.base import PanPath
     from aiobotocore.client import AioBaseClient  # type: ignore[import-untyped, unused-ignore]
     from botocore.exceptions import ClientError  # type: ignore[import-untyped, unused-ignore]
 
@@ -444,24 +443,17 @@ class AsyncS3Client(AsyncClient):
             Metadata={self.__class__.symlink_target_metaname: target},
         )
 
-    async def glob(
-        self,
-        path: str,
-        pattern: str,
-        _return_panpath: bool = False,
-    ) -> AsyncGenerator[Union[str, "PanPath"], None]:
+    async def glob(self, path: str, pattern: str) -> AsyncGenerator[str, None]:
         """Glob for files matching pattern.
 
         Args:
             path: Base S3 path
             pattern: Glob pattern (e.g., "*.txt", "**/*.py")
-            _return_panpath: If True, return PanPath objects; if False, return strings
 
         Returns:
             List of matching paths (as PanPath objects or strings)
         """
         from fnmatch import fnmatch
-        from panpath.base import PanPath
 
         bucket, prefix = self.__class__._parse_path(path)
 
@@ -484,10 +476,7 @@ class AsyncS3Client(AsyncClient):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
                         path_str = f"{self.prefix[0]}://{bucket}/{key}"
-                        if _return_panpath:
-                            yield PanPath(path_str)
-                        else:
-                            yield path_str
+                        yield path_str
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
@@ -499,16 +488,12 @@ class AsyncS3Client(AsyncClient):
                 key = obj["Key"]
                 if fnmatch(key, f"{prefix_with_slash}{pattern}"):
                     path_str = f"{self.prefix[0]}://{bucket}/{key}"
-                    if _return_panpath:
-                        yield PanPath(path_str)
-                    else:
-                        yield path_str
+                    yield path_str
 
     async def walk(  # type: ignore[override]
         self,
         path: str,
-        _return_panpath: bool = True,
-    ) -> AsyncGenerator[tuple[Union[str, "PanPath"], list[str], list[str]], None]:
+    ) -> AsyncGenerator[tuple[str, list[str], list[str]], None]:
         """Walk directory tree.
 
         Args:
@@ -517,8 +502,6 @@ class AsyncS3Client(AsyncClient):
         Yields:
             Tuples of (dirpath, dirnames, filenames)
         """
-        from panpath.base import PanPath
-
         bucket, prefix = self.__class__._parse_path(path)
 
         # List all objects under prefix
@@ -576,7 +559,7 @@ class AsyncS3Client(AsyncClient):
 
         # Yield tuples
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (PanPath(d) if _return_panpath else d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(files))
 
     async def touch(self, path: str, exist_ok: bool = True, mode: Optional[int] = None) -> None:
         """Create empty file.

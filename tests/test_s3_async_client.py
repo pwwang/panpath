@@ -189,36 +189,26 @@ async def test_asyncs3client_glob(testdir):
 
     # Test globbing
     txt_files = await async_generator_to_list(
-        client.glob(dirpath, "**/*.txt", _return_panpath=False)
+        client.glob(dirpath, "**/*.txt")
     )
     txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
-    txt_paths = await async_generator_to_list(
-        client.glob(dirpath, "**/*.txt", _return_panpath=True)
-    )
-    txt_path_names = sorted([path.name for path in txt_paths])
-    assert txt_path_names == sorted(["file1.txt", "file3.txt"])
-
-    txt_files2 = await async_generator_to_list(client.glob(dirpath, "*.txt", _return_panpath=False))
+    txt_files2 = await async_generator_to_list(client.glob(dirpath, "*.txt"))
     txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
     log_files = await async_generator_to_list(
-        client.glob(dirpath, "**/*.log", _return_panpath=False)
+        client.glob(dirpath, "**/*.log")
     )
     log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
-    log_paths = await async_generator_to_list(client.glob(dirpath, "*.log", _return_panpath=True))
-    log_path_names = sorted([path.name for path in log_paths])
-    assert log_path_names == sorted(["file2.log"])
-
-    log_files2 = await async_generator_to_list(client.glob(dirpath, "*.log", _return_panpath=False))
+    log_files2 = await async_generator_to_list(client.glob(dirpath, "*.log"))
     log_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in log_files2])
     assert log_file_names2 == sorted(["file2.log"])
 
-    files = await async_generator_to_list(client.glob(dirpath, "**", _return_panpath=False))
+    files = await async_generator_to_list(client.glob(dirpath, "**"))
     assert len(files) >= 4  # At least the files we created
 
 
@@ -234,7 +224,7 @@ async def test_asyncs3client_walk(testdir):
         await client.write_text(f"{dirpath}/{name}", "data", encoding="utf-8")
 
     all_items = []
-    async for root, dirs, files in client.walk(dirpath, _return_panpath=False):
+    async for root, dirs, files in client.walk(dirpath):
         all_items.append((root, dirs, files))
 
     all_roots = [item[0].split("/")[-1] for item in all_items]
