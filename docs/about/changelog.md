@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.4]
+
+- fix: update async file copying logic to use async for and correct path handling
+
 ## [0.4.3]
 
 - fix: correct variable name in fnmatch condition for blob retrieval in AsyncGSClient
