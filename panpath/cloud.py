@@ -843,9 +843,9 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         await dst_path.a_mkdir(parents=True, exist_ok=True)
 
         # Walk source tree and copy all files
-        for dirpath, dirnames, filenames in await src_path.a_walk():  # type: ignore[attr-defined]
+        async for dirpath, dirnames, filenames in src_path.a_walk():  # type: ignore[attr-defined]
             # Calculate relative path from src
-            rel_dir = dirpath[len(str(src)) :].lstrip("/")
+            rel_dir = str(dirpath)[len(str(src)) :].lstrip("/")
 
             # Create subdirectories in destination
             for dirname in dirnames:
@@ -854,7 +854,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
             # Copy files
             for filename in filenames:
-                src_file = PanPath(dirpath) / filename  # type: ignore[abstract]
+                src_file = dirpath / filename
                 dst_file = dst_path / rel_dir / filename if rel_dir else dst_path / filename
                 # Handle symlinks
                 if not follow_symlinks and await src_file.a_is_symlink():
