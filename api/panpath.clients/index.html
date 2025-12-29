@@ -5897,7 +5897,9 @@ the provider's specific streaming capabilities.</p>
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Flush write buffer (optional, default implementation is no-op).</p></div>
+      <div class="mkapi-section-body"><p>Flush write buffer (optional, default implementation is no-op).</p><p>Note latter flush will overwrite previous data in cloud storage.
+Incremental flush is not supported in this base implementation.</p>
+</div>
     </div>
   </div>
 

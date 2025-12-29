@@ -2272,7 +2272,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_stat" href="../../panpath.base/#panpath.base.PanPath.a_stat">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously get the file or directory&#39;s status information.</span>
 
 <span class="sd">        Returns:</span>

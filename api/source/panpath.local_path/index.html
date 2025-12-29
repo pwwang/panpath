@@ -2528,7 +2528,7 @@
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
             <span class="k">yield</span> <span class="bp">self</span> <span class="o">/</span> <span class="n">item</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_stat" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_stat">DOCS</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span><span id="panpath.local_path.LocalPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_stat" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_stat">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get file stats (async).&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_AIOFILES</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MissingDependencyError</span><span class="p">(</span>
@@ -2537,7 +2537,10 @@
                 <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;all-async&quot;</span><span class="p">,</span>
             <span class="p">)</span>
 
-        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># type: ignore[no-any-return]</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span>  <span class="c1"># type: ignore[no-any-return]</span>
+            <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
+            <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span><span id="panpath.local_path.LocalPath.a_open"></span><a class="mkapi-docs-link" title="panpath.local_path.LocalPath.a_open" href="../../panpath.local_path/#panpath.local_path.LocalPath.a_open">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>

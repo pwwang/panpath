@@ -2507,7 +2507,11 @@
     <span class="c1">#         return &quot;&quot;.join(chunks)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.AsyncFileHandle.flush"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncFileHandle.flush" href="../../panpath.clients/#panpath.clients.AsyncFileHandle.flush">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer (optional, default implementation is no-op).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer (optional, default implementation is no-op).</span>
+
+<span class="sd">        Note latter flush will overwrite previous data in cloud storage.</span>
+<span class="sd">        Incremental flush is not supported in this base implementation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
 
