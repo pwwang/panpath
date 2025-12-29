@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.5]
+
+- feat: add follow_symlinks parameter to a_stat methods for better symlink handling
+
 ## [0.4.4]
 
 - fix: update async file copying logic to use async for and correct path handling
