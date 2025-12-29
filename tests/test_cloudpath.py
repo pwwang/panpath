@@ -681,6 +681,12 @@ def test_cloudpath_stat():
     stats = p.stat()
     assert stats.st_size == len(content)
 
+    pl = MockCloudPath("mock://bucket/link.txt", client=client)
+    pl.symlink_to(p)
+
+    stats_link = pl.stat()
+    assert stats_link.st_size == len(content)
+
 
 def test_cloudpath_touch():
     """Test touch operations."""
@@ -958,6 +964,11 @@ async def test_cloudpath_async_stat():
     # Get stats
     stats = await p.a_stat()
     assert stats.st_size == len(content)
+
+    pl = MockCloudPath("mock://bucket/async-link.txt", async_client=client)
+    await pl.a_symlink_to(p)
+    stats_link = await pl.a_stat()
+    assert stats_link.st_size == len(content)
 
 
 async def test_cloudpath_async_glob():

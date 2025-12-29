@@ -214,7 +214,7 @@ class PanPath(PathlibPath):
         """
 
     @abstractmethod
-    async def a_stat(self) -> os.stat_result:
+    async def a_stat(self, follow_symlinks: bool = True) -> os.stat_result:
         """Asynchronously get the file or directory's status information.
 
         Returns:

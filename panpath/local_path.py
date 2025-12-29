@@ -470,7 +470,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         for item in await aiofiles.os.listdir(str(self)):
             yield self / item
 
-    async def a_stat(self) -> os.stat_result:
+    async def a_stat(self, follow_symlinks: bool = True) -> os.stat_result:
         """Get file stats (async)."""
         if not HAS_AIOFILES:
             raise MissingDependencyError(
@@ -479,7 +479,10 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return await aiofiles.os.stat(str(self))  # type: ignore[no-any-return]
+        return await aiofiles.os.stat(  # type: ignore[no-any-return]
+            str(self),
+            follow_symlinks=follow_symlinks,
+        )
 
     def a_open(  # type: ignore[override]
         self,

@@ -191,8 +191,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Check if path is a file."""
         return self.client.is_file(str(self))
 
-    def stat(self) -> Any:
+    def stat(self, follow_symlinks: bool = True) -> Any:
         """Get file stats."""
+        if follow_symlinks and self.is_symlink():
+            target = self.readlink()
+            return target.stat()
+
         return self.client.stat(str(self))
 
     def mkdir(self, mode: int = 0o777, parents: bool = False, exist_ok: bool = False) -> None:
@@ -378,7 +382,11 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = self.client.readlink(str(self))
 
-        return PanPath(target)  # type: ignore
+        return PanPath(  # type: ignore
+            target,
+            client=self._client,
+            async_client=self._async_client,
+        )
 
     def symlink_to(self, target: Union[str, "CloudPath"]) -> None:  # type: ignore[override]
         """Create symlink pointing to target (via metadata).
@@ -558,8 +566,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Check if path is a file."""
         return await self.async_client.is_file(str(self))
 
-    async def a_stat(self) -> Any:
+    async def a_stat(self, follow_symlinks: bool = True) -> Any:
         """Get file stats."""
+        if follow_symlinks and await self.a_is_symlink():
+            target = await self.a_readlink()
+            return await target.a_stat()
+
         return await self.async_client.stat(str(self))
 
     async def a_mkdir(
@@ -735,7 +747,11 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = await self.async_client.readlink(str(self))
 
-        return PanPath(target)  # type: ignore
+        return PanPath(  # type: ignore
+            target,
+            client=self._client,
+            async_client=self._async_client,
+        )
 
     async def a_symlink_to(  # type: ignore[override]
         self,
