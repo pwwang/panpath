@@ -2901,9 +2901,9 @@
         <span class="k">await</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">a_mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Walk source tree and copy all files</span>
-        <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_walk</span><span class="p">():</span>  <span class="c1"># type: ignore[attr-defined]</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_walk</span><span class="p">():</span>  <span class="c1"># type: ignore[attr-defined]</span>
             <span class="c1"># Calculate relative path from src</span>
-            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+            <span class="n">rel_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
             <span class="c1"># Create subdirectories in destination</span>
             <span class="k">for</span> <span class="n">dirname</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
@@ -2912,7 +2912,7 @@
 
             <span class="c1"># Copy files</span>
             <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
-                <span class="n">src_file</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span> <span class="o">/</span> <span class="n">filename</span>  <span class="c1"># type: ignore[abstract]</span>
+                <span class="n">src_file</span> <span class="o">=</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">filename</span>
                 <span class="n">dst_file</span> <span class="o">=</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">rel_dir</span> <span class="o">/</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">rel_dir</span> <span class="k">else</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">filename</span>
                 <span class="c1"># Handle symlinks</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="k">await</span> <span class="n">src_file</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">():</span>
