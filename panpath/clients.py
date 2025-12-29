@@ -449,7 +449,11 @@ class AsyncFileHandle(ABC):
     #         return "".join(chunks)
 
     async def flush(self) -> None:
-        """Flush write buffer (optional, default implementation is no-op)."""
+        """Flush write buffer (optional, default implementation is no-op).
+
+        Note latter flush will overwrite previous data in cloud storage.
+        Incremental flush is not supported in this base implementation.
+        """
         if self._closed:  # pragma: no cover
             raise ValueError("I/O operation on closed file")
 
