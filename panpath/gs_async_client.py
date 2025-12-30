@@ -124,9 +124,9 @@ class AsyncGSClient(AsyncClient):
             try:
                 loop = asyncio.get_running_loop()
                 # Check if we've already patched this loop
-                if not hasattr(loop, "_panpath_cleanup_registered"):
+                if not hasattr(loop, "_panpath_gs_cleanup_registered"):
                     _register_loop_cleanup(loop)
-                    loop._panpath_cleanup_registered = True  # type: ignore
+                    loop._panpath_gs_cleanup_registered = True  # type: ignore
             except RuntimeError:  # pragma: no cover
                 # No running loop, cleanup will be handled by explicit close
                 pass
