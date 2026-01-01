@@ -298,7 +298,8 @@ class AsyncS3Client(AsyncClient):
             path: S3 path (s3://bucket/key)
             mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
             encoding: Text encoding (for text modes)
-            **kwargs: Additional arguments (unused for S3)
+            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,
+                upload_interval supported)
 
         Returns:
             S3AsyncFileHandle with streaming support

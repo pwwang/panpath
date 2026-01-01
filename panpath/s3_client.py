@@ -188,7 +188,8 @@ class S3Client(SyncClient):
             path: S3 path (s3://bucket/key)
             mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
             encoding: Text encoding (for text modes)
-            **kwargs: Additional arguments (chunk_size supported)
+            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,
+                upload_interval supported)
 
         Returns:
             S3SyncFileHandle with streaming support

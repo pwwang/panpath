@@ -180,7 +180,15 @@ class AzureBlobClient(SyncClient):
         encoding: Optional[str] = None,
         **kwargs: Any,
     ) -> SyncFileHandle:
-        """Open Azure blob for reading/writing."""
+        """Open Azure blob for reading/writing.
+
+        Args:
+            path: Azure path
+            mode: File mode
+            encoding: Text encoding
+            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,
+                upload_interval supported)
+        """
         if mode not in ("r", "rb", "w", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'.")
 

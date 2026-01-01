@@ -301,6 +301,13 @@ class AsyncAzureBlobClient(AsyncClient):
 
         Note: For better streaming support, use a_open() instead.
         This method returns a file-like object that supports the standard file API.
+
+        Args:
+            path: Azure path
+            mode: File mode
+            encoding: Text encoding
+            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,
+                upload_interval supported)
         """
         if mode not in ("r", "rb", "w", "wb", "a", "ab"):
             raise ValueError(f"Unsupported mode '{mode}'. Use 'r', 'rb', 'w', 'wb', 'a', or 'ab'.")

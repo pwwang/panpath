@@ -176,7 +176,8 @@ class GSClient(SyncClient):
             path: GCS path (gs://bucket/blob)
             mode: File mode ('r', 'w', 'rb', 'wb', 'a', 'ab')
             encoding: Text encoding (for text modes)
-            **kwargs: Additional arguments (chunk_size supported)
+            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,
+                upload_interval supported)
 
         Returns:
             GSSyncFileHandle with streaming support
@@ -658,6 +659,8 @@ class GSSyncFileHandle(SyncFileHandle):
             try:
                 # Compose: original + temp = original
                 self._blob.compose([self._blob, temp_blob])
+            except Exception as e:  # pragma: no cover
+                raise IOError(f"Failed to append data to GCS blob: {self._blob}") from e
             finally:
                 # Clean up temp blob
                 temp_blob.delete()

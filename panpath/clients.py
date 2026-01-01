@@ -1,6 +1,8 @@
 """Base client classes for sync and async cloud storage operations."""
 
 from abc import ABC, abstractmethod
+import asyncio
+import time
 from typing import (
     Any,
     AsyncGenerator,
@@ -368,6 +370,7 @@ class AsyncFileHandle(ABC):
         encoding: Optional[str] = None,
         chunk_size: int = 4096,
         upload_warning_threshold: int = 100,
+        upload_interval: float = 1.0,
     ):
         """Initialize async file handle.
 
@@ -381,6 +384,8 @@ class AsyncFileHandle(ABC):
             chunk_size: Size of chunks to read
             upload_warning_threshold: Number of chunk uploads before warning (default: 100)
                 -1 to disable warning
+            upload_interval: Minimum interval (in seconds) between uploads to avoid
+                rate limits (default: 1.0)
         """
         self._client_factory = client_factory
         self._client: Optional[AsyncClient] = None
@@ -394,6 +399,8 @@ class AsyncFileHandle(ABC):
         self._upload_warning_threshold = upload_warning_threshold
         self._upload_count = 0
         self._first_write = True  # Track if this is the first write (for 'w' mode clearing)
+        self._upload_interval = upload_interval
+        self._last_upload_time: Optional[float] = None
 
         # For write modes
         self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
@@ -453,7 +460,14 @@ class AsyncFileHandle(ABC):
         else:
             data = "".join(self._write_buffer)  # type: ignore
 
+        # Rate limiting: wait if needed to respect upload_interval
+        if self._upload_interval > 0 and self._last_upload_time is not None:
+            elapsed = time.time() - self._last_upload_time
+            if elapsed < self._upload_interval:
+                await asyncio.sleep(self._upload_interval - elapsed)
+
         await self._upload(data)
+        self._last_upload_time = time.time()
         self._write_buffer = bytearray() if self._is_binary else []
 
         # Track upload count and warn if threshold exceeded
@@ -763,6 +777,7 @@ class SyncFileHandle(ABC):
         encoding: Optional[str] = None,
         chunk_size: int = 4096,
         upload_warning_threshold: int = 100,
+        upload_interval: float = 1.0,
     ):
         """Initialize sync file handle.
 
@@ -775,6 +790,8 @@ class SyncFileHandle(ABC):
             encoding: Text encoding (for text modes)
             chunk_size: Size of chunks to read
             upload_warning_threshold: Number of chunk uploads before warning (default: 100)
+            upload_interval: Minimum interval (in seconds) between uploads to avoid
+                rate limits (default: 1.0)
         """
         self._client = client
         self._bucket = bucket
@@ -787,6 +804,8 @@ class SyncFileHandle(ABC):
         self._upload_warning_threshold = upload_warning_threshold
         self._upload_count = 0
         self._first_write = True  # Track if this is the first write (for 'w' mode clearing)
+        self._upload_interval = upload_interval
+        self._last_upload_time: Optional[float] = None
 
         # For write modes
         self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
@@ -836,7 +855,14 @@ class SyncFileHandle(ABC):
         else:
             data = "".join(self._write_buffer)  # type: ignore
 
+        # Rate limiting: wait if needed to respect upload_interval
+        if self._upload_interval > 0 and self._last_upload_time is not None:
+            elapsed = time.time() - self._last_upload_time
+            if elapsed < self._upload_interval:
+                time.sleep(self._upload_interval - elapsed)
+
         self._upload(data)
+        self._last_upload_time = time.time()
         self._write_buffer = bytearray() if self._is_binary else []
 
         # Track upload count and warn if threshold exceeded
