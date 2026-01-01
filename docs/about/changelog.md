@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.6]
+
+- fix: update loop cleanup registration attributes for Azure, Google Cloud, and S3 clients
+- feat: implement upload methods with append semantics for Azure, Google Cloud, and S3 clients; add upload warning threshold
+
 ## [0.4.5]
 
 - feat: add follow_symlinks parameter to a_stat methods for better symlink handling
