@@ -79,7 +79,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         target_str = str(target)
         await aiofiles.os.rename(str(self), target_str)
-        return PanPath(target_str)  # type: ignore[abstract]
+        return PanPath(target_str)
 
     async def a_replace(self, target: Union[str, "Path"]) -> "PanPath":
         """Rename the file or directory to target, overwriting if target exists.
@@ -131,7 +131,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                             break
                         await df.write(chunk)
 
-        return PanPath(target_str)  # type: ignore[abstract]
+        return PanPath(target_str)
 
     async def a_copytree(
         self,
@@ -154,7 +154,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        target = PanPath(target)  # type: ignore[abstract]
+        target = PanPath(target)
         await target.a_mkdir(parents=True, exist_ok=True)
 
         async for entry in self.a_iterdir():
@@ -207,7 +207,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return PanPath(  # type: ignore[return-value, abstract]
+        return PanPath(  # type: ignore[return-value]
             await aiofiles.os.readlink(str(self))
         )
 

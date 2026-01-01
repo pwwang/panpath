@@ -472,8 +472,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         src: str, dst: str, follow_symlinks: bool = True
     ) -> None:  # pragma: no cover
         """Copy file across storage boundaries."""
-        src_path = PanPath(src)  # type: ignore[abstract]
-        dst_path = PanPath(dst)  # type: ignore[abstract]
+        src_path = PanPath(src)
+        dst_path = PanPath(dst)
 
         # Handle symlinks
         if not follow_symlinks and src_path.is_symlink():
@@ -490,8 +490,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         src: str, dst: str, follow_symlinks: bool = True
     ) -> None:  # pragma: no cover
         """Copy directory tree across storage boundaries."""
-        src_path = PanPath(src)  # type: ignore[abstract]
-        dst_path = PanPath(dst)  # type: ignore[abstract]
+        src_path = PanPath(src)
+        dst_path = PanPath(dst)
 
         # Create destination directory
         dst_path.mkdir(parents=True, exist_ok=True)
@@ -508,7 +508,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
             # Copy files
             for filename in filenames:
-                src_file = PanPath(dirpath) / filename  # type: ignore[abstract]
+                src_file = PanPath(dirpath) / filename
                 dst_file = dst_path / rel_dir / filename if rel_dir else dst_path / filename
                 # Handle symlinks
                 if not follow_symlinks and src_file.is_symlink():
@@ -666,7 +666,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         target_str = str(target)
         if not isinstance(target, PanPath):  # pragma: no cover
-            target = PanPath(target_str)  # type: ignore[abstract, assignment]
+            target = PanPath(target_str)  # type: ignore[assignment]
 
         source_is_dir = await self.a_is_dir()
         target_is_dir = await target.a_is_dir()  # type: ignore[union-attr]
@@ -799,7 +799,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             # Same storage, use native copy
             await self.async_client.copy(str(self), target_str, follow_symlinks=follow_symlinks)
 
-        return PanPath(target_str)  # type: ignore[abstract]
+        return PanPath(target_str)
 
     async def a_copytree(
         self,
@@ -834,8 +834,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         src: str, dst: str, follow_symlinks: bool = True
     ) -> None:  # pragma: no cover
         """Copy file across storage boundaries (async)."""
-        src_path = PanPath(src)  # type: ignore[abstract]
-        dst_path = PanPath(dst)  # type: ignore[abstract]
+        src_path = PanPath(src)
+        dst_path = PanPath(dst)
 
         # Handle symlinks
         if not follow_symlinks and await src_path.a_is_symlink():
@@ -852,8 +852,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         src: str, dst: str, follow_symlinks: bool = True
     ) -> None:  # pragma: no cover
         """Copy directory tree across storage boundaries (async)."""
-        src_path = PanPath(src)  # type: ignore[abstract]
-        dst_path = PanPath(dst)  # type: ignore[abstract]
+        src_path = PanPath(src)
+        dst_path = PanPath(dst)
 
         # Create destination directory
         await dst_path.a_mkdir(parents=True, exist_ok=True)
