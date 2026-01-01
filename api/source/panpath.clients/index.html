@@ -2072,6 +2072,7 @@
 <span class="p">)</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">Client</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span><span id="panpath.clients.Client"></span><a class="mkapi-docs-link" title="panpath.clients.Client" href="../../panpath.clients/#panpath.clients.Client">DOCS</a>
@@ -2424,6 +2425,7 @@
         <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
         <span class="n">encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
+        <span class="n">upload_warning_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize async file handle.</span>
 
@@ -2435,6 +2437,8 @@
 <span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, etc.)</span>
 <span class="sd">            encoding: Text encoding (for text modes)</span>
 <span class="sd">            chunk_size: Size of chunks to read</span>
+<span class="sd">            upload_warning_threshold: Number of chunk uploads before warning (default: 100)</span>
+<span class="sd">                -1 to disable warning</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client_factory</span> <span class="o">=</span> <span class="n">client_factory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AsyncClient</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2445,6 +2449,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_warning_threshold</span> <span class="o">=</span> <span class="n">upload_warning_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Track if this is the first write (for &#39;w&#39; mode clearing)</span>
 
         <span class="c1"># For write modes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytearray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="k">else</span> <span class="p">[]</span>
@@ -2483,39 +2490,20 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_stream_read_all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read all data from stream (used internally).&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Stream not initialized&quot;</span><span class="p">)</span>
-        <span class="n">chunk</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">chunk</span>  <span class="c1"># type: ignore</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-
-    <span class="c1"># async def _stream_read_all(self) -&gt; Union[str, bytes]:</span>
-    <span class="c1">#     &quot;&quot;&quot;Read all remaining data from the underlying stream.&quot;&quot;&quot;</span>
-    <span class="c1">#     chunks = []</span>
-    <span class="c1">#     while True:</span>
-    <span class="c1">#         chunk = await self._stream_read(self._chunk_size)</span>
-    <span class="c1">#         if not chunk:</span>
-    <span class="c1">#             break</span>
-    <span class="c1">#         chunks.append(chunk)</span>
-    <span class="c1">#     if self._is_binary:</span>
-    <span class="c1">#         return b&quot;&quot;.join(chunks)</span>
-    <span class="c1">#     else:</span>
-    <span class="c1">#         return &quot;&quot;.join(chunks)</span>
-
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.AsyncFileHandle.flush"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncFileHandle.flush" href="../../panpath.clients/#panpath.clients.AsyncFileHandle.flush">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer (optional, default implementation is no-op).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer to cloud storage.</span>
 
-<span class="sd">        Note latter flush will overwrite previous data in cloud storage.</span>
-<span class="sd">        Incremental flush is not supported in this base implementation.</span>
+<span class="sd">        After open, all flushes append to existing content using provider-native</span>
+<span class="sd">        append operations. The difference between &#39;w&#39; and &#39;a&#39; modes is that &#39;w&#39;</span>
+<span class="sd">        clears existing content on open, while &#39;a&#39; preserves it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
@@ -2525,6 +2513,18 @@
 
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upload</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="p">[]</span>
+
+        <span class="c1"># Track upload count and warn if threshold exceeded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upload_warning_threshold</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;File handle has flushed </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span><span class="si">}</span><span class="s2"> times. &quot;</span>
+                <span class="s2">&quot;Consider using larger chunk_size or buffering writes to reduce &quot;</span>
+                <span class="s2">&quot;cloud API calls. Set upload_warning_threshold=-1 to suppress &quot;</span>
+                <span class="s2">&quot;this warning.&quot;</span><span class="p">,</span>
+                <span class="ne">ResourceWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">reset_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.AsyncFileHandle.reset_stream"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncFileHandle.reset_stream" href="../../panpath.clients/#panpath.clients.AsyncFileHandle.reset_stream">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the underlying stream to the beginning.&quot;&quot;&quot;</span>
@@ -2547,20 +2547,10 @@
                     <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
                 <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                     <span class="k">raise</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">()</span>
-                <span class="n">existing</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read_all</span><span class="p">()</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">existing</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_expception_as_filenotfound</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
-                    <span class="c1"># File does not exist, start with empty buffer</span>
-                    <span class="k">pass</span>
-                <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                    <span class="k">raise</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
+            <span class="c1"># &#39;w&#39; mode: clear existing content - do nothing here, will create on first write</span>
+            <span class="c1"># The difference is that subsequent flushes will append</span>
+            <span class="k">pass</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__aexit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.AsyncFileHandle.__aexit__"></span><a class="mkapi-docs-link" title="panpath.clients.AsyncFileHandle.__aexit__" href="../../panpath.clients/#panpath.clients.AsyncFileHandle.__aexit__">DOCS</a>
@@ -2588,7 +2578,7 @@
                 <span class="c1"># Return all buffered data plus rest of stream</span>
                 <span class="n">buffered</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_read_buffer</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-                <span class="n">rest</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Use _stream_read with -1, not _stream_read_all</span>
+                <span class="n">rest</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_read_pos</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">result</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="n">buffered</span> <span class="o">+</span> <span class="n">rest</span>  <span class="c1"># type: ignore</span>
@@ -2614,7 +2604,6 @@
 
         <span class="c1"># No buffered data, read from stream</span>
         <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
-            <span class="c1"># Use _stream_read with -1, not _stream_read_all</span>
             <span class="n">result_stream</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_read_pos</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_stream</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
@@ -2694,6 +2683,9 @@
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
@@ -2828,17 +2820,19 @@
         <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
         <span class="n">encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
+        <span class="n">upload_warning_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize async file handle.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize sync file handle.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            client_factor: Async client factory for cloud operations</span>
+<span class="sd">            client: Sync client for cloud operations</span>
 <span class="sd">            bucket: Cloud storage bucket name or container</span>
 <span class="sd">            blob: Cloud storage blob name or object key</span>
 <span class="sd">            prefix: Cloud storage path prefix</span>
 <span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, etc.)</span>
 <span class="sd">            encoding: Text encoding (for text modes)</span>
 <span class="sd">            chunk_size: Size of chunks to read</span>
+<span class="sd">            upload_warning_threshold: Number of chunk uploads before warning (default: 100)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span> <span class="o">=</span> <span class="n">bucket</span>
@@ -2848,6 +2842,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span> <span class="ow">or</span> <span class="s2">&quot;utf-8&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_warning_threshold</span> <span class="o">=</span> <span class="n">upload_warning_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Track if this is the first write (for &#39;w&#39; mode clearing)</span>
 
         <span class="c1"># For write modes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytearray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;b&quot;</span> <span class="ow">in</span> <span class="n">mode</span> <span class="k">else</span> <span class="p">[]</span>
@@ -2877,11 +2874,19 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Upload data to cloud storage (used internally).&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.SyncFileHandle.flush"></span><a class="mkapi-docs-link" title="panpath.clients.SyncFileHandle.flush" href="../../panpath.clients/#panpath.clients.SyncFileHandle.flush">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer (optional, default implementation is no-op).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush write buffer to cloud storage.</span>
+
+<span class="sd">        After open, all flushes append to existing content using provider-native</span>
+<span class="sd">        append operations. The difference between &#39;w&#39; and &#39;a&#39; modes is that &#39;w&#39;</span>
+<span class="sd">        clears existing content on open, while &#39;a&#39; preserves it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;I/O operation on closed file&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
@@ -2891,6 +2896,17 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_upload</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="k">else</span> <span class="p">[]</span>
+
+        <span class="c1"># Track upload count and warn if threshold exceeded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upload_warning_threshold</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;File handle has flushed </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span><span class="si">}</span><span class="s2"> times. Consider using larger &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;chunk_size or buffering writes to reduce cloud API calls. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Set upload_warning_threshold=-1 to suppress this warning.&quot;</span><span class="p">,</span>
+                <span class="ne">ResourceWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_stream_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read from stream (used internally).&quot;&quot;&quot;</span>
@@ -2912,32 +2928,6 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_stream_read_all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read all data from stream (used internally).</span>
-<span class="sd">        Suppose self._stream.read() reads all remaining data.</span>
-<span class="sd">        If not, this method should be overridden in subclasses.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Stream not initialized&quot;</span><span class="p">)</span>
-        <span class="n">chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">chunk</span>  <span class="c1"># type: ignore</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">chunk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-
-    <span class="c1"># def _stream_read_all(self) -&gt; Union[str, bytes]:</span>
-    <span class="c1">#     &quot;&quot;&quot;Read all remaining data from the underlying stream.&quot;&quot;&quot;</span>
-    <span class="c1">#     chunks = []</span>
-    <span class="c1">#     while True:</span>
-    <span class="c1">#         chunk = self._stream_read(self._chunk_size)</span>
-    <span class="c1">#         if not chunk:</span>
-    <span class="c1">#             break</span>
-    <span class="c1">#         chunks.append(chunk)</span>
-    <span class="c1">#     if self._is_binary:</span>
-    <span class="c1">#         return b&quot;&quot;.join(chunks)</span>
-    <span class="c1">#     else:</span>
-    <span class="c1">#         return &quot;&quot;.join(chunks)</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">reset_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.SyncFileHandle.reset_stream"></span><a class="mkapi-docs-link" title="panpath.clients.SyncFileHandle.reset_stream" href="../../panpath.clients/#panpath.clients.SyncFileHandle.reset_stream">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the underlying stream to the beginning.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">()</span>
@@ -2946,7 +2936,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;SyncFileHandle&quot;</span><span class="p">:</span><span id="panpath.clients.SyncFileHandle.__enter__"></span><a class="mkapi-docs-link" title="panpath.clients.SyncFileHandle.__enter__" href="../../panpath.clients/#panpath.clients.SyncFileHandle.__enter__">DOCS</a>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enter async context manager.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enter context manager.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_read</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">()</span>
@@ -2957,20 +2947,11 @@
                     <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
                 <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                     <span class="k">raise</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">()</span>
-                <span class="n">existing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read_all</span><span class="p">()</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">existing</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_expception_as_filenotfound</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
-                    <span class="c1"># File does not exist, start with empty buffer</span>
-                    <span class="k">pass</span>
-                <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-                    <span class="k">raise</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_write</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
+            <span class="c1"># &#39;w&#39; mode: clear existing content - do nothing here, will create on</span>
+            <span class="c1"># first write</span>
+            <span class="c1"># The difference is that subsequent flushes will append</span>
+            <span class="k">pass</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.clients.SyncFileHandle.__exit__"></span><a class="mkapi-docs-link" title="panpath.clients.SyncFileHandle.__exit__" href="../../panpath.clients/#panpath.clients.SyncFileHandle.__exit__">DOCS</a>
@@ -2994,7 +2975,7 @@
 
         <span class="c1"># No buffered data, read from stream</span>
         <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Use _stream_read with -1, not _stream_read_all</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream_read</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_read_pos</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">return</span> <span class="n">result</span>
@@ -3073,6 +3054,9 @@
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_buffer</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 

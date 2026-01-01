@@ -4211,7 +4211,7 @@
 <div class='mkapi-object-container'>
   <div class="mkapi-object class code top">
     <div class="mkapi-object-kind class top">class</div>
-    <h2 id="panpaths3_async_clients3asyncfilehandle" class="mkapi-object-body class top"><code class="mkapi-object-prefix">panpath.s3_async_client.</code><code class="mkapi-object-name">S3AsyncFileHandle</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client_factory</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode=&#39;r&#39;</code>, <code class="mkapi-object-signature">encoding=None</code>, <code class="mkapi-object-signature">chunk_size=4096</code><code class="mkapi-object-parenthesis">)</code></h2>
+    <h2 id="panpaths3_async_clients3asyncfilehandle" class="mkapi-object-body class top"><code class="mkapi-object-prefix">panpath.s3_async_client.</code><code class="mkapi-object-name">S3AsyncFileHandle</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client_factory</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode=&#39;r&#39;</code>, <code class="mkapi-object-signature">encoding=None</code>, <code class="mkapi-object-signature">chunk_size=4096</code>, <code class="mkapi-object-signature">upload_warning_threshold=100</code><code class="mkapi-object-parenthesis">)</code></h2>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.s3_async_client/#panpath.s3_async_client.S3AsyncFileHandle" title="Source for panpath.s3_async_client.S3AsyncFileHandle">&lt;/&gt;</a>
@@ -4235,6 +4235,9 @@
           <span class="mkapi-section-name-body attributes">Attributes</span> 
         </div>
       <div class="mkapi-section-body attributes"><ul class="mkapi-items">
+
+
+
 
 
 
@@ -4287,7 +4290,7 @@
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncFileHandle.flush">flush</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-parenthesis">)</code>
 
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Flush write buffer (optional, default implementation is no-op).<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncFileHandle.flush" title="Source for panpath.clients.AsyncFileHandle.flush">&lt;/&gt;</a></span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Flush write buffer to cloud storage.<a class="mkapi-src-link" href="../source/panpath.clients/#panpath.clients.AsyncFileHandle.flush" title="Source for panpath.clients.AsyncFileHandle.flush">&lt;/&gt;</a></span></li>
 
 <li class="method"><code class="mkapi-item-name"><a href="#panpath.clients.AsyncFileHandle.read">read</a></code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">size</code><code class="mkapi-object-parenthesis">)</code>
 <span class="mkapi-item-type">(Union)</span>
@@ -4341,8 +4344,9 @@
 </div>
 <div class="mkapi-docstring">
 <div class="mkapi-section">
-      <div class="mkapi-section-body"><p>Flush write buffer (optional, default implementation is no-op).</p><p>Note latter flush will overwrite previous data in cloud storage.
-Incremental flush is not supported in this base implementation.</p>
+      <div class="mkapi-section-body"><p>Flush write buffer to cloud storage.</p><p>After open, all flushes append to existing content using provider-native
+append operations. The difference between 'w' and 'a' modes is that 'w'
+clears existing content on open, while 'a' preserves it.</p>
 </div>
     </div>
   </div>

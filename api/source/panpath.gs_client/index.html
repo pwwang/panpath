@@ -2648,8 +2648,9 @@
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GCS blob not found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_expception_as_filenotfound</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if exception is GCS NotFound and convert to FileNotFoundError.&quot;&quot;&quot;</span>
+        <span class="c1"># FileNotFoundError already raised in __init__</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exception</span><span class="p">,</span> <span class="n">NotFound</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">reset_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.gs_client.GSSyncFileHandle.reset_stream"></span><a class="mkapi-docs-link" title="panpath.gs_client.GSSyncFileHandle.reset_stream" href="../../panpath.gs_client/#panpath.gs_client.GSSyncFileHandle.reset_stream">DOCS</a>
@@ -2674,8 +2675,48 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore[no-any-return]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flush buffered writes to GCS.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Upload data to GCS blob using append semantics.</span>
+
+<span class="sd">        This method appends data using GCS compose API.</span>
+<span class="sd">        For &#39;w&#39; mode on first write, it overwrites. Subsequently it appends.</span>
+<span class="sd">        For &#39;a&#39; mode, it always appends.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: Data to upload</span>
+<span class="sd">                (will be appended to existing content after first write)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
+
+        <span class="c1"># For &#39;w&#39; mode on first write, overwrite existing content</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_append</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># Simple overwrite</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_first_write</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># For subsequent writes or append mode, use compose to append</span>
+        <span class="c1"># Check if the original blob exists</span>
+        <span class="n">blob_exists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">blob_exists</span><span class="p">:</span>
+            <span class="c1"># If blob doesn&#39;t exist, just upload the new data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">bucket</span>
+            <span class="n">temp_blob_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.tmp.</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">temp_blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">temp_blob_name</span><span class="p">)</span>
+
+            <span class="c1"># Upload new data to temp blob</span>
+            <span class="n">temp_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="c1"># Compose: original + temp = original</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">compose</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">temp_blob</span><span class="p">])</span>
+
+            <span class="c1"># Clean up temp blob</span>
+            <span class="n">temp_blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
 </code></pre></div>
 </div>
 </div>
