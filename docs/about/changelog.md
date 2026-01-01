@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.7]
+
+- fix: update gcloud-aio-storage version to 9.5 in pyproject.toml (supporting storage.compose)
+- fix: ensure unique temporary blob names and cleanup in upload methods for GSAsyncFileHandle and GSSyncFileHandle to avoid rate limit for object mutation operations
+- fix: remove unnecessary type ignore comments for PanPath instantiation in cloud and local path implementations
+
 ## [0.4.6]
 
 - fix: update loop cleanup registration attributes for Azure, Google Cloud, and S3 clients
