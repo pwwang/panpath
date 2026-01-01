@@ -330,3 +330,50 @@ class TestLocalPath:
 
         with pytest.raises(FileExistsError):
             await file_path.a_touch(exist_ok=False)
+
+    def test_copy_copytree_sync(self, tmp_path):
+        base = PanPath(tmp_path)
+
+        # Test copy
+        src_file = PanPath(base / "test.txt")
+        src_file.write_text("Hello, World!")
+
+        dst_file = PanPath(base / "test_copy.txt")
+        result = src_file.copy(dst_file)
+        assert dst_file.exists()
+        assert dst_file.read_text() == "Hello, World!"
+
+        # Test copytree
+        src_dir = PanPath(base / "src_tree")
+        src_dir.mkdir()
+        (src_dir / "file1.txt").write_text("File 1")
+        (src_dir / "file2.txt").write_text("File 2")
+        sub_dir = src_dir / "subdir"
+        sub_dir.mkdir()
+        (sub_dir / "file3.txt").write_text("File 3")
+
+        dst_dir = PanPath(base / "dst_tree")
+        result = src_dir.copytree(dst_dir)  # noqa
+        assert dst_dir.exists()
+        assert (dst_dir / "file1.txt").exists()
+        assert (dst_dir / "file2.txt").exists()
+        assert (dst_dir / "subdir" / "file3.txt").exists()
+        assert (dst_dir / "file1.txt").read_text() == "File 1"
+
+        # Test rmdir
+        empty_dir = PanPath(base / "empty_dir")
+        empty_dir.mkdir()
+        assert empty_dir.exists()
+        empty_dir.rmdir()
+        assert not empty_dir.exists()
+
+        # Test rmtree
+        tree_to_remove = PanPath(base / "tree_to_remove")
+        tree_to_remove.mkdir()
+        (tree_to_remove / "file.txt").write_text("Remove me")
+        (tree_to_remove / "subdir").mkdir()
+        (tree_to_remove / "subdir" / "nested.txt").write_text("Nested")
+
+        assert tree_to_remove.exists()
+        tree_to_remove.rmtree()
+        assert not tree_to_remove.exists()

@@ -2,6 +2,7 @@
 
 from pathlib import Path, PosixPath, WindowsPath
 import os
+import shutil
 import sys
 from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
 from panpath.base import PanPath
@@ -512,3 +513,60 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             errors=errors,
             newline=newline,
         )
+
+    def copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
+        """Copy file to target.
+
+        Can copy between cloud and local paths.
+
+        Args:
+            target: Destination path (can be cloud or local)
+            follow_symlinks: If True, follow symbolic links
+
+        Returns:
+            Target path instance
+        """
+        target_str = str(target)
+
+        if follow_symlinks:
+            shutil.copy2(str(self), target_str)
+        else:
+            shutil.copy(str(self), target_str)
+
+        return PanPath(target_str)
+
+    def copytree(
+        self,
+        target: Union[str, "Path"],
+        follow_symlinks: bool = True,
+    ) -> "PanPath":
+        """Recursively copy the directory and all its contents to the target path.
+
+        Args:
+            target: Destination PanPath to copy to.
+            follow_symlinks: If True, copies the contents of symlinks.
+
+        Returns:
+            The copied PanPath instance.
+        """
+        target = PanPath(target)
+        target.mkdir(parents=True, exist_ok=True)
+
+        for entry in self.iterdir():
+            src_path = entry
+            dest_path = target / entry.name
+
+            if src_path.is_dir():
+                src_path.copytree(dest_path, follow_symlinks=follow_symlinks)
+            else:
+                src_path.copy(dest_path, follow_symlinks=follow_symlinks)
+
+        return target
+
+    def rmdir(self) -> None:
+        """Remove empty directory."""
+        os.rmdir(str(self))
+
+    def rmtree(self) -> None:
+        """Recursively remove directory and its contents."""
+        shutil.rmtree(str(self))
