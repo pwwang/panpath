@@ -637,15 +637,58 @@ class AzureSyncFileHandle(SyncFileHandle):
             self._read_residue = self._read_residue[size:]
             return result  # type: ignore[no-any-return]
 
-    def _stream_read_all(self) -> Union[str, bytes]:
-        """Read all remaining data from stream."""
-        download_stream = self._client.get_blob_client(self._bucket, self._blob).download_blob()
-        data = download_stream.readall()
-        if self._is_binary:
-            return data  # type: ignore[no-any-return]
-        else:
-            return data.decode(self._encoding)  # type: ignore[no-any-return]
-
     def _upload(self, data: Union[str, bytes]) -> None:
-        """Flush write buffer to Azure blob."""
-        self._client.get_blob_client(self._bucket, self._blob).upload_blob(data, overwrite=True)
+        """Upload data to Azure blob using append semantics.
+
+        This method uses Azure append blobs for efficient appending.
+        For 'w' mode on first write, it overwrites. Subsequently it appends.
+        For 'a' mode, it always appends.
+
+        Args:
+            data: Data to upload
+                (will be appended to existing content after first write)
+        """
+        if isinstance(data, str):
+            data = data.encode(self._encoding)
+
+        blob_client = self._client.get_blob_client(self._bucket, self._blob)
+
+        # For 'w' mode on first write, overwrite existing content
+        if self._first_write and not self._is_append:
+            self._first_write = False
+            # Simple overwrite
+            blob_client.upload_blob(data, overwrite=True)
+            return
+
+        self._first_write = False
+
+        # For subsequent writes or 'a' mode, use append semantics
+        # Check if blob exists and its type
+        try:
+            properties = blob_client.get_blob_properties()
+            blob_exists = True
+            blob_type = properties.blob_type
+        except ResourceNotFoundError:
+            blob_exists = False
+            blob_type = None
+
+        if not blob_exists:
+            # Create new append blob
+            from azure.storage.blob import BlobType
+
+            blob_client.upload_blob(data, blob_type=BlobType.AppendBlob)
+        elif blob_type == "AppendBlob":
+            # Append to existing append blob
+            blob_client.append_block(data)
+        else:
+            # Convert block blob to append blob by reading, then creating append blob
+            existing_data = blob_client.download_blob()
+            existing_content = existing_data.readall()
+
+            # Delete the old block blob
+            blob_client.delete_blob()
+
+            # Create new append blob with combined content
+            from azure.storage.blob import BlobType
+
+            blob_client.upload_blob(existing_content + data, blob_type=BlobType.AppendBlob)

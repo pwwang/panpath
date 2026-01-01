@@ -185,9 +185,7 @@ async def test_asyncgsclient_glob(testdir):
         await client.write_text(f"{dirpath}/{name}", "data", encoding="utf-8")
 
     # Test globbing
-    txt_files = await async_generator_to_list(
-        client.glob(dirpath, "**/*.txt")
-    )
+    txt_files = await async_generator_to_list(client.glob(dirpath, "**/*.txt"))
     txt_file_names = sorted([path.rstrip("/").split("/")[-1] for path in txt_files])
     assert txt_file_names == sorted(["file1.txt", "file3.txt"])
 
@@ -195,9 +193,7 @@ async def test_asyncgsclient_glob(testdir):
     txt_file_names2 = sorted([path.rstrip("/").split("/")[-1] for path in txt_files2])
     assert txt_file_names2 == sorted(["file1.txt"])
 
-    log_files = await async_generator_to_list(
-        client.glob(dirpath, "**/*.log")
-    )
+    log_files = await async_generator_to_list(client.glob(dirpath, "**/*.log"))
     log_file_names = sorted([path.rstrip("/").split("/")[-1] for path in log_files])
     assert log_file_names == sorted(["file2.log", "file4.log"])
 
@@ -727,3 +723,46 @@ async def test_asyncgsclient_tell_seek(testdir):
         assert chunk == data.decode("utf-8")
         pos = await f.tell()
         assert pos == len(data)
+
+
+async def test_asyncgsclient_flush_noop_on_empty_write_buffer(testdir):
+    """Test that flush is a no-op when write buffer is empty."""
+    client = AsyncGSClient()
+    file_path = f"{testdir}/flushnoop.txt"
+
+    async with client.open(file_path, mode="wb") as f:
+        # Directly call flush without writing anything
+        await f.flush()
+
+    # Verify that the file was created and is empty
+    content = await client.read_bytes(file_path)
+    assert content == b""
+
+
+async def test_asyncgsclient_write_flush_counter(testdir):
+    """Test that flush updates the write counter correctly."""
+    client = AsyncGSClient()
+    file_path = f"{testdir}/writeflushcounter.txt"
+
+    async with client.open(
+        file_path,
+        mode="wb",
+        chunk_size=4,
+        upload_warning_threshold=2,
+    ) as f:
+        await f.write(b"123")
+        # not reached chunk size yet, so flush should be no-op
+        assert f._upload_count == 0
+
+        await f.write(b"4")
+        # reached chunk size, so flush should have uploaded once
+        assert f._upload_count == 1
+
+        with pytest.warns(ResourceWarning):
+            await f.write(b"5678")
+
+        # reached chunk size again, so flush should have uploaded twice
+        assert f._upload_count == 2
+
+    content = await client.read_bytes(file_path)
+    assert content == b"12345678"

@@ -632,5 +632,47 @@ class S3SyncFileHandle(SyncFileHandle):
         return False  # pragma: no cover
 
     def _upload(self, data: Union[str, bytes]) -> None:
-        """Flush write buffer to S3 (no-op for S3)."""
-        self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+        """Upload data to S3 using append semantics.
+
+        This method appends data using multipart upload.
+        For 'w' mode on first write, it overwrites. Subsequently it appends.
+        For 'a' mode, it always appends.
+
+        Args:
+            data: Data to upload
+                (will be appended to existing content after first write)
+        """
+        if isinstance(data, str):
+            data = data.encode(self._encoding)
+
+        # For 'w' mode on first write, overwrite existing content
+        if self._first_write and not self._is_append:
+            self._first_write = False
+            # Simple overwrite
+            self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+            return
+
+        self._first_write = False
+
+        # For subsequent writes or append mode, use read-modify-write
+        # Check if object exists
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=self._blob)
+            object_exists = True
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
+                object_exists = False
+            else:  # pragma: no cover
+                raise
+
+        if not object_exists:
+            # Simple upload for new objects
+            self._client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+        else:
+            # For existing objects, download, concatenate, and re-upload
+            response = self._client.get_object(Bucket=self._bucket, Key=self._blob)
+            existing_data = response["Body"].read()
+            combined_data = existing_data + data
+            self._client.put_object(
+                Bucket=self._bucket, Key=self._blob, Body=combined_data
+            )

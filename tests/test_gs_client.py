@@ -522,6 +522,7 @@ def test_gsclient_open_read(testdir):
     """Test opening a blob for reading using GSClient."""
     client = GSClient()
     file_path = f"{testdir}/openread.txt"
+
     data = b"Open read data"
     client.write_bytes(file_path, data)
 
@@ -606,3 +607,45 @@ def test_gsclient_tell_seek(testdir):
         assert chunk == data.decode("utf-8")
         pos = f.tell()
         assert pos == len(data)
+
+
+def test_gsclient_flush_noop_on_empty_write_buffer(testdir):
+    """Test that flush is a no-op when write buffer is empty."""
+    client = GSClient()
+    file_path = f"{testdir}/flushnoop.txt"
+
+    with client.open(file_path, mode="wb") as f:
+        # Directly call flush without writing anything
+        f.flush()
+
+    # Verify that the file was created and is empty
+    content = client.read_bytes(file_path)
+    assert content == b""
+
+
+def test_gsclient_write_flush_counter(testdir):
+    """Test that flush updates the write counter correctly."""
+    client = GSClient()
+    file_path = f"{testdir}/writeflushcounter.txt"
+
+    with client.open(
+        file_path,
+        mode="wb",
+        chunk_size=4,
+        upload_warning_threshold=2,
+    ) as f:
+        f.write(b"123")
+        # not reached chunk size yet, so flush should be no-op
+        assert f._upload_count == 0
+
+        f.write(b"4")
+        # reached chunk size, so flush should have uploaded once
+        assert f._upload_count == 1
+
+        with pytest.warns(ResourceWarning):
+            f.write(b"5678")
+        # reached chunk size again, so flush should have uploaded twice
+        assert f._upload_count == 2
+
+    content = client.read_bytes(file_path)
+    assert content == b"12345678"

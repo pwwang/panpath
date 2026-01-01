@@ -776,9 +776,56 @@ class GSAsyncFileHandle(AsyncFileHandle):
         return True
 
     async def _upload(self, data: Union[str, bytes]) -> None:
-        """Upload data to GCS blob.
+        """Upload data to GCS blob using append semantics.
+
+        This method appends data using GCS compose.
+        For 'w' mode on first write, it overwrites. Subsequently it appends.
+        For 'a' mode, it always appends.
 
         Args:
             data: Data to upload
+                (will be appended to existing content after first write)
         """
-        await self._client.upload(self._bucket, self._blob, data)  # type: ignore[union-attr]
+        if isinstance(data, str):
+            data = data.encode(self._encoding)
+
+        storage: Storage = self._client  # type: ignore[assignment]
+
+        # For 'w' mode on first write, overwrite existing content
+        if self._first_write and not self._is_append:
+            self._first_write = False
+            # Simple overwrite
+            await storage.upload(self._bucket, self._blob, data)
+            return
+
+        self._first_write = False
+
+        # For subsequent writes or append mode, use compose to append
+        # Check if the original blob exists
+        try:
+            await storage.download_metadata(self._bucket, self._blob)
+            blob_exists = True
+        except Exception:
+            blob_exists = False
+
+        if not blob_exists:
+            # If blob doesn't exist, just upload the new data
+            await storage.upload(self._bucket, self._blob, data)
+        else:
+            # Upload new data to a temporary blob
+            temp_blob = f"{self._blob}.tmp.{os.getpid()}"
+            await storage.upload(
+                self._bucket,
+                temp_blob,
+                data,
+            )
+
+            # Use compose API to concatenate original + new data
+            await storage.compose(
+                bucket=self._bucket,
+                object_name=self._blob,
+                source_object_names=[self._blob, temp_blob],
+            )
+
+            # Clean up the temporary blob
+            await storage.delete(self._bucket, temp_blob)

@@ -590,8 +590,9 @@ class GSSyncFileHandle(SyncFileHandle):
             raise FileNotFoundError(f"GCS blob not found: {self._bucket}/{self._blob}")
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:  # pragma: no cover
         """Check if exception is GCS NotFound and convert to FileNotFoundError."""
+        # FileNotFoundError already raised in __init__
         return isinstance(exception, NotFound)
 
     def reset_stream(self) -> None:
@@ -616,5 +617,45 @@ class GSSyncFileHandle(SyncFileHandle):
         return self._blob.open("rb")  # type: ignore[no-any-return]
 
     def _upload(self, data: Union[bytes, str]) -> None:
-        """Flush buffered writes to GCS."""
-        self._blob.upload_from_string(data)
+        """Upload data to GCS blob using append semantics.
+
+        This method appends data using GCS compose API.
+        For 'w' mode on first write, it overwrites. Subsequently it appends.
+        For 'a' mode, it always appends.
+
+        Args:
+            data: Data to upload
+                (will be appended to existing content after first write)
+        """
+        if isinstance(data, str):
+            data = data.encode(self._encoding)
+
+        # For 'w' mode on first write, overwrite existing content
+        if self._first_write and not self._is_append:
+            self._first_write = False
+            # Simple overwrite
+            self._blob.upload_from_string(data)
+            return
+
+        self._first_write = False
+
+        # For subsequent writes or append mode, use compose to append
+        # Check if the original blob exists
+        blob_exists = self._blob.exists()
+
+        if not blob_exists:
+            # If blob doesn't exist, just upload the new data
+            self._blob.upload_from_string(data)
+        else:
+            bucket = self._blob.bucket
+            temp_blob_name = f"{self._blob.name}.tmp.{os.getpid()}"
+            temp_blob = bucket.blob(temp_blob_name)
+
+            # Upload new data to temp blob
+            temp_blob.upload_from_string(data)
+
+            # Compose: original + temp = original
+            self._blob.compose([self._blob, temp_blob])
+
+            # Clean up temp blob
+            temp_blob.delete()

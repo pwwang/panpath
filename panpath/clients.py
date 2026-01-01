@@ -14,6 +14,7 @@ from typing import (
 )
 
 import re
+import warnings
 
 
 class Client(ABC):
@@ -366,6 +367,7 @@ class AsyncFileHandle(ABC):
         mode: str = "r",
         encoding: Optional[str] = None,
         chunk_size: int = 4096,
+        upload_warning_threshold: int = 100,
     ):
         """Initialize async file handle.
 
@@ -377,6 +379,8 @@ class AsyncFileHandle(ABC):
             mode: File mode ('r', 'w', 'rb', 'wb', etc.)
             encoding: Text encoding (for text modes)
             chunk_size: Size of chunks to read
+            upload_warning_threshold: Number of chunk uploads before warning (default: 100)
+                -1 to disable warning
         """
         self._client_factory = client_factory
         self._client: Optional[AsyncClient] = None
@@ -387,6 +391,9 @@ class AsyncFileHandle(ABC):
         self._encoding = encoding or "utf-8"
         self._chunk_size = chunk_size
         self._closed = False
+        self._upload_warning_threshold = upload_warning_threshold
+        self._upload_count = 0
+        self._first_write = True  # Track if this is the first write (for 'w' mode clearing)
 
         # For write modes
         self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
@@ -425,39 +432,20 @@ class AsyncFileHandle(ABC):
         else:
             return chunk.decode(self._encoding)  # type: ignore
 
-    async def _stream_read_all(self) -> Union[str, bytes]:
-        """Read all data from stream (used internally)."""
-        if self._stream is None:  # pragma: no cover
-            raise ValueError("Stream not initialized")
-        chunk = await self._stream.read()
-        if self._is_binary:
-            return chunk  # type: ignore
-        else:
-            return chunk.decode(self._encoding)  # type: ignore
-
-    # async def _stream_read_all(self) -> Union[str, bytes]:
-    #     """Read all remaining data from the underlying stream."""
-    #     chunks = []
-    #     while True:
-    #         chunk = await self._stream_read(self._chunk_size)
-    #         if not chunk:
-    #             break
-    #         chunks.append(chunk)
-    #     if self._is_binary:
-    #         return b"".join(chunks)
-    #     else:
-    #         return "".join(chunks)
-
     async def flush(self) -> None:
-        """Flush write buffer (optional, default implementation is no-op).
+        """Flush write buffer to cloud storage.
 
-        Note latter flush will overwrite previous data in cloud storage.
-        Incremental flush is not supported in this base implementation.
+        After open, all flushes append to existing content using provider-native
+        append operations. The difference between 'w' and 'a' modes is that 'w'
+        clears existing content on open, while 'a' preserves it.
         """
         if self._closed:  # pragma: no cover
             raise ValueError("I/O operation on closed file")
 
         if not self._is_write:  # pragma: no cover
+            return
+
+        if not self._write_buffer and not self._first_write:
             return
 
         if self._is_binary:
@@ -467,6 +455,18 @@ class AsyncFileHandle(ABC):
 
         await self._upload(data)
         self._write_buffer = bytearray() if self._is_binary else []
+
+        # Track upload count and warn if threshold exceeded
+        self._upload_count += 1
+        if self._upload_count == self._upload_warning_threshold:
+            warnings.warn(
+                f"File handle has flushed {self._upload_count} times. "
+                "Consider using larger chunk_size or buffering writes to reduce "
+                "cloud API calls. Set upload_warning_threshold=-1 to suppress "
+                "this warning.",
+                ResourceWarning,
+                stacklevel=2,
+            )
 
     async def reset_stream(self) -> None:
         """Reset the underlying stream to the beginning."""
@@ -489,20 +489,10 @@ class AsyncFileHandle(ABC):
                     ) from None
                 else:  # pragma: no cover
                     raise
-        elif self._is_append:
-            try:
-                self._stream = await self._create_stream()
-                existing = await self._stream_read_all()
-                if self._is_binary:
-                    self._write_buffer = bytearray(existing)  # type: ignore
-                else:
-                    self._write_buffer = [existing]  # type: ignore
-            except Exception as e:
-                if self.__class__._expception_as_filenotfound(e):
-                    # File does not exist, start with empty buffer
-                    pass
-                else:  # pragma: no cover
-                    raise
+        elif self._is_write and not self._is_append:
+            # 'w' mode: clear existing content - do nothing here, will create on first write
+            # The difference is that subsequent flushes will append
+            pass
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -530,7 +520,7 @@ class AsyncFileHandle(ABC):
                 # Return all buffered data plus rest of stream
                 buffered = self._read_buffer
                 self._read_buffer = b"" if self._is_binary else ""
-                rest = await self._stream_read(-1)  # Use _stream_read with -1, not _stream_read_all
+                rest = await self._stream_read(-1)
                 self._read_pos += len(rest)
                 self._eof = True
                 result: Union[str, bytes] = buffered + rest  # type: ignore
@@ -556,7 +546,6 @@ class AsyncFileHandle(ABC):
 
         # No buffered data, read from stream
         if size == -1:
-            # Use _stream_read with -1, not _stream_read_all
             result_stream = await self._stream_read(-1)
             self._read_pos += len(result_stream)
             self._eof = True
@@ -636,6 +625,9 @@ class AsyncFileHandle(ABC):
             if isinstance(data, bytes):
                 data = data.decode(self._encoding)
             self._write_buffer.append(data)  # type: ignore
+
+        if len(self._write_buffer) >= self._chunk_size:
+            await self.flush()
 
         return len(data)
 
@@ -770,17 +762,19 @@ class SyncFileHandle(ABC):
         mode: str = "r",
         encoding: Optional[str] = None,
         chunk_size: int = 4096,
+        upload_warning_threshold: int = 100,
     ):
-        """Initialize async file handle.
+        """Initialize sync file handle.
 
         Args:
-            client_factor: Async client factory for cloud operations
+            client: Sync client for cloud operations
             bucket: Cloud storage bucket name or container
             blob: Cloud storage blob name or object key
             prefix: Cloud storage path prefix
             mode: File mode ('r', 'w', 'rb', 'wb', etc.)
             encoding: Text encoding (for text modes)
             chunk_size: Size of chunks to read
+            upload_warning_threshold: Number of chunk uploads before warning (default: 100)
         """
         self._client = client
         self._bucket = bucket
@@ -790,6 +784,9 @@ class SyncFileHandle(ABC):
         self._encoding = encoding or "utf-8"
         self._chunk_size = chunk_size
         self._closed = False
+        self._upload_warning_threshold = upload_warning_threshold
+        self._upload_count = 0
+        self._first_write = True  # Track if this is the first write (for 'w' mode clearing)
 
         # For write modes
         self._write_buffer: Union[bytearray, List[str]] = bytearray() if "b" in mode else []
@@ -819,11 +816,19 @@ class SyncFileHandle(ABC):
         """Upload data to cloud storage (used internally)."""
 
     def flush(self) -> None:
-        """Flush write buffer (optional, default implementation is no-op)."""
+        """Flush write buffer to cloud storage.
+
+        After open, all flushes append to existing content using provider-native
+        append operations. The difference between 'w' and 'a' modes is that 'w'
+        clears existing content on open, while 'a' preserves it.
+        """
         if self._closed:  # pragma: no cover
             raise ValueError("I/O operation on closed file")
 
         if not self._is_write:  # pragma: no cover
+            return
+
+        if not self._write_buffer and not self._first_write:
             return
 
         if self._is_binary:
@@ -833,6 +838,17 @@ class SyncFileHandle(ABC):
 
         self._upload(data)
         self._write_buffer = bytearray() if self._is_binary else []
+
+        # Track upload count and warn if threshold exceeded
+        self._upload_count += 1
+        if self._upload_count == self._upload_warning_threshold:
+            warnings.warn(
+                f"File handle has flushed {self._upload_count} times. Consider using larger "
+                f"chunk_size or buffering writes to reduce cloud API calls. "
+                f"Set upload_warning_threshold=-1 to suppress this warning.",
+                ResourceWarning,
+                stacklevel=2,
+            )
 
     def _stream_read(self, size: int = -1) -> Union[str, bytes]:
         """Read from stream (used internally)."""
@@ -854,32 +870,6 @@ class SyncFileHandle(ABC):
         else:
             return chunk.decode(self._encoding)  # type: ignore
 
-    def _stream_read_all(self) -> Union[str, bytes]:
-        """Read all data from stream (used internally).
-        Suppose self._stream.read() reads all remaining data.
-        If not, this method should be overridden in subclasses.
-        """
-        if self._stream is None:  # pragma: no cover
-            raise ValueError("Stream not initialized")
-        chunk = self._stream.read()
-        if self._is_binary:
-            return chunk  # type: ignore
-        else:
-            return chunk.decode(self._encoding)  # type: ignore
-
-    # def _stream_read_all(self) -> Union[str, bytes]:
-    #     """Read all remaining data from the underlying stream."""
-    #     chunks = []
-    #     while True:
-    #         chunk = self._stream_read(self._chunk_size)
-    #         if not chunk:
-    #             break
-    #         chunks.append(chunk)
-    #     if self._is_binary:
-    #         return b"".join(chunks)
-    #     else:
-    #         return "".join(chunks)
-
     def reset_stream(self) -> None:
         """Reset the underlying stream to the beginning."""
         self._stream = self._create_stream()
@@ -888,7 +878,7 @@ class SyncFileHandle(ABC):
         self._eof = False
 
     def __enter__(self) -> "SyncFileHandle":
-        """Enter async context manager."""
+        """Enter context manager."""
         if self._is_read:
             try:
                 self._stream = self._create_stream()
@@ -899,20 +889,11 @@ class SyncFileHandle(ABC):
                     ) from None
                 else:  # pragma: no cover
                     raise
-        elif self._is_append:
-            try:
-                self._stream = self._create_stream()
-                existing = self._stream_read_all()
-                if self._is_binary:
-                    self._write_buffer = bytearray(existing)  # type: ignore
-                else:
-                    self._write_buffer = [existing]  # type: ignore
-            except Exception as e:
-                if self.__class__._expception_as_filenotfound(e):
-                    # File does not exist, start with empty buffer
-                    pass
-                else:  # pragma: no cover
-                    raise
+        elif self._is_write and not self._is_append:
+            # 'w' mode: clear existing content - do nothing here, will create on
+            # first write
+            # The difference is that subsequent flushes will append
+            pass
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -936,7 +917,7 @@ class SyncFileHandle(ABC):
 
         # No buffered data, read from stream
         if size == -1:
-            result = self._stream_read(-1)  # Use _stream_read with -1, not _stream_read_all
+            result = self._stream_read(-1)
             self._read_pos += len(result)
             self._eof = True
             return result
@@ -1015,6 +996,9 @@ class SyncFileHandle(ABC):
             if isinstance(data, bytes):
                 data = data.decode(self._encoding)
             self._write_buffer.append(data)  # type: ignore
+
+        if len(self._write_buffer) >= self._chunk_size:
+            self.flush()
 
         return len(data)
 
