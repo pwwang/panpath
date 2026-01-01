@@ -3691,7 +3691,8 @@
 
 <li><code class="mkapi-item-name">**kwargs</code>
 <span class="mkapi-item-type">(Any)</span>
-<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Additional arguments (unused for GCS)</span></li>
+<span class="mkapi-item-dash">&mdash;</span> <span class="mkapi-item-description">Additional arguments (chunk_size, upload_warning_threshold,upload_interval supported)
+</span></li>
 
 
 </ul></div>
@@ -4211,7 +4212,7 @@
 <div class='mkapi-object-container'>
   <div class="mkapi-object class code top">
     <div class="mkapi-object-kind class top">class</div>
-    <h2 id="panpathgs_async_clientgsasyncfilehandle" class="mkapi-object-body class top"><code class="mkapi-object-prefix">panpath.gs_async_client.</code><code class="mkapi-object-name">GSAsyncFileHandle</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client_factory</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode=&#39;r&#39;</code>, <code class="mkapi-object-signature">encoding=None</code>, <code class="mkapi-object-signature">chunk_size=4096</code>, <code class="mkapi-object-signature">upload_warning_threshold=100</code><code class="mkapi-object-parenthesis">)</code></h2>
+    <h2 id="panpathgs_async_clientgsasyncfilehandle" class="mkapi-object-body class top"><code class="mkapi-object-prefix">panpath.gs_async_client.</code><code class="mkapi-object-name">GSAsyncFileHandle</code><code class="mkapi-object-parenthesis">(</code><code class="mkapi-object-signature">client_factory</code>, <code class="mkapi-object-signature">bucket</code>, <code class="mkapi-object-signature">blob</code>, <code class="mkapi-object-signature">prefix</code>, <code class="mkapi-object-signature">mode=&#39;r&#39;</code>, <code class="mkapi-object-signature">encoding=None</code>, <code class="mkapi-object-signature">chunk_size=4096</code>, <code class="mkapi-object-signature">upload_warning_threshold=100</code>, <code class="mkapi-object-signature">upload_interval=1.0</code><code class="mkapi-object-parenthesis">)</code></h2>
   </div>
   <div class="mkapi-src-link">
     <a class="mkapi-src-link" href="../source/panpath.gs_async_client/#panpath.gs_async_client.GSAsyncFileHandle" title="Source for panpath.gs_async_client.GSAsyncFileHandle">&lt;/&gt;</a>
@@ -4235,6 +4236,8 @@
           <span class="mkapi-section-name-body attributes">Attributes</span> 
         </div>
       <div class="mkapi-section-body attributes"><ul class="mkapi-items">
+
+
 
 
 

@@ -2356,7 +2356,8 @@
 <span class="sd">            path: S3 path (s3://bucket/key)</span>
 <span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, &#39;a&#39;, &#39;ab&#39;)</span>
 <span class="sd">            encoding: Text encoding (for text modes)</span>
-<span class="sd">            **kwargs: Additional arguments (unused for S3)</span>
+<span class="sd">            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,</span>
+<span class="sd">                upload_interval supported)</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            S3AsyncFileHandle with streaming support</span>

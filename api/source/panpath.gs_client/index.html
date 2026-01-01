@@ -2234,7 +2234,8 @@
 <span class="sd">            path: GCS path (gs://bucket/blob)</span>
 <span class="sd">            mode: File mode (&#39;r&#39;, &#39;w&#39;, &#39;rb&#39;, &#39;wb&#39;, &#39;a&#39;, &#39;ab&#39;)</span>
 <span class="sd">            encoding: Text encoding (for text modes)</span>
-<span class="sd">            **kwargs: Additional arguments (chunk_size supported)</span>
+<span class="sd">            **kwargs: Additional arguments (chunk_size, upload_warning_threshold,</span>
+<span class="sd">                upload_interval supported)</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            GSSyncFileHandle with streaming support</span>
@@ -2706,17 +2707,21 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">bucket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">bucket</span>
-            <span class="n">temp_blob_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.tmp.</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="c1"># Use upload count to ensure unique temp blob names across multiple flushes</span>
+            <span class="n">temp_blob_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.tmp.</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_upload_count</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">temp_blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">temp_blob_name</span><span class="p">)</span>
 
             <span class="c1"># Upload new data to temp blob</span>
             <span class="n">temp_blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-            <span class="c1"># Compose: original + temp = original</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">compose</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">temp_blob</span><span class="p">])</span>
-
-            <span class="c1"># Clean up temp blob</span>
-            <span class="n">temp_blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Compose: original + temp = original</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="o">.</span><span class="n">compose</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="p">,</span> <span class="n">temp_blob</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to append data to GCS blob: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_blob</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># Clean up temp blob</span>
+                <span class="n">temp_blob</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
 </code></pre></div>
 </div>
 </div>

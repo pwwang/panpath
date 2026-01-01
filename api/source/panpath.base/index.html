@@ -2061,7 +2061,6 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">PathlibPath</span><span class="p">,</span> <span class="n">PurePosixPath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
 
@@ -2181,32 +2180,31 @@
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported URI scheme: </span><span class="si">{</span><span class="n">scheme</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_resolve" href="../../panpath.base/#panpath.base.PanPath.a_resolve">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="c1"># These methods are used for IDE type hinting and documentation generation.</span>
+    <span class="c1"># Actual implementations are in LocalPath and CloudPath subclasses and</span>
+    <span class="c1"># are routed via __new__.</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_resolve"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_resolve" href="../../panpath.base/#panpath.base.PanPath.a_resolve">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve to absolute path (no-op for cloud paths).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self (cloud paths are already absolute)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_exists"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_exists" href="../../panpath.base/#panpath.base.PanPath.a_exists">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_exists"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_exists" href="../../panpath.base/#panpath.base.PanPath.a_exists">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously check if the path exists.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            True if the path exists, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_read_bytes"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_read_bytes" href="../../panpath.base/#panpath.base.PanPath.a_read_bytes">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_read_bytes"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_read_bytes" href="../../panpath.base/#panpath.base.PanPath.a_read_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously read the file&#39;s bytes.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            File content as bytes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_read_text"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_read_text" href="../../panpath.base/#panpath.base.PanPath.a_read_text">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_read_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_read_text"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_read_text" href="../../panpath.base/#panpath.base.PanPath.a_read_text">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously read the file&#39;s text content.</span>
 
 <span class="sd">        Args:</span>
@@ -2216,8 +2214,7 @@
 <span class="sd">            File content as string.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_write_bytes"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_write_bytes" href="../../panpath.base/#panpath.base.PanPath.a_write_bytes">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span><span id="panpath.base.PanPath.a_write_bytes"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_write_bytes" href="../../panpath.base/#panpath.base.PanPath.a_write_bytes">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously write bytes to the file.</span>
 
 <span class="sd">        Args:</span>
@@ -2227,8 +2224,11 @@
 <span class="sd">            Number of bytes written. For some cloud paths, may return None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_write_text"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_write_text" href="../../panpath.base/#panpath.base.PanPath.a_write_text">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_write_text</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_write_text"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_write_text" href="../../panpath.base/#panpath.base.PanPath.a_write_text">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously write text to the file.</span>
 
 <span class="sd">        Args:</span>
@@ -2239,48 +2239,45 @@
 <span class="sd">            Number of characters written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_unlink" href="../../panpath.base/#panpath.base.PanPath.a_unlink">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_unlink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.base.PanPath.a_unlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_unlink" href="../../panpath.base/#panpath.base.PanPath.a_unlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove (delete) the file or empty directory.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            missing_ok: If True, does not raise an error if the file does not exist.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_iterdir" href="../../panpath.base/#panpath.base.PanPath.a_iterdir">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_iterdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_iterdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_iterdir" href="../../panpath.base/#panpath.base.PanPath.a_iterdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously iterate over directory contents.</span>
 
 <span class="sd">        Yields:</span>
 <span class="sd">            PanPath instances for each item in the directory.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_is_dir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_dir" href="../../panpath.base/#panpath.base.PanPath.a_is_dir">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_is_dir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_dir" href="../../panpath.base/#panpath.base.PanPath.a_is_dir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously check if the path is a directory.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            True if the path is a directory, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_is_file"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_file" href="../../panpath.base/#panpath.base.PanPath.a_is_file">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_is_file"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_file" href="../../panpath.base/#panpath.base.PanPath.a_is_file">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously check if the path is a file.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            True if the path is a file, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_stat" href="../../panpath.base/#panpath.base.PanPath.a_stat">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_stat</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_stat"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_stat" href="../../panpath.base/#panpath.base.PanPath.a_stat">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously get the file or directory&#39;s status information.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            An object containing file status information (platform-dependent).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_mkdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_mkdir" href="../../panpath.base/#panpath.base.PanPath.a_mkdir">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_mkdir</span><span class="p">(</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_mkdir</span><span class="p">(</span><span id="panpath.base.PanPath.a_mkdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_mkdir" href="../../panpath.base/#panpath.base.PanPath.a_mkdir">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o777</span><span class="p">,</span>
         <span class="n">parents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -2294,8 +2291,10 @@
 <span class="sd">            exist_ok: If True, does not raise an error if the directory already exists.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_glob"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_glob" href="../../panpath.base/#panpath.base.PanPath.a_glob">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_glob</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_glob"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_glob" href="../../panpath.base/#panpath.base.PanPath.a_glob">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously yield paths matching a glob pattern.</span>
 
 <span class="sd">        Args:</span>
@@ -2305,8 +2304,10 @@
 <span class="sd">            List of PanPath instances matching the pattern.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rglob"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rglob" href="../../panpath.base/#panpath.base.PanPath.a_rglob">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rglob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rglob</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_rglob"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rglob" href="../../panpath.base/#panpath.base.PanPath.a_rglob">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously yield paths matching a recursive glob pattern.</span>
 
 <span class="sd">        Args:</span>
@@ -2316,16 +2317,20 @@
 <span class="sd">            List of PanPath instances matching the pattern.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_walk"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_walk" href="../../panpath.base/#panpath.base.PanPath.a_walk">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_walk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_walk</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_walk"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_walk" href="../../panpath.base/#panpath.base.PanPath.a_walk">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;PanPath&quot;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously walk the directory tree.</span>
 
 <span class="sd">        Yields:</span>
 <span class="sd">            Tuples of (current_path, dirnames, filenames) at each level.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_touch"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_touch" href="../../panpath.base/#panpath.base.PanPath.a_touch">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_touch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o666</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_touch</span><span class="p">(</span><span id="panpath.base.PanPath.a_touch"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_touch" href="../../panpath.base/#panpath.base.PanPath.a_touch">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mo">0o666</span><span class="p">,</span>
+        <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously create the file if it does not exist.</span>
 
 <span class="sd">        Args:</span>
@@ -2333,8 +2338,10 @@
 <span class="sd">            exist_ok: If False, raises an error if the file already exists.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rename"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rename" href="../../panpath.base/#panpath.base.PanPath.a_rename">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rename</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_rename"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rename" href="../../panpath.base/#panpath.base.PanPath.a_rename">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously rename this path to the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2344,8 +2351,10 @@
 <span class="sd">            The renamed PanPath instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_replace"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_replace" href="../../panpath.base/#panpath.base.PanPath.a_replace">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_replace</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_replace"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_replace" href="../../panpath.base/#panpath.base.PanPath.a_replace">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously replace this path with the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2355,12 +2364,10 @@
 <span class="sd">            The replaced PanPath instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rmdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rmdir" href="../../panpath.base/#panpath.base.PanPath.a_rmdir">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.base.PanPath.a_rmdir"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rmdir" href="../../panpath.base/#panpath.base.PanPath.a_rmdir">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove the directory and its contents recursively.&quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_is_symlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_symlink" href="../../panpath.base/#panpath.base.PanPath.a_is_symlink">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_is_symlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_is_symlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_is_symlink" href="../../panpath.base/#panpath.base.PanPath.a_is_symlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously check if the path is a symbolic link.</span>
 
 <span class="sd">        For local path, this checks if the path is a symlink.</span>
@@ -2372,8 +2379,7 @@
 <span class="sd">            True if the path is a symlink, False otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_readlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_readlink" href="../../panpath.base/#panpath.base.PanPath.a_readlink">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_readlink</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_readlink"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_readlink" href="../../panpath.base/#panpath.base.PanPath.a_readlink">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously read the target of the symbolic link.</span>
 
 <span class="sd">        For local path, this reads the symlink target.</span>
@@ -2383,8 +2389,7 @@
 <span class="sd">            The target PanPath of the symlink.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_symlink_to" href="../../panpath.base/#panpath.base.PanPath.a_symlink_to">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_symlink_to</span><span class="p">(</span><span id="panpath.base.PanPath.a_symlink_to"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_symlink_to" href="../../panpath.base/#panpath.base.PanPath.a_symlink_to">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
         <span class="n">target_is_directory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -2399,8 +2404,7 @@
 <span class="sd">            target_is_directory: Whether the target is a directory (ignored for cloud paths).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_rmtree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rmtree" href="../../panpath.base/#panpath.base.PanPath.a_rmtree">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_rmtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">onerror</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span><span id="panpath.base.PanPath.a_rmtree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_rmtree" href="../../panpath.base/#panpath.base.PanPath.a_rmtree">DOCS</a>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously remove the directory and all its contents recursively.</span>
 
 <span class="sd">        Args:</span>
@@ -2408,8 +2412,10 @@
 <span class="sd">            onerror: Optional function to call on errors.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copy" href="../../panpath.base/#panpath.base.PanPath.a_copy">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copy</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_copy"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copy" href="../../panpath.base/#panpath.base.PanPath.a_copy">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PanPath&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously copy this path to the target path.</span>
 
 <span class="sd">        Args:</span>
@@ -2419,8 +2425,7 @@
 <span class="sd">            The copied PanPath instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copytree" href="../../panpath.base/#panpath.base.PanPath.a_copytree">DOCS</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_copytree</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_copytree"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_copytree" href="../../panpath.base/#panpath.base.PanPath.a_copytree">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;PathlibPath&quot;</span><span class="p">],</span>
         <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -2435,8 +2440,12 @@
 <span class="sd">            The copied PanPath instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="nd">@abstractmethod</span><span id="panpath.base.PanPath.a_open"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_open" href="../../panpath.base/#panpath.base.PanPath.a_open">DOCS</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AsyncFileHandle&quot;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span><span id="panpath.base.PanPath.a_open"></span><a class="mkapi-docs-link" title="panpath.base.PanPath.a_open" href="../../panpath.base/#panpath.base.PanPath.a_open">DOCS</a>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AsyncFileHandle&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Asynchronously open the file and return an async file handle.</span>
 
 <span class="sd">        Args:</span>
