@@ -813,19 +813,21 @@ class GSAsyncFileHandle(AsyncFileHandle):
             await storage.upload(self._bucket, self._blob, data)
         else:
             # Upload new data to a temporary blob
-            temp_blob = f"{self._blob}.tmp.{os.getpid()}"
+            # Use upload count to ensure unique temp blob names across multiple flushes
+            temp_blob = f"{self._blob}.tmp.{os.getpid()}.{self._upload_count}"
             await storage.upload(
                 self._bucket,
                 temp_blob,
                 data,
             )
 
-            # Use compose API to concatenate original + new data
-            await storage.compose(
-                bucket=self._bucket,
-                object_name=self._blob,
-                source_object_names=[self._blob, temp_blob],
-            )
-
-            # Clean up the temporary blob
-            await storage.delete(self._bucket, temp_blob)
+            try:
+                # Use compose API to concatenate original + new data
+                await storage.compose(
+                    bucket=self._bucket,
+                    object_name=self._blob,
+                    source_object_names=[self._blob, temp_blob],
+                )
+            finally:
+                # Clean up the temporary blob
+                await storage.delete(self._bucket, temp_blob)

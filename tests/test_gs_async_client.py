@@ -755,6 +755,9 @@ async def test_asyncgsclient_write_flush_counter(testdir):
         assert f._upload_count == 0
 
         await f.write(b"4")
+        content = await client.read_bytes(file_path)
+        assert content == b"1234"
+
         # reached chunk size, so flush should have uploaded once
         assert f._upload_count == 1
 

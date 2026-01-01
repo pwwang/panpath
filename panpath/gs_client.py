@@ -648,14 +648,16 @@ class GSSyncFileHandle(SyncFileHandle):
             self._blob.upload_from_string(data)
         else:
             bucket = self._blob.bucket
-            temp_blob_name = f"{self._blob.name}.tmp.{os.getpid()}"
+            # Use upload count to ensure unique temp blob names across multiple flushes
+            temp_blob_name = f"{self._blob.name}.tmp.{os.getpid()}.{self._upload_count}"
             temp_blob = bucket.blob(temp_blob_name)
 
             # Upload new data to temp blob
             temp_blob.upload_from_string(data)
 
-            # Compose: original + temp = original
-            self._blob.compose([self._blob, temp_blob])
-
-            # Clean up temp blob
-            temp_blob.delete()
+            try:
+                # Compose: original + temp = original
+                self._blob.compose([self._blob, temp_blob])
+            finally:
+                # Clean up temp blob
+                temp_blob.delete()
