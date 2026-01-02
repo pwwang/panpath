@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.8]
+
+- feat: add copy, copytree, rmdir, and rmtree methods to LocalPath for enhanced file and directory management
+- fix: filter out empty values from files in directory yield with walk for all clients
+- fix: fix sync rename for cross storage op with directories
+- fix: fix subdirectories not included in gs sync walk
+- feat: add synchronous rename method to LocalPath with corresponding test
+- feat: implement async and sync cross-storage operations for copy and rename in LocalPath
+- feat: add backported walk method for directory traversal in LocalPath
+- fix: update walk method to use iterator instead of list in LocalPath
+
 ## [0.4.7]
 
 - fix: update gcloud-aio-storage version to 9.5 in pyproject.toml (supporting storage.compose)
