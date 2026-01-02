@@ -322,9 +322,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         target_str = str(target)
         # Check if cross-storage operation (cloud <-> local or cloud <-> cloud)
         if self._is_cross_storage_op(str(self), target_str):  # pragma: no cover
-            # Copy then delete for cross-storage
-            self._copy_cross_storage(str(self), target_str)
-            self.unlink()
+            if self.is_dir():
+                self._copytree_cross_storage(str(self), target_str)
+                self.rmtree()
+            else:
+                self._copy_cross_storage(str(self), target_str)
+                self.unlink()
         else:
             # Same storage, use native rename
             self.client.rename(str(self), target_str)
@@ -469,27 +472,48 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     def _copy_cross_storage(
-        src: str, dst: str, follow_symlinks: bool = True
+        src: str,
+        dst: str,
+        follow_symlinks: bool = True,
+        chunk_size: int = 1024 * 1024,
     ) -> None:  # pragma: no cover
-        """Copy file across storage boundaries."""
+        """Copy file across storage boundaries.
+
+        Args:
+            src: Source path
+            dst: Destination path
+            follow_symlinks: If False, copy symlink as symlink
+            chunk_size: Size of chunks to read/write (for large files)
+        """
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
-        # Handle symlinks
-        if not follow_symlinks and src_path.is_symlink():
-            # Copy as symlink
-            target = src_path.readlink()
-            dst_path.symlink_to(str(target))
-        else:
-            # Read from source and write to destination
-            data = src_path.read_bytes()
-            dst_path.write_bytes(data)
+        if follow_symlinks and src_path.is_symlink():
+            # If following symlinks, read the target and copy that instead
+            src_path = src_path.readlink()
+
+        with src_path.open("rb") as src_file, dst_path.open("wb") as dst_file:
+            while True:
+                chunk = src_file.read(chunk_size)
+                if not chunk:
+                    break
+                dst_file.write(chunk)
 
     @staticmethod
     def _copytree_cross_storage(
-        src: str, dst: str, follow_symlinks: bool = True
+        src: str,
+        dst: str,
+        follow_symlinks: bool = True,
+        chunk_size: int = 1024 * 1024,
     ) -> None:  # pragma: no cover
-        """Copy directory tree across storage boundaries."""
+        """Copy directory tree across storage boundaries.
+
+        Args:
+            src: Source directory path
+            dst: Destination directory path
+            follow_symlinks: If False, copy symlinks as symlinks
+            chunk_size: Size of chunks to read/write (for large files)
+        """
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
@@ -499,7 +523,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # Walk source tree and copy all files
         for dirpath, dirnames, filenames in src_path.walk():  # type: ignore[attr-defined]
             # Calculate relative path from src
-            rel_dir = dirpath[len(str(src)) :].lstrip("/")
+            rel_dir = str(dirpath)[len(str(src)) :].lstrip("/")
 
             # Create subdirectories in destination
             for dirname in dirnames:
@@ -508,16 +532,14 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
             # Copy files
             for filename in filenames:
-                src_file = PanPath(dirpath) / filename
+                src_file = dirpath / filename
                 dst_file = dst_path / rel_dir / filename if rel_dir else dst_path / filename
-                # Handle symlinks
-                if not follow_symlinks and src_file.is_symlink():
-                    # Copy as symlink
-                    target = src_file.readlink()
-                    dst_file.symlink_to(str(target))
-                else:
-                    data = src_file.read_bytes()
-                    dst_file.write_bytes(data)
+                CloudPath._copy_cross_storage(
+                    str(src_file),
+                    str(dst_file),
+                    follow_symlinks=follow_symlinks,
+                    chunk_size=chunk_size,
+                )
 
     # Async methods (prefixed with a_)
     async def a_exists(self) -> bool:
@@ -831,27 +853,49 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     async def _a_copy_cross_storage(
-        src: str, dst: str, follow_symlinks: bool = True
-    ) -> None:  # pragma: no cover
-        """Copy file across storage boundaries (async)."""
+        src: str,
+        dst: str,
+        follow_symlinks: bool = True,
+        chunk_size: int = 1024 * 1024,
+    ) -> None:
+        """Copy file across storage boundaries (async).
+
+        Args:
+            src: Source path
+            dst: Destination path
+            follow_symlinks: If False, copy symlinks as symlinks
+            chunk_size: Size of chunks to read/write (default 1MB)
+        """
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
-        # Handle symlinks
-        if not follow_symlinks and await src_path.a_is_symlink():
-            # Copy as symlink
-            target = await src_path.a_readlink()
-            await dst_path.a_symlink_to(str(target))
-        else:
-            # Read from source and write to destination
-            data = await src_path.a_read_bytes()
-            await dst_path.a_write_bytes(data)
+        if follow_symlinks and await src_path.a_is_symlink():  # pragma: no cover
+            # If following symlinks, read the target and copy that instead
+            src_path = await src_path.a_readlink()
+
+        async with src_path.a_open("rb") as fsrc:
+            async with dst_path.a_open("wb") as fdst:
+                while True:
+                    buf = await fsrc.read(chunk_size)  # Read in 1MB chunks
+                    if not buf:
+                        break
+                    await fdst.write(buf)
 
     @staticmethod
     async def _a_copytree_cross_storage(
-        src: str, dst: str, follow_symlinks: bool = True
-    ) -> None:  # pragma: no cover
-        """Copy directory tree across storage boundaries (async)."""
+        src: str,
+        dst: str,
+        follow_symlinks: bool = True,
+        chunk_size: int = 1024 * 1024,
+    ) -> None:
+        """Copy directory tree across storage boundaries (async).
+
+        Args:
+            src: Source path
+            dst: Destination path
+            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
+            chunk_size: Size of chunks to read/write (default 1MB)
+        """
         src_path = PanPath(src)
         dst_path = PanPath(dst)
 
@@ -872,14 +916,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             for filename in filenames:
                 src_file = dirpath / filename
                 dst_file = dst_path / rel_dir / filename if rel_dir else dst_path / filename
-                # Handle symlinks
-                if not follow_symlinks and await src_file.a_is_symlink():
-                    # Copy as symlink
-                    target = await src_file.a_readlink()
-                    await dst_file.a_symlink_to(str(target))
-                else:
-                    data = await src_file.a_read_bytes()
-                    await dst_file.a_write_bytes(data)
+                await CloudPath._a_copy_cross_storage(
+                    str(src_file),
+                    str(dst_file),
+                    follow_symlinks=follow_symlinks,
+                    chunk_size=chunk_size,
+                )
 
     def a_open(
         self,
