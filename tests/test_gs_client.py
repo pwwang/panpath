@@ -224,6 +224,12 @@ def test_gsclient_walk(testdir):
     assert isinstance(walk_results, list)
     assert len(walk_results) >= 1
 
+    all_subdirs = []
+    for dirpath, subdirs, files in walk_results:
+        all_subdirs.extend(subdirs)
+
+    assert "data" in all_subdirs
+
     # Flatten files from walk results
     all_files = []
     for _, _, files in walk_results:

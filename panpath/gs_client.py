@@ -406,6 +406,13 @@ class GSClient(SyncClient):
                     if i < len(parts) - 2:  # pragma: no cover
                         dirs[dir_path][0].add(parts[i + 1])
 
+                    sub_parent = (
+                        f"{path}/" + "/".join(parts[: i]) if path else "/".join(parts[: i])
+                    ).rstrip("/")
+                    if sub_parent not in dirs:  # pragma: no cover
+                        dirs[sub_parent] = (set(), set())
+                    dirs[sub_parent][0].add(parts[i])
+
                 # Add file to its parent directory
                 parent_dir = f"{path}/" + "/".join(parts[:-1]) if path else "/".join(parts[:-1])
                 if parent_dir not in dirs:  # pragma: no cover
@@ -588,7 +595,7 @@ class GSSyncFileHandle(SyncFileHandle):
         super().__init__(*args, **kwargs)
         self._blob: storage.Blob = self._client.bucket(self._bucket).blob(self._blob)
         if self._is_read and not self._blob.exists():
-            raise FileNotFoundError(f"GCS blob not found: {self._bucket}/{self._blob}")
+            raise FileNotFoundError(f"GCS blob not found: {self._bucket}/{self._blob.name}")
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:  # pragma: no cover
