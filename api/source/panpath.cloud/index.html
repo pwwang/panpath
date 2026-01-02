@@ -2380,9 +2380,12 @@
         <span class="n">target_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="c1"># Check if cross-storage operation (cloud &lt;-&gt; local or cloud &lt;-&gt; cloud)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_cross_storage_op</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
-            <span class="c1"># Copy then delete for cross-storage</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_copytree_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rmtree</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_copy_cross_storage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Same storage, use native rename</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">target_str</span><span class="p">)</span>
@@ -2527,27 +2530,48 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_copy_cross_storage</span><span class="p">(</span>
-        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source path</span>
+<span class="sd">            dst: Destination path</span>
+<span class="sd">            follow_symlinks: If False, copy symlink as symlink</span>
+<span class="sd">            chunk_size: Size of chunks to read/write (for large files)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
-        <span class="c1"># Handle symlinks</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="n">src_path</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
-            <span class="c1"># Copy as symlink</span>
-            <span class="n">target</span> <span class="o">=</span> <span class="n">src_path</span><span class="o">.</span><span class="n">readlink</span><span class="p">()</span>
-            <span class="n">dst_path</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Read from source and write to destination</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">src_path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
-            <span class="n">dst_path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="n">src_path</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+            <span class="c1"># If following symlinks, read the target and copy that instead</span>
+            <span class="n">src_path</span> <span class="o">=</span> <span class="n">src_path</span><span class="o">.</span><span class="n">readlink</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="n">src_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">src_file</span><span class="p">,</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">dst_file</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">src_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">dst_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_copytree_cross_storage</span><span class="p">(</span>
-        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source directory path</span>
+<span class="sd">            dst: Destination directory path</span>
+<span class="sd">            follow_symlinks: If False, copy symlinks as symlinks</span>
+<span class="sd">            chunk_size: Size of chunks to read/write (for large files)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2557,7 +2581,7 @@
         <span class="c1"># Walk source tree and copy all files</span>
         <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">src_path</span><span class="o">.</span><span class="n">walk</span><span class="p">():</span>  <span class="c1"># type: ignore[attr-defined]</span>
             <span class="c1"># Calculate relative path from src</span>
-            <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">dirpath</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+            <span class="n">rel_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)[</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">:]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
             <span class="c1"># Create subdirectories in destination</span>
             <span class="k">for</span> <span class="n">dirname</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
@@ -2566,16 +2590,14 @@
 
             <span class="c1"># Copy files</span>
             <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
-                <span class="n">src_file</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span> <span class="o">/</span> <span class="n">filename</span>
+                <span class="n">src_file</span> <span class="o">=</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">filename</span>
                 <span class="n">dst_file</span> <span class="o">=</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">rel_dir</span> <span class="o">/</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">rel_dir</span> <span class="k">else</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">filename</span>
-                <span class="c1"># Handle symlinks</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="n">src_file</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
-                    <span class="c1"># Copy as symlink</span>
-                    <span class="n">target</span> <span class="o">=</span> <span class="n">src_file</span><span class="o">.</span><span class="n">readlink</span><span class="p">()</span>
-                    <span class="n">dst_file</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">src_file</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
-                    <span class="n">dst_file</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">CloudPath</span><span class="o">.</span><span class="n">_copy_cross_storage</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">src_file</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">dst_file</span><span class="p">),</span>
+                    <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">,</span>
+                    <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">,</span>
+                <span class="p">)</span>
 
     <span class="c1"># Async methods (prefixed with a_)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">a_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span><span id="panpath.cloud.CloudPath.a_exists"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_exists" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_exists">DOCS</a>
@@ -2889,27 +2911,49 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_a_copy_cross_storage</span><span class="p">(</span>
-        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries (async).&quot;&quot;&quot;</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy file across storage boundaries (async).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source path</span>
+<span class="sd">            dst: Destination path</span>
+<span class="sd">            follow_symlinks: If False, copy symlinks as symlinks</span>
+<span class="sd">            chunk_size: Size of chunks to read/write (default 1MB)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
-        <span class="c1"># Handle symlinks</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">():</span>
-            <span class="c1"># Copy as symlink</span>
-            <span class="n">target</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span>
-            <span class="k">await</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">a_symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Read from source and write to destination</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_read_bytes</span><span class="p">()</span>
-            <span class="k">await</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">a_write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">():</span>  <span class="c1"># pragma: no cover</span>
+            <span class="c1"># If following symlinks, read the target and copy that instead</span>
+            <span class="n">src_path</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">src_path</span><span class="o">.</span><span class="n">a_open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fsrc</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">dst_path</span><span class="o">.</span><span class="n">a_open</span><span class="p">(</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fdst</span><span class="p">:</span>
+                <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">buf</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fsrc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>  <span class="c1"># Read in 1MB chunks</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">buf</span><span class="p">:</span>
+                        <span class="k">break</span>
+                    <span class="k">await</span> <span class="n">fdst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_a_copytree_cross_storage</span><span class="p">(</span>
-        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries (async).&quot;&quot;&quot;</span>
+        <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">follow_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy directory tree across storage boundaries (async).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source path</span>
+<span class="sd">            dst: Destination path</span>
+<span class="sd">            follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)</span>
+<span class="sd">            chunk_size: Size of chunks to read/write (default 1MB)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">src_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
         <span class="n">dst_path</span> <span class="o">=</span> <span class="n">PanPath</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
 
@@ -2930,14 +2974,12 @@
             <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
                 <span class="n">src_file</span> <span class="o">=</span> <span class="n">dirpath</span> <span class="o">/</span> <span class="n">filename</span>
                 <span class="n">dst_file</span> <span class="o">=</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">rel_dir</span> <span class="o">/</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">rel_dir</span> <span class="k">else</span> <span class="n">dst_path</span> <span class="o">/</span> <span class="n">filename</span>
-                <span class="c1"># Handle symlinks</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">follow_symlinks</span> <span class="ow">and</span> <span class="k">await</span> <span class="n">src_file</span><span class="o">.</span><span class="n">a_is_symlink</span><span class="p">():</span>
-                    <span class="c1"># Copy as symlink</span>
-                    <span class="n">target</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_file</span><span class="o">.</span><span class="n">a_readlink</span><span class="p">()</span>
-                    <span class="k">await</span> <span class="n">dst_file</span><span class="o">.</span><span class="n">a_symlink_to</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">src_file</span><span class="o">.</span><span class="n">a_read_bytes</span><span class="p">()</span>
-                    <span class="k">await</span> <span class="n">dst_file</span><span class="o">.</span><span class="n">a_write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">CloudPath</span><span class="o">.</span><span class="n">_a_copy_cross_storage</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">src_file</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">dst_file</span><span class="p">),</span>
+                    <span class="n">follow_symlinks</span><span class="o">=</span><span class="n">follow_symlinks</span><span class="p">,</span>
+                    <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">,</span>
+                <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">a_open</span><span class="p">(</span><span id="panpath.cloud.CloudPath.a_open"></span><a class="mkapi-docs-link" title="panpath.cloud.CloudPath.a_open" href="../../panpath.cloud/#panpath.cloud.CloudPath.a_open">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
