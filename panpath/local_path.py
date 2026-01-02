@@ -71,15 +71,22 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             New path instance
         """
-        if not HAS_AIOFILES:
-            raise MissingDependencyError(
-                backend="async local paths",
-                package="aiofiles",
-                extra="all-async",
-            )
-
         target_str = str(target)
-        await aiofiles.os.rename(str(self), target_str)
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            if await self.a_is_dir():
+                await CloudPath._a_copytree_cross_storage(str(self), target_str)
+                await self.a_rmtree()
+            else:
+                await CloudPath._a_copy_cross_storage(self, target_str)
+                await self.a_unlink()
+        else:
+            if not HAS_AIOFILES:
+                raise MissingDependencyError(
+                    backend="async local paths",
+                    package="aiofiles",
+                    extra="all-async",
+                )
+            await aiofiles.os.rename(str(self), target_str)
         return PanPath(target_str)
 
     async def a_replace(self, target: Union[str, "Path"]) -> "PanPath":
@@ -112,18 +119,18 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             Target path instance
         """
-        if not HAS_AIOFILES:
-            raise MissingDependencyError(
-                backend="async local paths",
-                package="aiofiles",
-                extra="all-async",
-            )
 
         target_str = str(target)
         # Check if cross-storage operation
-        if CloudPath._is_cross_storage_op(str(self), target_str):  # pragma: no cover
+        if CloudPath._is_cross_storage_op(str(self), target_str):
             await CloudPath._a_copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
         else:
+            if not HAS_AIOFILES:
+                raise MissingDependencyError(
+                    backend="async local paths",
+                    package="aiofiles",
+                    extra="all-async",
+                )
             async with aiofiles.open(str(self), mode="rb") as sf:
                 async with aiofiles.open(target_str, mode="wb") as df:
                     while True:
@@ -148,26 +155,28 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             The copied PanPath instance.
         """
-        if not HAS_AIOFILES:
-            raise MissingDependencyError(
-                backend="async local paths",
-                package="aiofiles",
-                extra="all-async",
+        target_str = str(target)
+
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            await CloudPath._a_copytree_cross_storage(
+                self,
+                target_str,
+                follow_symlinks=follow_symlinks,
             )
+        else:
+            target = PanPath(target)
+            await target.a_mkdir(parents=True, exist_ok=True)
 
-        target = PanPath(target)
-        await target.a_mkdir(parents=True, exist_ok=True)
+            async for entry in self.a_iterdir():
+                src_path = entry
+                dest_path = target / entry.name
 
-        async for entry in self.a_iterdir():
-            src_path = entry
-            dest_path = target / entry.name
+                if await src_path.a_is_dir():
+                    await src_path.a_copytree(dest_path, follow_symlinks=follow_symlinks)
+                else:
+                    await src_path.a_copy(dest_path, follow_symlinks=follow_symlinks)
 
-            if await src_path.a_is_dir():
-                await src_path.a_copytree(dest_path, follow_symlinks=follow_symlinks)
-            else:
-                await src_path.a_copy(dest_path, follow_symlinks=follow_symlinks)
-
-        return target
+        return PanPath(target)
 
     async def a_walk(  # type: ignore[override]
         self,
@@ -208,9 +217,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return PanPath(  # type: ignore[return-value]
-            await aiofiles.os.readlink(str(self))
-        )
+        return PanPath(await aiofiles.os.readlink(str(self)))  # type: ignore[return-value]
 
     async def a_symlink_to(
         self,
@@ -549,13 +556,12 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             Target path instance
         """
         target_str = str(target)
-
-        if follow_symlinks:
-            shutil.copy2(str(self), target_str)
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            CloudPath._copy_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
         else:
-            shutil.copy(str(self), target_str)
+            shutil.copy2(str(self), target_str, follow_symlinks=follow_symlinks)
 
-        return PanPath(target_str)
+        return PanPath(target)
 
     def copytree(
         self,
@@ -571,19 +577,24 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         Returns:
             The copied PanPath instance.
         """
-        target = PanPath(target)
-        target.mkdir(parents=True, exist_ok=True)
+        target_str = str(target)
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            CloudPath._copytree_cross_storage(self, target_str, follow_symlinks=follow_symlinks)
+        else:
+            target = PanPath(target)
 
-        for entry in self.iterdir():
-            src_path = entry
-            dest_path = target / entry.name
+            target.mkdir(parents=True, exist_ok=True)
 
-            if src_path.is_dir():
-                src_path.copytree(dest_path, follow_symlinks=follow_symlinks)
-            else:
-                src_path.copy(dest_path, follow_symlinks=follow_symlinks)
+            for entry in self.iterdir():
+                src_path = entry
+                dest_path = target / entry.name
 
-        return target
+                if src_path.is_dir():
+                    src_path.copytree(dest_path, follow_symlinks=follow_symlinks)
+                else:
+                    src_path.copy(dest_path, follow_symlinks=follow_symlinks)
+
+        return PanPath(target)
 
     def rmdir(self) -> None:
         """Remove empty directory."""
