@@ -521,7 +521,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         dst_path.mkdir(parents=True, exist_ok=True)
 
         # Walk source tree and copy all files
-        for dirpath, dirnames, filenames in src_path.walk():  # type: ignore[attr-defined]
+        for dirpath, dirnames, filenames in src_path.walk():
             # Calculate relative path from src
             rel_dir = str(dirpath)[len(str(src)) :].lstrip("/")
 

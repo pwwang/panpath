@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 from pathlib import Path, PosixPath, WindowsPath
-from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
+from typing import Any, AsyncGenerator, Iterator, List, Optional, Tuple, Union
 from panpath.base import PanPath
 from panpath.cloud import CloudPath
 from panpath.exceptions import MissingDependencyError
@@ -521,7 +521,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             newline=newline,
         )
 
-    def rename(self, target: Union[str, "Path"]) -> "PanPath":
+    def rename(self, target: Union[str, "Path"]) -> "PanPath":  # type: ignore[override]
         """Rename the file or directory to target.
 
         Args:
@@ -605,34 +605,27 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         shutil.rmtree(str(self))
 
     # backports, walk is introduced in Python 3.12
-    def walk(  # type: ignore[override]
+    def walk(  # type: ignore[no-untyped-def]
         self,
         *args,
         **kwargs,
-    ) -> List[Tuple["LocalPath", List[str], List[str]]]:
+    ) -> Iterator[Tuple["LocalPath", List[str], List[str]]]:
         """Walk the directory tree.
 
         Returns:
             A list of tuples (dirpath, dirnames, filenames)
         """
         if sys.version_info >= (3, 12):
-            return super().walk(*args, **kwargs)  # type: ignore[no-untyped-call]
+            yield from Path.walk(self, *args, **kwargs)  # type: ignore[no-untyped-call]
 
         if args or kwargs:  # pragma: no cover
             raise NotImplementedError(
                 "walk() does not accept arguments in this backport."
             )
         else:  # pragma: no cover
-            results: List[Tuple["LocalPath", List[str], List[str]]] = []
-            dirnames: List[str] = []
-            filenames: List[str] = []
-            for entry in os.listdir(str(self)):
-                path = self / entry
-                if path.is_dir():
-                    dirnames.append(entry)
-                    sub_results = path.walk()
-                    results.extend(sub_results)
-                else:
-                    filenames.append(entry)
-            results.insert(0, (self, dirnames, filenames))
-            return results
+            for dirpath, dirnames, filenames in os.walk(str(self)):
+                yield (  # type: ignore[misc]
+                    PanPath(dirpath),
+                    dirnames,
+                    filenames,
+                )

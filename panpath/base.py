@@ -400,7 +400,7 @@ class PanPath(PathlibPath):
         """
 
     # backports
-    def walk(self) -> Any:  # type: ignore[empty-body]
+    def walk(self) -> Any:
         """Walk the directory tree.
 
         Yields:
