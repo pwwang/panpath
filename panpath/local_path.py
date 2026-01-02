@@ -1,9 +1,9 @@
 """Local filesystem path implementation."""
 
-from pathlib import Path, PosixPath, WindowsPath
 import os
 import shutil
 import sys
+from pathlib import Path, PosixPath, WindowsPath
 from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
 from panpath.base import PanPath
 from panpath.cloud import CloudPath
@@ -603,3 +603,36 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
     def rmtree(self) -> None:
         """Recursively remove directory and its contents."""
         shutil.rmtree(str(self))
+
+    # backports, walk is introduced in Python 3.12
+    def walk(  # type: ignore[override]
+        self,
+        *args,
+        **kwargs,
+    ) -> List[Tuple["LocalPath", List[str], List[str]]]:
+        """Walk the directory tree.
+
+        Returns:
+            A list of tuples (dirpath, dirnames, filenames)
+        """
+        if sys.version_info >= (3, 12):
+            return super().walk(*args, **kwargs)  # type: ignore[no-untyped-call]
+
+        if args or kwargs:  # pragma: no cover
+            raise NotImplementedError(
+                "walk() does not accept arguments in this backport."
+            )
+        else:  # pragma: no cover
+            results: List[Tuple["LocalPath", List[str], List[str]]] = []
+            dirnames: List[str] = []
+            filenames: List[str] = []
+            for entry in os.listdir(str(self)):
+                path = self / entry
+                if path.is_dir():
+                    dirnames.append(entry)
+                    sub_results = path.walk()
+                    results.extend(sub_results)
+                else:
+                    filenames.append(entry)
+            results.insert(0, (self, dirnames, filenames))
+            return results

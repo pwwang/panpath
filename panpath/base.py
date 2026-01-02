@@ -398,3 +398,11 @@ class PanPath(PathlibPath):
         Returns:
             An async file handle.
         """
+
+    # backports
+    def walk(self) -> Any:  # type: ignore[empty-body]
+        """Walk the directory tree.
+
+        Yields:
+            Tuples of (current_path, dirnames, filenames) at each level.
+        """
