@@ -21,6 +21,22 @@ class TestLocalPath:
         assert isinstance(path, LocalPath)
         assert str(path) == "."
 
+    def test_sync_rename(self, tmp_path):
+        """Test synchronous rename operation."""
+        src_file = tmp_path / "src.txt"
+        dest_file = tmp_path / "dest.txt"
+
+        src_path = LocalPath(src_file)
+        dest_path = LocalPath(dest_file)
+
+        src_path.write_text("rename_test_content")
+
+        src_path.rename(dest_path)
+
+        assert not src_path.exists()
+        assert dest_path.exists()
+        assert dest_path.read_text() == "rename_test_content"
+
     def test_binary_operations(self, tmp_path):
         """Test binary read/write operations."""
         test_file = tmp_path / "test.bin"

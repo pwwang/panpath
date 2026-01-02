@@ -514,6 +514,28 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
             newline=newline,
         )
 
+    def rename(self, target: Union[str, "Path"]) -> "PanPath":
+        """Rename the file or directory to target.
+
+        Args:
+            target: New path
+
+        Returns:
+            New path instance
+        """
+        target_str = str(target)
+        if CloudPath._is_cross_storage_op(str(self), target_str):
+            if self.is_dir():
+                CloudPath._copytree_cross_storage(self, target_str)
+                self.rmtree()
+            else:
+                CloudPath._copy_cross_storage(self, target_str)
+                self.unlink()
+        else:
+            os.rename(str(self), target_str)
+
+        return PanPath(target_str)
+
     def copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
 
