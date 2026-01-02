@@ -394,7 +394,7 @@ class AzureBlobClient(SyncClient):
 
         # Yield each directory tuple
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(filter(None, files)))
 
     def touch(  # type: ignore[no-untyped-def, override]
         self,

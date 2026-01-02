@@ -568,7 +568,7 @@ class AsyncS3Client(AsyncClient):
 
         # Yield tuples
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(filter(None, files)))
 
     async def touch(self, path: str, exist_ok: bool = True, mode: Optional[int] = None) -> None:
         """Create empty file.

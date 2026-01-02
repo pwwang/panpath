@@ -526,7 +526,7 @@ class AsyncAzureBlobClient(AsyncClient):
 
         # Yield each directory tuple
         for d, (subdirs, files) in sorted(dirs.items()):
-            yield (d, sorted(subdirs), sorted(files))
+            yield (d, sorted(subdirs), sorted(filter(None, files)))
 
     async def touch(  # type: ignore[no-untyped-def, override]
         self,

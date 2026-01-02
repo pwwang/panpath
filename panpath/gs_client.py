@@ -413,7 +413,7 @@ class GSClient(SyncClient):
                 dirs[parent_dir][1].add(parts[-1])
 
         for d, (subdirs, files) in dirs.items():
-            yield d, sorted(subdirs), sorted(files)
+            yield d, sorted(subdirs), sorted(filter(None, files))
 
     def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file.
