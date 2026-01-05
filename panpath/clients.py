@@ -192,7 +192,7 @@ class SyncClient(Client, ABC):
             raise ValueError(f"Invalid metadata format for: {path}")
         target: Any = meta_dict.get(self.__class__.symlink_target_metaname, None)
         if not target or not isinstance(target, str):
-            raise ValueError(f"Not a symlink: {path}")
+            raise ValueError(f"Not a symlink: {path!r}")
 
         if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
             return str(target)

@@ -150,6 +150,13 @@ def test_s3client_symlink(testdir):
     with pytest.raises(ValueError):
         client.readlink(resolved_path)
 
+    # relative symlink
+    relative_target = "target_blob.txt"
+    client.symlink_to(symlink_path, relative_target)
+    resolved_path = client.readlink(symlink_path)
+    assert resolved_path == f"{testdir}/target_blob.txt"
+    assert client.read_bytes(resolved_path) == data
+
 
 def test_s3client_glob(testdir):
     """Test globbing objects using S3Client."""

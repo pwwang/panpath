@@ -175,6 +175,14 @@ async def test_asyncs3client_symlink(testdir):
     with pytest.raises(ValueError):
         await client.readlink(resolved_path)
 
+    # relative symlink test
+    relative_target = "target_blob.txt"
+    await client.symlink_to(symlink_path, relative_target)
+    resolved_path = await client.readlink(symlink_path)
+    assert resolved_path == f"{testdir}/target_blob.txt"
+    content = await client.read_bytes(resolved_path)
+    assert content == data
+
 
 async def test_asyncs3client_glob(testdir):
     """Test globbing objects using AsyncS3Client."""

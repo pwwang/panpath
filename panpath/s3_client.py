@@ -315,8 +315,14 @@ class S3Client(SyncClient):
             self.__class__.symlink_target_metaname
         )
         if not target:
-            raise ValueError(f"Not a symlink: {path}")
-        return target  # type: ignore[no-any-return]
+            raise ValueError(f"Not a symlink: {path!r}")
+
+        if any(target.startswith(f"{p}://") for p in self.prefix):
+            return target  # type: ignore[no-any-return]
+
+        # relative path - construct full path
+        path = path.rstrip("/").rsplit("/", 1)[0]
+        return f"{path}/{target}"
 
     def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata.
