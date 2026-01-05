@@ -302,9 +302,9 @@ class GSClient(SyncClient):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get(self.__class__.symlink_target_metaname)
+        target = metadata.get(self.__class__.symlink_target_metaname, None)
         if not target:
-            raise ValueError(f"Not a symlink: {path}")
+            raise ValueError(f"Not a symlink: {path!r}")
 
         if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
             return target

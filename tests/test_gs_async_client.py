@@ -172,6 +172,13 @@ async def test_asyncgsclient_symlink(testdir):
     with pytest.raises(ValueError):
         await client.readlink(resolved_path)
 
+    # relative symlink
+    target_path = "target_blob.txt"
+    await client.symlink_to(symlink_path, target_path)
+    resolved_path = await client.readlink(symlink_path)
+    assert resolved_path == f"{testdir}/target_blob.txt"
+    assert await client.read_bytes(resolved_path) == data
+
 
 async def test_asyncgsclient_glob(testdir):
     """Test globbing blobs using AsyncGSClient."""

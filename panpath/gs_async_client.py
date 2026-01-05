@@ -424,10 +424,17 @@ class AsyncGSClient(AsyncClient):
         metadata = await self.get_metadata(path)
         target = metadata.get("metadata", {}).get(  # type: ignore[union-attr, call-overload]
             self.__class__.symlink_target_metaname,
+            None,
         )
         if not target:
-            raise ValueError(f"Not a symlink: {path}")
-        return target  # type: ignore[no-any-return]
+            raise ValueError(f"Not a symlink: {path!r}")
+
+        if any(target.startswith(f"{prefix}://") for prefix in self.__class__.prefix):
+            return target  # type: ignore[no-any-return]
+
+        # relative path - construct full path
+        path = path.rstrip("/").rsplit("/", 1)[0]
+        return f"{path}/{target}"
 
     async def symlink_to(self, path: str, target: str) -> None:
         """Create symlink by storing target in metadata.
