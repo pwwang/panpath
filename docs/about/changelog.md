@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.9]
+
+- fix: enhance symlink resolution in AsyncGSClient to handle relative paths
+- fix: improve symlink handling in S3 client to support relative paths
+
 ## [0.4.8]
 
 - feat: add copy, copytree, rmdir, and rmtree methods to LocalPath for enhanced file and directory management
