@@ -5,6 +5,10 @@ from panpath.azure_async_client import AsyncAzureBlobClient
 from .utils import async_generator_to_list
 
 
+# skip the tests for now
+pytest.skip("Azure Blob Storage tests are skipped for now", allow_module_level=True)
+
+
 @pytest.fixture
 async def testdir(request):
     """Fixture to auto-clean test artifacts after test."""

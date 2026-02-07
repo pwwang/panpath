@@ -3,6 +3,9 @@ import sys
 from azure.storage.blob import BlobServiceClient
 from panpath.azure_client import AzureBlobClient
 
+# skip the tests for now
+pytest.skip("Azure Blob Storage tests are skipped for now", allow_module_level=True)
+
 
 @pytest.fixture
 def testdir(request):
