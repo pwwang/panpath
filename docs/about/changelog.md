@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.10]
+
+- test: skip Azure Blob Storage tests temporarily as the account is expired
+- refactor: unify client type handling in Azure, GCS, and S3 path implementations to save package loading time
+
 ## [0.4.9]
 
 - fix: enhance symlink resolution in AsyncGSClient to handle relative paths
