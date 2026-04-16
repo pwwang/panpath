@@ -16,24 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.0.0
         with:
           python-version: '3.12'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip poetry
-          python -m poetry config virtualenvs.create false
-          python -m poetry install -v --with docs --all-extras
+          uv sync --locked --group docs --all-extras
 
       - name: Build documentation
-        run: mkdocs build
+        run: uv run mkdocs build
 
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: mkdocs gh-deploy --force
+        run: uv run mkdocs gh-deploy --force
