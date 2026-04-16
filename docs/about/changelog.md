@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.11]
+
+- chore: migrate from poetry to uv
+- style: fix type annotations
+
 ## [0.4.10]
 
 - test: skip Azure Blob Storage tests temporarily as the account is expired

@@ -2209,7 +2209,7 @@ wheels = [
 
 [[package]]
 name = "panpath"
-version = "0.4.10"
+version = "0.4.11a1"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions" },
