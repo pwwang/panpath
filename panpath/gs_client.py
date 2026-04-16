@@ -10,18 +10,19 @@ from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
     from google.cloud import storage  # type: ignore[import-untyped, unused-ignore]
-    from google.api_core.exceptions import NotFound
+    from google.api_core.exceptions import NotFound, Forbidden
 
 try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FutureWarning)
         from google.cloud import storage
-    from google.api_core.exceptions import NotFound
+    from google.api_core.exceptions import NotFound, Forbidden
 
     HAS_GCS = True
 except ImportError:
     HAS_GCS = False
     NotFound = Exception  # type: ignore
+    Forbidden = Exception  # type: ignore
 
 
 class GSClient(SyncClient):
@@ -56,7 +57,10 @@ class GSClient(SyncClient):
                 return False
 
         bucket = self._client.bucket(bucket_name)
-        blob = bucket.get_blob(blob_name)
+        try:
+            blob = bucket.get_blob(blob_name)
+        except Forbidden:
+            return False
         if blob is None:
             blob = bucket.get_blob(f"{blob_name}/")
 
@@ -123,7 +127,7 @@ class GSClient(SyncClient):
         try:
             for _ in blobs:
                 return True
-        except NotFound:
+        except (NotFound, Forbidden):
             return False
         return False
 
@@ -436,16 +440,16 @@ class GSClient(SyncClient):
         blob = self._client.bucket(bucket_name).blob(blob_name)
         blob.upload_from_string("")
 
-    def rename(self, source: str, target: str) -> None:
+    def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
         """
         # Copy to new location
-        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_bucket_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         src_bucket = self._client.bucket(src_bucket_name)
         tgt_bucket = self._client.bucket(tgt_bucket_name)
@@ -507,40 +511,45 @@ class GSClient(SyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        blobs_delete = None
         try:
             bucket = self._client.bucket(bucket_name)
             blobs = list(bucket.list_blobs(prefix=prefix))
 
             # Delete all blobs with this prefix
-            for blob in blobs:
-                blob.delete()
+            def _blobs_delete():
+                for blob in blobs:
+                    blob.delete()
+
+            blobs_delete = _blobs_delete
+            blobs_delete()
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
-                onerror(blob.delete, path, sys.exc_info())
+                onerror(blobs_delete, path, sys.exc_info())
             else:
                 raise
 
-    def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
-        if self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
-        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_bucket_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         src_bucket = self._client.bucket(src_bucket_name)
         src_blob = src_bucket.blob(src_blob_name)
@@ -549,22 +558,22 @@ class GSClient(SyncClient):
         # Use GCS's native copy operation
         src_bucket.copy_blob(src_blob, tgt_bucket, tgt_blob_name)
 
-    def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
-        src_bucket_name, src_prefix = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_prefix = self.__class__._parse_path(target)
+        src_bucket_name, src_prefix = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):

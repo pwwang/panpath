@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 class GSPath(CloudPath):
     """Google Cloud Storage path implementation (sync and async methods)."""
 
-    _client: Optional[Client] = None
-    _default_client: Optional[Client] = None
+    _client: Optional[Client] = None  # type: ignore[assignment]
+    _default_client: Optional[Client] = None  # type: ignore[assignment]
 
     @classmethod
     def _create_default_client(cls) -> "Client":  # type: ignore[override]

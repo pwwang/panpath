@@ -468,16 +468,16 @@ class S3Client(SyncClient):
         bucket, key = self.__class__._parse_path(path)
         self._client.put_object(Bucket=bucket, Key=key, Body=b"")
 
-    def rename(self, source: str, target: str) -> None:
+    def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
         """
         # Copy to new location
-        src_bucket, src_key = self.__class__._parse_path(source)
-        tgt_bucket, tgt_key = self.__class__._parse_path(target)
+        src_bucket, src_key = self.__class__._parse_path(src)
+        tgt_bucket, tgt_key = self.__class__._parse_path(dst)
 
         # Copy object
         self._client.copy_object(
@@ -546,53 +546,53 @@ class S3Client(SyncClient):
             else:
                 raise
 
-    def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
         # Check if source is a directory
-        if self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
-        src_bucket, src_key = self.__class__._parse_path(source)
-        tgt_bucket, tgt_key = self.__class__._parse_path(target)
+        src_bucket, src_key = self.__class__._parse_path(src)
+        tgt_bucket, tgt_key = self.__class__._parse_path(dst)
 
         # Use S3's native copy operation
         self._client.copy_object(
             Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
-    def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
         # Check if source exists
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
         # Check if source is a directory
-        if not self.is_dir(source):
-            raise NotADirectoryError(f"Source is not a directory: {source}")
+        if not self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
 
-        src_bucket, src_prefix = self.__class__._parse_path(source)
-        tgt_bucket, tgt_prefix = self.__class__._parse_path(target)
+        src_bucket, src_prefix = self.__class__._parse_path(src)
+        tgt_bucket, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):

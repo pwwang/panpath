@@ -37,7 +37,7 @@ async def _async_cleanup_all_clients() -> None:
     client_to_clean = list(_active_clients)
 
     for client_ref in client_to_clean:
-        client: AioBaseClient = client_ref()
+        client: AioBaseClient = client_ref()  # type: ignore[assignment]
         if client is None:  # pragma: no cover
             continue
 
@@ -123,7 +123,7 @@ class AsyncS3Client(AsyncClient):
             # No running loop, cleanup will be handled by explicit close
             pass
 
-        return self._client
+        return self._client  # type: ignore[return-value]
 
     def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
         """Called when client is garbage collected."""
@@ -144,13 +144,13 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         if not key:
             try:
-                await client.head_bucket(Bucket=bucket)
+                await client.head_bucket(Bucket=bucket)  # type: ignore[no-any-return]
                 return True
             except ClientError:
                 return False
 
         try:
-            await client.head_object(Bucket=bucket, Key=key)
+            await client.head_object(Bucket=bucket, Key=key)  # type: ignore[no-any-return]
             return True
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
@@ -160,7 +160,10 @@ class AsyncS3Client(AsyncClient):
                 if key.endswith("/"):
                     return False
                 try:
-                    await client.head_object(Bucket=bucket, Key=key + "/")
+                    await client.head_object(  # type: ignore[no-any-return]
+                        Bucket=bucket,
+                        Key=key + "/",
+                    )
                     return True
                 except ClientError:
                     return False
@@ -174,7 +177,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.get_object(Bucket=bucket, Key=key)
+            response = await client.get_object(Bucket=bucket, Key=key)  # type: ignore
             async with response["Body"] as stream:
                 return await stream.read()  # type: ignore[no-any-return]
         except ClientError as e:
@@ -191,7 +194,7 @@ class AsyncS3Client(AsyncClient):
         """Write bytes to S3 object."""
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
-        await client.put_object(Bucket=bucket, Key=key, Body=data)
+        await client.put_object(Bucket=bucket, Key=key, Body=data)  # type: ignore
 
     async def delete(self, path: str) -> None:
         """Delete S3 object."""
@@ -205,7 +208,7 @@ class AsyncS3Client(AsyncClient):
             raise FileNotFoundError(f"S3 object not found: {path}")
 
         try:
-            await client.delete_object(Bucket=bucket, Key=key)
+            await client.delete_object(Bucket=bucket, Key=key)  # type: ignore
         except ClientError:  # pragma: no cover
             raise
 
@@ -218,7 +221,11 @@ class AsyncS3Client(AsyncClient):
         results = []
         client = await self._get_client()
         paginator = client.get_paginator("list_objects_v2")
-        async for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter="/"):
+        async for page in paginator.paginate(  # type: ignore
+            Bucket=bucket,
+            Prefix=prefix,
+            Delimiter="/",
+        ):
             # List "subdirectories"
             for common_prefix in page.get("CommonPrefixes", []):
                 results.append(f"{self.prefix[0]}://{bucket}/{common_prefix['Prefix'].rstrip('/')}")
@@ -237,7 +244,11 @@ class AsyncS3Client(AsyncClient):
 
         prefix = key if key.endswith("/") else key + "/"
         client = await self._get_client()
-        response = await client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
+        response = await client.list_objects_v2(  # type: ignore
+            Bucket=bucket,
+            Prefix=prefix,
+            MaxKeys=1,
+        )
         return "Contents" in response or "CommonPrefixes" in response
 
     async def is_file(self, path: str) -> bool:
@@ -248,7 +259,7 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         try:
-            await client.head_object(Bucket=bucket, Key=key)
+            await client.head_object(Bucket=bucket, Key=key)  # type: ignore
             return True
         except ClientError:
             return False
@@ -258,7 +269,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.head_object(Bucket=bucket, Key=key)
+            response = await client.head_object(Bucket=bucket, Key=key)  # type: ignore
         except ClientError as e:  # pragma: no cover
             if e.response["Error"]["Code"] == "404":
                 raise FileNotFoundError(f"S3 object not found: {path}")
@@ -350,7 +361,7 @@ class AsyncS3Client(AsyncClient):
         # Check if it already exists
         client = await self._get_client()
         try:
-            await client.head_object(Bucket=bucket, Key=key)
+            await client.head_object(Bucket=bucket, Key=key)  # type: ignore
             if not exist_ok:
                 raise FileExistsError(f"Directory already exists: {path}")
             return
@@ -361,7 +372,7 @@ class AsyncS3Client(AsyncClient):
                 raise
 
         # Create empty directory marker
-        await client.put_object(Bucket=bucket, Key=key, Body=b"")
+        await client.put_object(Bucket=bucket, Key=key, Body=b"")  # type: ignore
 
     async def get_metadata(self, path: str) -> dict[str, Any]:
         """Get object metadata.
@@ -375,7 +386,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.head_object(Bucket=bucket, Key=key)
+            response = await client.head_object(Bucket=bucket, Key=key)  # type: ignore
             return response  # type: ignore[no-any-return]
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
@@ -392,7 +403,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         # S3 requires copying object to itself to update metadata
-        await client.copy_object(
+        await client.copy_object(  # type: ignore
             Bucket=bucket,
             Key=key,
             CopySource={"Bucket": bucket, "Key": key},
@@ -447,7 +458,7 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         # Create empty object with symlink metadata
-        await client.put_object(
+        await client.put_object(  # type: ignore
             Bucket=bucket,
             Key=key,
             Body=b"",
@@ -486,7 +497,7 @@ class AsyncS3Client(AsyncClient):
             else:
                 file_pattern = "*"
 
-            async for page in pages:
+            async for page in pages:  # type: ignore
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
@@ -495,7 +506,7 @@ class AsyncS3Client(AsyncClient):
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
-            response = await client.list_objects_v2(
+            response = await client.list_objects_v2(  # type: ignore
                 Bucket=bucket, Prefix=prefix_with_slash, Delimiter="/"
             )
 
@@ -530,7 +541,7 @@ class AsyncS3Client(AsyncClient):
         # Organize into directory structure
         dirs: dict[str, tuple[set[str], set[str]]] = {}  # dirpath -> (subdirs, files)
 
-        async for page in pages:
+        async for page in pages:  # type: ignore
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 # Get relative path from prefix
@@ -592,31 +603,31 @@ class AsyncS3Client(AsyncClient):
 
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
-        await client.put_object(Bucket=bucket, Key=key, Body=b"")
+        await client.put_object(Bucket=bucket, Key=key, Body=b"")  # type: ignore
 
-    async def rename(self, source: str, target: str) -> None:
+    async def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
         """
         # Check if source exists
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
         # Copy to new location
-        src_bucket, src_key = self.__class__._parse_path(source)
-        tgt_bucket, tgt_key = self.__class__._parse_path(target)
+        src_bucket, src_key = self.__class__._parse_path(src)
+        dst_bucket, dst_key = self.__class__._parse_path(dst)
 
         client = await self._get_client()
         # Copy object
-        await client.copy_object(
-            Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
+        await client.copy_object(  # type: ignore
+            Bucket=dst_bucket, Key=dst_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
         # Delete source
-        await client.delete_object(Bucket=src_bucket, Key=src_key)
+        await client.delete_object(Bucket=src_bucket, Key=src_key)  # type: ignore
 
     async def rmdir(self, path: str) -> None:
         """Remove directory marker.
@@ -639,7 +650,7 @@ class AsyncS3Client(AsyncClient):
         if await self.is_dir(path) and await self.list_dir(path):
             raise OSError(f"Directory not empty: {path}")
 
-        await client.delete_object(Bucket=bucket, Key=key)
+        await client.delete_object(Bucket=bucket, Key=key)  # type: ignore
 
     async def rmtree(
         self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
@@ -657,78 +668,86 @@ class AsyncS3Client(AsyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        delete_objs = None
         try:
             client = await self._get_client()
             # List all objects with this prefix
             objects_to_delete = []
             paginator = client.get_paginator("list_objects_v2")
-            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):  # type: ignore
                 if "Contents" in page:
                     objects_to_delete.extend([{"Key": obj["Key"]} for obj in page["Contents"]])
 
             # Delete in batches (max 1000 per request)
-            if objects_to_delete:
-                for i in range(0, len(objects_to_delete), 1000):
-                    batch = objects_to_delete[i : i + 1000]
-                    await client.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+            async def _delete_objs():
+                if objects_to_delete:
+                    for i in range(0, len(objects_to_delete), 1000):
+                        batch = objects_to_delete[i : i + 1000]
+                        await client.delete_objects(  # type: ignore
+                            Bucket=bucket,
+                            Delete={"Objects": batch},
+                        )
+
+            delete_objs = _delete_objs
+            await delete_objs()
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
 
-                onerror(client.delete_objects, path, sys.exc_info())
+                onerror(delete_objs, path, sys.exc_info())
             else:
                 raise
 
-    async def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
         # Check if source is a directory
-        if await self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if await self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
-        src_bucket, src_key = self.__class__._parse_path(source)
-        tgt_bucket, tgt_key = self.__class__._parse_path(target)
+        src_bucket, src_key = self.__class__._parse_path(src)
+        tgt_bucket, tgt_key = self.__class__._parse_path(dst)
 
         client = await self._get_client()
         # Use S3's native copy operation
-        await client.copy_object(
+        await client.copy_object(  # type: ignore
             Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
-    async def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source S3 path
-            target: Target S3 path
+            src: Source S3 path
+            dst: Target S3 path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
         # Check if source exists
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
         # Check if source is a directory
-        if not await self.is_dir(source):
-            raise NotADirectoryError(f"Source is not a directory: {source}")
+        if not await self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
 
-        src_bucket, src_prefix = self.__class__._parse_path(source)
-        tgt_bucket, tgt_prefix = self.__class__._parse_path(target)
+        src_bucket, src_prefix = self.__class__._parse_path(src)
+        tgt_bucket, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):
@@ -739,7 +758,10 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         # List all objects with source prefix
         paginator = client.get_paginator("list_objects_v2")
-        async for page in paginator.paginate(Bucket=src_bucket, Prefix=src_prefix):
+        async for page in paginator.paginate(  # type: ignore
+            Bucket=src_bucket,
+            Prefix=src_prefix,
+        ):
             if "Contents" not in page:  # pragma: no cover
                 continue
 
@@ -750,7 +772,7 @@ class AsyncS3Client(AsyncClient):
                 tgt_key = tgt_prefix + rel_path
 
                 # Copy object
-                await client.copy_object(
+                await client.copy_object(  # type: ignore
                     Bucket=tgt_bucket,
                     Key=tgt_key,
                     CopySource={"Bucket": src_bucket, "Key": src_key},
@@ -766,7 +788,7 @@ class S3AsyncFileHandle(AsyncFileHandle):
     async def _create_stream(self) -> None:
         """Create the underlying stream for reading or writing."""
         client: AioBaseClient = await self._client_factory()
-        response = await client.get_object(Bucket=self._bucket, Key=self._blob)
+        response = await client.get_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
         return response["Body"]  # type: ignore[no-any-return]
 
     @classmethod
@@ -793,13 +815,13 @@ class S3AsyncFileHandle(AsyncFileHandle):
         if isinstance(data, str):
             data = data.encode(self._encoding)
 
-        client: AioBaseClient = self._client
+        client: AioBaseClient = self._client  # type: ignore
 
         # For 'w' mode on first write, overwrite existing content
         if self._first_write and not self._is_append:
             self._first_write = False
             # Simple overwrite
-            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore
             return
 
         self._first_write = False
@@ -807,7 +829,7 @@ class S3AsyncFileHandle(AsyncFileHandle):
         # For subsequent writes or append mode, use read-modify-write
         # Check if object exists
         try:
-            await client.head_object(Bucket=self._bucket, Key=self._blob)
+            await client.head_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
             object_exists = True
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
@@ -817,12 +839,14 @@ class S3AsyncFileHandle(AsyncFileHandle):
 
         if not object_exists:
             # Simple upload for new objects
-            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
+            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore
         else:
             # For existing objects, download, concatenate, and re-upload
-            response = await client.get_object(Bucket=self._bucket, Key=self._blob)
+            response = await client.get_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
             existing_data = await response["Body"].read()
             combined_data = existing_data + data
-            await client.put_object(
-                Bucket=self._bucket, Key=self._blob, Body=combined_data
+            await client.put_object(  # type: ignore
+                Bucket=self._bucket,
+                Key=self._blob,
+                Body=combined_data,
             )

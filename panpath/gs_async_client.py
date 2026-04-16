@@ -603,19 +603,19 @@ class AsyncGSClient(AsyncClient):
         storage = await self._get_client()
         await storage.upload(bucket_name, blob_name, b"")
 
-    async def rename(self, source: str, target: str) -> None:
+    async def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
         # Copy to new location
-        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_bucket_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         storage = await self._get_client()
 
@@ -677,6 +677,7 @@ class AsyncGSClient(AsyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        delete_fn = None
         try:
             storage = await self._get_client()
 
@@ -685,35 +686,38 @@ class AsyncGSClient(AsyncClient):
             blob_names = [item["name"] for item in blobs.get("items", [])]
 
             # Delete all blobs
-            for blob_name in blob_names:
-                await storage.delete(bucket_name, blob_name)
+            async def _delete_fn():
+                for blob_name in blob_names:
+                    await storage.delete(bucket_name, blob_name)
+            delete_fn = _delete_fn
+            await delete_fn()
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
-                onerror(storage.delete, path, sys.exc_info())
+                onerror(delete_fn, path, sys.exc_info())
             else:
                 raise
 
-    async def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
-        if await self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if await self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
-        src_bucket_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_bucket_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         storage = await self._get_client()
 
@@ -723,25 +727,25 @@ class AsyncGSClient(AsyncClient):
         # Write to target
         await storage.upload(tgt_bucket_name, tgt_blob_name, data)
 
-    async def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source GCS path
-            target: Target GCS path
+            src: Source GCS path
+            dst: Target GCS path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
-        if not await self.is_dir(source):
-            raise NotADirectoryError(f"Source is not a directory: {source}")
+        if not await self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
 
-        src_bucket_name, src_prefix = self.__class__._parse_path(source)
-        tgt_bucket_name, tgt_prefix = self.__class__._parse_path(target)
+        src_bucket_name, src_prefix = self.__class__._parse_path(src)
+        tgt_bucket_name, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):

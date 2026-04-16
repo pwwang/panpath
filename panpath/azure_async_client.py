@@ -88,7 +88,7 @@ class AsyncAzureBlobClient(AsyncClient):
         self._kwargs = kwargs
         self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
 
-    async def _get_client(self) -> BlobServiceClient:
+    async def _get_client(self) -> Optional[BlobServiceClient]:
         """Get or create shared BlobServiceClient."""
         # Check if client needs to be recreated (closed or never created)
         needs_recreation = False
@@ -552,20 +552,20 @@ class AsyncAzureBlobClient(AsyncClient):
 
         await blob_client.upload_blob(b"", overwrite=True)
 
-    async def rename(self, source: str, target: str) -> None:
+    async def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
             source: Source Azure path
             target: Target Azure path
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
         # Copy to new location
         client = await self._get_client()
-        src_container, src_blob = self.__class__._parse_path(source)
-        tgt_container, tgt_blob = self.__class__._parse_path(target)
+        src_container, src_blob = self.__class__._parse_path(src)
+        tgt_container, tgt_blob = self.__class__._parse_path(dst)
 
         src_blob_client = client.get_blob_client(src_container, src_blob)
         tgt_blob_client = client.get_blob_client(tgt_container, tgt_blob)
@@ -610,7 +610,7 @@ class AsyncAzureBlobClient(AsyncClient):
         Args:
             path: Azure path
             ignore_errors: If True, errors are ignored
-            onerror: Callable that accepts (function, path, excinfo)
+            onerror: Async callable that accepts (function, path, excinfo)
         """
         if not await self.exists(path):
             if ignore_errors:
@@ -630,6 +630,7 @@ class AsyncAzureBlobClient(AsyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        delete_blob = None
         try:
             client = await self._get_client()
             container_client = client.get_container_client(container_name)
@@ -637,37 +638,38 @@ class AsyncAzureBlobClient(AsyncClient):
             # List and delete all blobs with this prefix
             async for blob in container_client.list_blobs(name_starts_with=prefix):
                 blob_client = client.get_blob_client(container_name, blob.name)
-                await blob_client.delete_blob()
+                delete_blob = blob_client.delete_blob
+                await delete_blob()
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
 
-                onerror(blob_client.delete_blob, path, sys.exc_info())
+                await onerror(delete_blob, path, sys.exc_info())
             else:
                 raise
 
-    async def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source Azure path
-            target: Target Azure path
+            src: Source Azure path
+            dst: Target Azure path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
-        if await self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if await self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
         client = await self._get_client()
-        src_container_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_container_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_container_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_container_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         src_blob_client = client.get_blob_client(src_container_name, src_blob_name)
         tgt_blob_client = client.get_blob_client(tgt_container_name, tgt_blob_name)
@@ -676,25 +678,25 @@ class AsyncAzureBlobClient(AsyncClient):
         source_url = src_blob_client.url
         await tgt_blob_client.start_copy_from_url(source_url)
 
-    async def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    async def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source Azure path
-            target: Target Azure path
+            src: Source Azure path
+            dst: Target Azure path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not await self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not await self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and await self.is_symlink(source):
-            source = await self.readlink(source)
+        if follow_symlinks and await self.is_symlink(src):
+            src = await self.readlink(src)
 
-        if not await self.is_dir(source):
-            raise NotADirectoryError(f"Source is not a directory: {source}")
+        if not await self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
 
-        src_container_name, src_prefix = self.__class__._parse_path(source)
-        tgt_container_name, tgt_prefix = self.__class__._parse_path(target)
+        src_container_name, src_prefix = self.__class__._parse_path(src)
+        tgt_container_name, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):

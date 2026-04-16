@@ -1,4 +1,5 @@
 """Local filesystem path implementation."""
+# pyright: reportPossiblyUnboundVariable=false
 
 import os
 import shutil
@@ -512,9 +513,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return aiofiles.open(
+        return aiofiles.open(  # type: ignore
             str(self),
-            mode=mode,
+            mode=mode,  # type: ignore
             buffering=buffering,
             encoding=encoding,
             errors=errors,
@@ -609,7 +610,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         self,
         *args,
         **kwargs,
-    ) -> Iterator[Tuple["LocalPath", List[str], List[str]]]:
+    ) -> Iterator[Tuple["PanPath", List[str], List[str]]]:
         """Walk the directory tree.
 
         Returns:

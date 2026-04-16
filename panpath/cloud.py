@@ -1,4 +1,5 @@
 """Base classes for cloud path implementations."""
+from __future__ import annotations
 
 import sys
 
@@ -150,8 +151,14 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         return ""
 
     # Cloud storage operations delegated to client
-    def exists(self) -> bool:
-        """Check if path exists."""
+    def exists(self, *, follow_symlinks: bool = True) -> bool:
+        """Check if path exists.
+
+        Args:
+            follow_symlinks: If False, report existence of the symlink itself.
+        """
+        if not follow_symlinks and self.is_symlink():
+            return True
         return self.client.exists(str(self))
 
     def read_bytes(self) -> bytes:
@@ -191,7 +198,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Check if path is a file."""
         return self.client.is_file(str(self))
 
-    def stat(self, follow_symlinks: bool = True) -> Any:
+    def stat(self, *, follow_symlinks: bool = True) -> Any:
         """Get file stats."""
         if follow_symlinks and self.is_symlink():
             target = self.readlink()
@@ -246,7 +253,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """Return the path as a URI (same as string representation)."""
         return str(self)
 
-    def match(self, pattern: str) -> bool:
+    def match(
+        self,
+        path_pattern: str,
+        *,
+        case_sensitive: Optional[bool] = None,
+    ) -> bool:
         """Match path against glob pattern.
 
         Override to work correctly with cloud URIs by matching against
@@ -260,13 +272,21 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         # If no key parts, can only match empty patterns
         if not our_parts:  # pragma: no cover
-            return pattern in ("", "*", "**")
+            return path_pattern in ("", "*", "**")
 
         # Create a PurePosixPath from the key parts to do matching
         key_path = PurePosixPath(*our_parts)
 
+        # Python 3.12+ supports case_sensitive keyword argument
+        if sys.version_info >= (3, 12):
+            return key_path.match(path_pattern, case_sensitive=case_sensitive)
+
+        # Python < 3.12 fallback (only case-sensitive matching is natively supported)
+        if case_sensitive is False:
+            return PurePosixPath(str(key_path).lower()).match(path_pattern.lower())
+
         # Use PurePosixPath's match which handles ** correctly
-        return key_path.match(pattern)
+        return key_path.match(path_pattern)
 
     def glob(self, pattern: str) -> Iterator["CloudPath"]:  # type: ignore[override]
         """Glob for files matching pattern.
@@ -385,10 +405,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = self.client.readlink(str(self))
 
-        return PanPath(  # type: ignore
+        return PanPath(
             target,
-            client=self._client,
-            async_client=self._async_client,
+            client=self._client,  # type: ignore
+            async_client=self._async_client,  # type: ignore
         )
 
     def symlink_to(self, target: Union[str, "CloudPath"]) -> None:  # type: ignore[override]
@@ -472,8 +492,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     def _copy_cross_storage(
-        src: str,
-        dst: str,
+        src: "str | CloudPath | Path",
+        dst: "str | CloudPath | Path",
         follow_symlinks: bool = True,
         chunk_size: int = 1024 * 1024,
     ) -> None:  # pragma: no cover
@@ -501,8 +521,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     def _copytree_cross_storage(
-        src: str,
-        dst: str,
+        src: "str | CloudPath | Path",
+        dst: "str | CloudPath | Path",
         follow_symlinks: bool = True,
         chunk_size: int = 1024 * 1024,
     ) -> None:  # pragma: no cover
@@ -769,10 +789,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = await self.async_client.readlink(str(self))
 
-        return PanPath(  # type: ignore
+        return PanPath(
             target,
-            client=self._client,
-            async_client=self._async_client,
+            client=self._client,  # type: ignore
+            async_client=self._async_client,  # type: ignore
         )
 
     async def a_symlink_to(  # type: ignore[override]
@@ -798,7 +818,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
         Args:
             ignore_errors: If True, errors are ignored
-            onerror: Callable that accepts (function, path, excinfo)
+            onerror: Async callable that accepts (function, path, excinfo)
         """
         await self.async_client.rmtree(str(self), ignore_errors=ignore_errors, onerror=onerror)
 
@@ -853,8 +873,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     async def _a_copy_cross_storage(
-        src: str,
-        dst: str,
+        src: "str | CloudPath | Path",
+        dst: "str | CloudPath | Path",
         follow_symlinks: bool = True,
         chunk_size: int = 1024 * 1024,
     ) -> None:
@@ -883,8 +903,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
 
     @staticmethod
     async def _a_copytree_cross_storage(
-        src: str,
-        dst: str,
+        src: "str | CloudPath | Path",
+        dst: "str | CloudPath | Path",
         follow_symlinks: bool = True,
         chunk_size: int = 1024 * 1024,
     ) -> None:

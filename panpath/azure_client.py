@@ -419,19 +419,19 @@ class AzureBlobClient(SyncClient):
         blob_client = self._client.get_blob_client(container_name, blob_name)
         blob_client.upload_blob(b"", overwrite=True)
 
-    def rename(self, source: str, target: str) -> None:
+    def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
 
         Args:
-            source: Source Azure path
-            target: Target Azure path
+            src: Source Azure path
+            dst: Target Azure path
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
         # Copy to new location
-        src_container, src_blob = self.__class__._parse_path(source)
-        tgt_container, tgt_blob = self.__class__._parse_path(target)
+        src_container, src_blob = self.__class__._parse_path(src)
+        tgt_container, tgt_blob = self.__class__._parse_path(dst)
 
         src_blob_client = self._client.get_blob_client(src_container, src_blob)
         tgt_blob_client = self._client.get_blob_client(tgt_container, tgt_blob)
@@ -491,42 +491,46 @@ class AzureBlobClient(SyncClient):
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
+        blobs_delete = None
         try:
             container_client = self._client.get_container_client(container_name)
 
             # List and delete all blobs with this prefix
-            for blob in container_client.list_blobs(name_starts_with=prefix):
-                blob_client = self._client.get_blob_client(container_name, blob.name)
-                blob_client.delete_blob()
+            def _blobs_delete():
+                for blob in container_client.list_blobs(name_starts_with=prefix):
+                    blob_client = self._client.get_blob_client(container_name, blob.name)
+                    blob_client.delete_blob()
+            blobs_delete = _blobs_delete
+            blobs_delete()
         except Exception:  # pragma: no cover
             if ignore_errors:
                 return
             if onerror is not None:
                 import sys
 
-                onerror(blob_client.delete_blob, path, sys.exc_info())
+                onerror(blobs_delete, path, sys.exc_info())
             else:
                 raise
 
-    def copy(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copy(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy file to target.
 
         Args:
-            source: Source Azure path
-            target: Target Azure path
+            src: Source Azure path
+            dst: Target Azure path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
-        if self.is_dir(source):
-            raise IsADirectoryError(f"Source is a directory: {source}")
+        if self.is_dir(src):
+            raise IsADirectoryError(f"Source is a directory: {src}")
 
-        src_container_name, src_blob_name = self.__class__._parse_path(source)
-        tgt_container_name, tgt_blob_name = self.__class__._parse_path(target)
+        src_container_name, src_blob_name = self.__class__._parse_path(src)
+        tgt_container_name, tgt_blob_name = self.__class__._parse_path(dst)
 
         src_blob_client = self._client.get_blob_client(src_container_name, src_blob_name)
         tgt_blob_client = self._client.get_blob_client(tgt_container_name, tgt_blob_name)
@@ -535,25 +539,25 @@ class AzureBlobClient(SyncClient):
         source_url = src_blob_client.url
         tgt_blob_client.start_copy_from_url(source_url)
 
-    def copytree(self, source: str, target: str, follow_symlinks: bool = True) -> None:
+    def copytree(self, src: str, dst: str, follow_symlinks: bool = True) -> None:
         """Copy directory tree to target recursively.
 
         Args:
-            source: Source Azure path
-            target: Target Azure path
+            src: Source Azure path
+            dst: Target Azure path
             follow_symlinks: If False, symlinks are copied as symlinks (not dereferenced)
         """
-        if not self.exists(source):
-            raise FileNotFoundError(f"Source not found: {source}")
+        if not self.exists(src):
+            raise FileNotFoundError(f"Source not found: {src}")
 
-        if follow_symlinks and self.is_symlink(source):
-            source = self.readlink(source)
+        if follow_symlinks and self.is_symlink(src):
+            src = self.readlink(src)
 
-        if not self.is_dir(source):
-            raise NotADirectoryError(f"Source is not a directory: {source}")
+        if not self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
 
-        src_container_name, src_prefix = self.__class__._parse_path(source)
-        tgt_container_name, tgt_prefix = self.__class__._parse_path(target)
+        src_container_name, src_prefix = self.__class__._parse_path(src)
+        tgt_container_name, tgt_prefix = self.__class__._parse_path(dst)
 
         # Ensure prefixes end with / for directory operations
         if src_prefix and not src_prefix.endswith("/"):

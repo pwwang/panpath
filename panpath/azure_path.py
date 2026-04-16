@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 class AzurePath(CloudPath):
     """Azure Blob Storage path implementation (sync and async methods)."""
 
-    _client: Optional[Client] = None
-    _default_client: Optional[Client] = None
+    _client: Optional[Client] = None  # type: ignore[assignment]
+    _default_client: Optional[Client] = None  # type: ignore[assignment]
 
     @classmethod
     def _create_default_client(cls) -> "Client":  # type: ignore[override]

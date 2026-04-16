@@ -166,11 +166,11 @@ class PanPath(PathlibPath):
             Number of bytes written. For some cloud paths, may return None.
         """
 
-    async def a_write_text(  # type: ignore[empty-body]
+    async def a_write_text(
         self,
         data: str,
         encoding: str = "utf-8",
-    ) -> int:
+    ) -> int:  # type: ignore[empty-body]
         """Asynchronously write text to the file.
 
         Args:
@@ -209,10 +209,10 @@ class PanPath(PathlibPath):
             True if the path is a file, False otherwise.
         """
 
-    async def a_stat(  # type: ignore[empty-body]
+    async def a_stat(
         self,
         follow_symlinks: bool = True,
-    ) -> os.stat_result:
+    ) -> os.stat_result:  # type: ignore[empty-body]
         """Asynchronously get the file or directory's status information.
 
         Returns:
@@ -233,10 +233,10 @@ class PanPath(PathlibPath):
             exist_ok: If True, does not raise an error if the directory already exists.
         """
 
-    async def a_glob(  # type: ignore[empty-body]
+    async def a_glob(
         self,
         pattern: str,
-    ) -> AsyncGenerator["PanPath", None]:
+    ) -> AsyncGenerator["PanPath", None]:  # type: ignore[empty-body]
         """Asynchronously yield paths matching a glob pattern.
 
         Args:
@@ -246,10 +246,10 @@ class PanPath(PathlibPath):
             List of PanPath instances matching the pattern.
         """
 
-    async def a_rglob(  # type: ignore[empty-body]
+    async def a_rglob(
         self,
         pattern: str,
-    ) -> AsyncGenerator["PanPath", None]:
+    ) -> AsyncGenerator["PanPath", None]:  # type: ignore[empty-body]
         """Asynchronously yield paths matching a recursive glob pattern.
 
         Args:
@@ -259,9 +259,9 @@ class PanPath(PathlibPath):
             List of PanPath instances matching the pattern.
         """
 
-    async def a_walk(  # type: ignore[empty-body]
+    async def a_walk(
         self,
-    ) -> AsyncGenerator[tuple["PanPath", List[str], List[str]], None]:
+    ) -> AsyncGenerator[tuple["PanPath", List[str], List[str]], None]:  # type: ignore[empty-body]
         """Asynchronously walk the directory tree.
 
         Yields:
@@ -280,10 +280,10 @@ class PanPath(PathlibPath):
             exist_ok: If False, raises an error if the file already exists.
         """
 
-    async def a_rename(  # type: ignore[empty-body]
+    async def a_rename(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":
+    ) -> "PanPath":  # type: ignore[empty-body]
         """Asynchronously rename this path to the target path.
 
         Args:
@@ -293,10 +293,10 @@ class PanPath(PathlibPath):
             The renamed PanPath instance.
         """
 
-    async def a_replace(  # type: ignore[empty-body]
+    async def a_replace(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":
+    ) -> "PanPath":  # type: ignore[empty-body]
         """Asynchronously replace this path with the target path.
 
         Args:
@@ -351,13 +351,13 @@ class PanPath(PathlibPath):
 
         Args:
             ignore_errors: If True, ignores errors during removal.
-            onerror: Optional function to call on errors.
+            onerror: Optional async function to call on errors.
         """
 
-    async def a_copy(  # type: ignore[empty-body]
+    async def a_copy(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":
+    ) -> "PanPath":  # type: ignore[empty-body]
         """Asynchronously copy this path to the target path.
 
         Args:
@@ -367,11 +367,11 @@ class PanPath(PathlibPath):
             The copied PanPath instance.
         """
 
-    async def a_copytree(  # type: ignore[empty-body]
+    async def a_copytree(
         self,
         target: Union[str, "PathlibPath"],
         follow_symlinks: bool = True,
-    ) -> "PanPath":
+    ) -> "PanPath":  # type: ignore[empty-body]
         """Asynchronously copy the directory and all its contents recursively to the target path.
 
         Args:
@@ -382,12 +382,12 @@ class PanPath(PathlibPath):
             The copied PanPath instance.
         """
 
-    def a_open(  # type: ignore[empty-body]
+    def a_open(
         self,
         mode: str = "r",
         encoding: str = "utf-8",
         **kwargs: Any,
-    ) -> "AsyncFileHandle":
+    ) -> "AsyncFileHandle":  # type: ignore[empty-body]
         """Asynchronously open the file and return an async file handle.
 
         Args:
@@ -400,7 +400,7 @@ class PanPath(PathlibPath):
         """
 
     # backports
-    def walk(self) -> Any:
+    def walk(self) -> Any:  # type: ignore[empty-body]
         """Walk the directory tree.
 
         Yields:
