@@ -583,18 +583,14 @@ class AsyncGSClient(AsyncClient):
     async def touch(  # type: ignore[no-untyped-def, override]
         self,
         path: str,
-        mode=None,
         exist_ok: bool = True,
     ) -> None:
         """Create empty file.
 
         Args:
             path: GCS path
-            mode: Mode setting (not supported for GCS, will raise ValueError if provided)
             exist_ok: If False, raise error if file exists
         """
-        if mode is not None:
-            raise ValueError("Mode setting is not supported for Google Cloud Storage.")
 
         if not exist_ok and await self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
@@ -785,7 +781,10 @@ class GSAsyncFileHandle(AsyncFileHandle):
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
-        return True
+        status = getattr(exception, "status", None)
+        if status is not None:
+            return status == 404
+        return False
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Upload data to GCS blob using append semantics.

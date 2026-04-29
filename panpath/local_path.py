@@ -618,6 +618,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         """
         if sys.version_info >= (3, 12):
             yield from Path.walk(self, *args, **kwargs)  # type: ignore[no-untyped-call]
+            return
 
         if args or kwargs:  # pragma: no cover
             raise NotImplementedError(

@@ -35,7 +35,7 @@ try:
     register_path_class("s3", S3Path)
 except ImportError:
     # S3 dependencies not installed
-    raise
+    pass
 
 # Register Google Cloud Storage
 try:

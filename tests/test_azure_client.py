@@ -243,8 +243,6 @@ def test_azureblobclient_touch(testdir):
     with pytest.raises(FileExistsError):
         client.touch(path, exist_ok=False)
 
-    with pytest.raises(ValueError):
-        client.touch(path, mode=0o644)
 
 
 def test_azureblobclient_rename(testdir):

@@ -264,8 +264,6 @@ async def test_asyncazureblobclient_touch(testdir):
     with pytest.raises(FileExistsError):
         await client.touch(path, exist_ok=False)
 
-    with pytest.raises(ValueError):
-        await client.touch(path, mode=0o644)
 
 
 async def test_asyncazureblobclient_rename(testdir):

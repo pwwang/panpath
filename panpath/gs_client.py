@@ -572,6 +572,10 @@ class GSClient(SyncClient):
         if follow_symlinks and self.is_symlink(src):
             src = self.readlink(src)
 
+        # Check if source is a directory
+        if not self.is_dir(src):
+            raise NotADirectoryError(f"Source is not a directory: {src}")
+
         src_bucket_name, src_prefix = self.__class__._parse_path(src)
         tgt_bucket_name, tgt_prefix = self.__class__._parse_path(dst)
 
@@ -603,8 +607,6 @@ class GSSyncFileHandle(SyncFileHandle):
     def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self._blob: storage.Blob = self._client.bucket(self._bucket).blob(self._blob)
-        if self._is_read and not self._blob.exists():
-            raise FileNotFoundError(f"GCS blob not found: {self._bucket}/{self._blob.name}")
 
     @classmethod
     def _expception_as_filenotfound(cls, exception: Exception) -> bool:  # pragma: no cover

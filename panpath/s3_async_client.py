@@ -587,16 +587,13 @@ class AsyncS3Client(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(filter(None, files)))
 
-    async def touch(self, path: str, exist_ok: bool = True, mode: Optional[int] = None) -> None:
+    async def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file.
 
         Args:
             path: S3 path
             exist_ok: If False, raise error if file exists
-            mode: Ignored for S3 (for compatibility)
         """
-        if mode is not None:
-            raise ValueError("Mode parameter is not supported for S3")
 
         if not exist_ok and await self.exists(path):
             raise FileExistsError(f"File already exists: {path}")

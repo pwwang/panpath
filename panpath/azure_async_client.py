@@ -531,7 +531,6 @@ class AsyncAzureBlobClient(AsyncClient):
     async def touch(  # type: ignore[no-untyped-def, override]
         self,
         path: str,
-        mode=None,
         exist_ok: bool = True,
     ) -> None:
         """Create empty file.
@@ -540,8 +539,6 @@ class AsyncAzureBlobClient(AsyncClient):
             path: Azure path
             exist_ok: If False, raise error if file exists
         """
-        if mode is not None:
-            raise ValueError("Mode setting is not supported for Azure Blob Storage.")
 
         if not exist_ok and await self.exists(path):
             raise FileExistsError(f"File already exists: {path}")
@@ -588,7 +585,8 @@ class AsyncAzureBlobClient(AsyncClient):
         if blob_name and not blob_name.endswith("/"):
             blob_name += "/"
 
-        blob_client = self._client.get_blob_client(  # type: ignore[union-attr]
+        client = await self._get_client()
+        blob_client = client.get_blob_client(
             container_name,
             blob_name,
         )

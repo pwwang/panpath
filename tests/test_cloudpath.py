@@ -307,7 +307,7 @@ class MockAsyncClient(AsyncClient):
         for path in self._sync_client.walk(path):
             yield path
 
-    async def touch(self, path: str, exist_ok: bool = True, mode: Optional[int] = None) -> None:
+    async def touch(self, path: str, exist_ok: bool = True) -> None:
         """Create empty file."""
         self._sync_client.touch(path, exist_ok)
 
