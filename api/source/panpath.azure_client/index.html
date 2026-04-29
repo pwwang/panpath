@@ -2457,18 +2457,14 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">touch</span><span class="p">(</span>  <span class="c1"># type: ignore[no-untyped-def, override]</span><span id="panpath.azure_client.AzureBlobClient.touch"></span><a class="mkapi-docs-link" title="panpath.azure_client.AzureBlobClient.touch" href="../../panpath.azure_client/#panpath.azure_client.AzureBlobClient.touch">DOCS</a>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create empty file.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            path: Azure path</span>
-<span class="sd">            mode: File mode (not supported for Azure)</span>
 <span class="sd">            exist_ok: If False, raise error if file exists</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mode setting is not supported for Azure Blob Storage.&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">exist_ok</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File already exists: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
