@@ -633,6 +633,8 @@ class GSSyncFileHandle(SyncFileHandle):
 
     def _create_stream(self) -> None:
         """Create streaming reader/writer."""
+        if not self._blob.exists():
+            raise NotFound(f"Blob {self._blob.name} not found")
         return self._blob.open("rb")  # type: ignore[no-any-return]
 
     def _upload(self, data: Union[bytes, str]) -> None:
