@@ -1,6 +1,7 @@
 """Tests for Google Cloud Storage path implementations using mocks."""
 
 import pytest
+from pathlib import Path
 
 
 def test_create_gs_path():
@@ -85,3 +86,20 @@ def test_gs_missing_dependency():
 
         assert "google-cloud-storage" in str(exc_info.value)
         assert "panpath[gs]" in str(exc_info.value)
+
+
+def test_relative_to():
+    from panpath import PanPath
+    p1 = PanPath("gs://bucket/dir1/dir2/file.txt")
+    p2 = Path("/local/path")
+
+    with pytest.raises(TypeError):
+        p1.relative_to(p2)
+
+    p3 = PanPath("gs://bucket/dir3")
+    with pytest.raises(ValueError):
+        p1.relative_to(p3)
+
+    p4 = PanPath("gs://bucket/dir1")
+    rel_path = p1.relative_to(p4)
+    assert str(rel_path) == "dir2/file.txt"

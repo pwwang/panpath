@@ -4,7 +4,7 @@ from __future__ import annotations
 import sys
 
 from abc import ABC, abstractmethod
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -423,6 +423,27 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             # Resolve relative to symlink's parent directory
             target_str = str(self.parent / target_str)
         self.client.symlink_to(str(self), target_str)
+
+    def relative_to(self, other: Union[str, "CloudPath"]) -> "Path":  # type: ignore[override]
+        """Return relative path to other.
+
+        Args:
+            other: Path to which this path should be relative
+
+        Returns:
+            Relative path as LocalPath
+        """
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"Cannot compute relative path to {other} of different type")
+
+        self_path = Path(*self.parts[1:])
+        other_path = Path(*other.parts[1:])
+        try:
+            rel_path = self_path.relative_to(other_path)
+        except ValueError:
+            raise ValueError(f"{self} is not relative to {other}") from None
+
+        return rel_path
 
     def rmtree(self, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
         """Remove directory and all its contents recursively.
