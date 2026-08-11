@@ -1,6 +1,9 @@
-# PanPath
+<div align="center">
+    <img src="./logo.png" width="240px" alt="panpath logo" />
 
-Universal sync/async local/cloud path library with pathlib-compatible interface for Python.
+   <p style="font-weight:bold;">Universal sync/async local/cloud path library with pathlib-compatible interface for Python.</p>
+
+</div>
 
 ## Features
 
