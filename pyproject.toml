@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "panpath"
-version = "0.4.11"
+dynamic = ["version"]
 description = "Universal sync/async local/cloud path library with pathlib-compatible interface"
 authors = [{name = "panpath contributors"}]
 readme = "README.md"
@@ -26,6 +26,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Filesystems",
 ]
+
+[tool.hatch.version]
+path = "panpath/__init__.py"
 
 [project.urls]
 Homepage = "https://github.com/pwwang/panpath"

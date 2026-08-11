@@ -2909,7 +2909,6 @@ wheels = [
 
 [[package]]
 name = "panpath"
-version = "0.4.11"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions" },
@@ -3014,7 +3013,7 @@ requires-dist = [
     { name = "google-cloud-storage", marker = "extra == 'gs'", specifier = ">=2.0.0" },
     { name = "typing-extensions", specifier = ">=4.0.0" },
 ]
-provides-extras = ["s3", "gs", "azure", "async-s3", "async-gs", "async-azure", "all-sync", "all-async", "all"]
+provides-extras = ["all", "all-async", "all-sync", "async-azure", "async-gs", "async-s3", "azure", "gs", "s3"]
 
 [package.metadata.requires-dev]
 dev = [
