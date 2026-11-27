@@ -30,7 +30,7 @@ load_dotenv()
 LIVE = os.environ.get("PANPATH_LIVE") == "1"
 
 S3_BUCKET = "panpath-test2"
-GCS_BUCKET = "handy-buffer-287000.appspot.com"
+GCS_BUCKET = "panpath-test"
 AZURE_CONTAINER = "panpath-test"
 SEED_BLOB = "readonly.txt"
 SEED_CONTENT = b"123"
