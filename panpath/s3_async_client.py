@@ -70,6 +70,8 @@ class AsyncS3Client(AsyncClient):
     """Asynchronous S3 client implementation using aioboto3."""
 
     prefix = ("s3",)
+    # See S3Client: underscore metadata keys are dropped over HTTP.
+    symlink_target_metaname = "symlink-target"
 
     def __init__(self, **kwargs: Any):
         """Initialize async S3 client.

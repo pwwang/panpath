@@ -25,6 +25,9 @@ class S3Client(SyncClient):
     """Synchronous S3 client implementation using boto3."""
 
     prefix = ("s3",)
+    # User metadata travels as HTTP headers, and headers with underscores are
+    # silently dropped by many servers (moto, proxies, nginx). Use a hyphen.
+    symlink_target_metaname = "symlink-target"
 
     def __init__(self, **kwargs: Any):
         """Initialize S3 client.
