@@ -158,6 +158,43 @@ def test_s3client_symlink(testdir):
     assert client.read_bytes(resolved_path) == data
 
 
+def test_s3client_legacy_symlink_metadata(monkeypatch):
+    """Legacy S3 symlinks written with underscore symlink_target still resolve."""
+    assert S3Client.symlink_target_metaname == "symlink-target"
+    client = S3Client()
+
+    # Absolute legacy target
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {"Metadata": {"symlink_target": "s3://bucket/target.txt"}},
+    )
+    assert client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/target.txt"
+
+    # Relative legacy target
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {"Metadata": {"symlink_target": "target.txt"}},
+    )
+    assert client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/dir/target.txt"
+
+    # Current hyphenated key takes precedence when both are present
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {
+            "Metadata": {
+                "symlink-target": "s3://bucket/new.txt",
+                "symlink_target": "s3://bucket/old.txt",
+            }
+        },
+    )
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/new.txt"
+
+
 def test_s3client_glob(testdir):
     """Test globbing objects using S3Client."""
     client = S3Client()

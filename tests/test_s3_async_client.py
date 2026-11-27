@@ -187,6 +187,37 @@ async def test_asyncs3client_symlink(testdir):
     assert content == data
 
 
+async def test_asyncs3client_legacy_symlink_metadata(monkeypatch):
+    """Legacy S3 symlinks written with underscore symlink_target still resolve."""
+    assert AsyncS3Client.symlink_target_metaname == "symlink-target"
+    client = AsyncS3Client()
+
+    async def _meta_abs(path):
+        return {"Metadata": {"symlink_target": "s3://bucket/target.txt"}}
+
+    monkeypatch.setattr(client, "get_metadata", _meta_abs)
+    assert await client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/target.txt"
+
+    async def _meta_rel(path):
+        return {"Metadata": {"symlink_target": "target.txt"}}
+
+    monkeypatch.setattr(client, "get_metadata", _meta_rel)
+    assert await client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/dir/target.txt"
+
+    async def _meta_both(path):
+        return {
+            "Metadata": {
+                "symlink-target": "s3://bucket/new.txt",
+                "symlink_target": "s3://bucket/old.txt",
+            }
+        }
+
+    monkeypatch.setattr(client, "get_metadata", _meta_both)
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/new.txt"
+
+
 async def test_asyncs3client_glob(testdir):
     """Test globbing objects using AsyncS3Client."""
     client = AsyncS3Client()

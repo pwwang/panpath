@@ -29,8 +29,9 @@ class AsyncS3Client(AsyncClient):
     """Asynchronous S3 client implementation using aioboto3."""
 
     prefix = ("s3",)
-    # See S3Client: underscore metadata keys are dropped over HTTP.
+    # See S3Client: write hyphenated key, fall back to legacy underscore key on reads.
     symlink_target_metaname = "symlink-target"
+    _legacy_symlink_target_metaname = "symlink_target"
 
     def __init__(self, **kwargs: Any):
         """Initialize async S3 client.
@@ -345,7 +346,11 @@ class AsyncS3Client(AsyncClient):
         """
         try:
             metadata = await self.get_metadata(path)
-            return self.__class__.symlink_target_metaname in metadata.get("Metadata", {})
+            user_meta: Any = metadata.get("Metadata", {})
+            return (
+                self.__class__.symlink_target_metaname in user_meta
+                or self.__class__._legacy_symlink_target_metaname in user_meta
+            )
         except FileNotFoundError:
             return False
 
@@ -359,7 +364,10 @@ class AsyncS3Client(AsyncClient):
             Symlink target path
         """
         metadata = await self.get_metadata(path)
-        target = metadata.get("Metadata", {}).get(self.__class__.symlink_target_metaname)
+        user_meta: Any = metadata.get("Metadata", {})
+        target = user_meta.get(self.__class__.symlink_target_metaname) or user_meta.get(
+            self.__class__._legacy_symlink_target_metaname
+        )
         if not target:
             raise ValueError(f"Not a symlink: {path!r}")
 
