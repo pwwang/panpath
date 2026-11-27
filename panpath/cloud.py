@@ -233,14 +233,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             **kwargs,
         )  # type: ignore[return-value]
 
-    def __eq__(self, other: Any) -> bool:
-        """Check equality."""
-        return super().__eq__(other)
-
-    def __hash__(self) -> int:
-        """Return hash of path."""
-        return super().__hash__()
-
     def absolute(self) -> "CloudPath":
         """Return absolute path - cloud paths are already absolute."""
         return self
@@ -264,8 +256,6 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Override to work correctly with cloud URIs by matching against
         the key portion of the path (excluding scheme and bucket).
         """
-        from pathlib import PurePosixPath
-
         # For cloud paths, we want to match against the key part only (path after bucket)
         # Get the key portion (all parts after scheme and bucket)
         our_parts = self.parts[2:] if len(self.parts) > 2 else ()
@@ -328,8 +318,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         self.client.touch(str(self), exist_ok=exist_ok)
 
-    def rename(self, target: Union[str, "CloudPath"]) -> "CloudPath":  # type: ignore[override]
-        """Rename/move file to target.
+    def rename(self, target: Union[str, "Path"]) -> "PanPath":  # type: ignore[override]
+        """Rename/move file or directory to target.
 
         Can move between cloud and local paths.
 
@@ -339,22 +329,53 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             New path instance
         """
+        if not self.exists():
+            raise FileNotFoundError(f"Source path does not exist: {self}")
+
         target_str = str(target)
+        target_path: PanPath
+        if isinstance(target, PanPath):
+            target_path = target
+        elif not self._is_cross_storage_op(str(self), target_str):
+            target_path = self._new_cloudpath(target_str)
+        else:  # pragma: no cover
+            target_path = PanPath(target_str)
+
+        source_is_dir = self.is_dir()
+        target_is_dir = target_path.is_dir()
+        target_exists = target_path.exists()
+        if source_is_dir and not target_is_dir and target_exists:
+            raise NotADirectoryError(
+                f"Cannot rename directory {self} to non-directory target {target_path}"
+            )
+        if not source_is_dir and target_is_dir and target_exists:
+            raise IsADirectoryError(
+                f"Cannot rename file {self} to directory target {target_path}"
+            )
+
+        if source_is_dir:
+            if not target_exists:
+                target_path.mkdir(parents=True, exist_ok=True)
+
+            # Support renaming directories by moving contents
+            for item in self.iterdir():
+                relative_path = item.relative_to(self)
+                new_target = target_path / relative_path
+                item.rename(new_target)
+            self.rmdir()
+            return target_path
+
         # Check if cross-storage operation (cloud <-> local or cloud <-> cloud)
         if self._is_cross_storage_op(str(self), target_str):  # pragma: no cover
-            if self.is_dir():
-                self._copytree_cross_storage(str(self), target_str)
-                self.rmtree()
-            else:
-                self._copy_cross_storage(str(self), target_str)
-                self.unlink()
+            self._copy_cross_storage(str(self), target_str)
+            self.unlink()
         else:
             # Same storage, use native rename
             self.client.rename(str(self), target_str)
 
-        return PanPath(target_str)  # type: ignore
+        return target_path
 
-    def replace(self, target: Union[str, "CloudPath"]) -> "CloudPath":  # type: ignore[override]
+    def replace(self, target: Union[str, "Path"]) -> "PanPath":  # type: ignore[override]
         """Replace file at target (overwriting if exists).
 
         Args:
@@ -405,10 +426,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = self.client.readlink(str(self))
 
-        return PanPath(
+        return PanPath(  # type: ignore[return-value]
             target,
-            client=self._client,  # type: ignore
-            async_client=self._async_client,  # type: ignore
+            client=self._client,
+            async_client=self._async_client,
         )
 
     def symlink_to(self, target: Union[str, "CloudPath"]) -> None:  # type: ignore[override]
@@ -710,11 +731,11 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         await self.async_client.touch(str(self), exist_ok=exist_ok)
 
-    async def a_rename(  # type: ignore[override]
+    async def a_rename(
         self,
-        target: Union[str, "CloudPath"],
-    ) -> "CloudPath":
-        """Rename/move file to target.
+        target: Union[str, "Path"],
+    ) -> "PanPath":
+        """Rename/move file or directory to target.
 
         Can move between cloud and local paths.
 
@@ -728,33 +749,40 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             raise FileNotFoundError(f"Source path does not exist: {self}")
 
         target_str = str(target)
-        if not isinstance(target, PanPath):  # pragma: no cover
-            target = PanPath(target_str)  # type: ignore[assignment]
+        target_path: PanPath
+        if isinstance(target, PanPath):
+            target_path = target
+        elif not CloudPath._is_cross_storage_op(str(self), target_str):
+            target_path = self._new_cloudpath(target_str)
+        else:  # pragma: no cover
+            target_path = PanPath(target_str)
 
         source_is_dir = await self.a_is_dir()
-        target_is_dir = await target.a_is_dir()  # type: ignore[union-attr]
-        target_exists = await target.a_exists()  # type: ignore[union-attr]
+        target_is_dir = await target_path.a_is_dir()
+        target_exists = await target_path.a_exists()
         if source_is_dir and not target_is_dir and target_exists:
             raise NotADirectoryError(
-                f"Cannot rename directory {self} to non-directory target {target}"
+                f"Cannot rename directory {self} to non-directory target {target_path}"
             )
         if not source_is_dir and target_is_dir and target_exists:
-            raise IsADirectoryError(f"Cannot rename file {self} to directory target {target}")
+            raise IsADirectoryError(
+                f"Cannot rename file {self} to directory target {target_path}"
+            )
 
         if source_is_dir:
             if not target_exists:
-                await target.a_mkdir(  # type: ignore[union-attr]
+                await target_path.a_mkdir(
                     parents=True,
                     exist_ok=True,
                 )
 
-            # Support renaming directories by copying contents
+            # Support renaming directories by moving contents
             async for item in self.a_iterdir():
                 relative_path = item.relative_to(self)
-                new_target = target / relative_path
+                new_target = target_path / relative_path
                 await item.a_rename(new_target)
             await self.a_rmdir()
-            return target  # type: ignore[return-value]
+            return target_path
 
         # Check if cross-storage operation
         if CloudPath._is_cross_storage_op(str(self), target_str):  # pragma: no cover
@@ -765,12 +793,12 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             # Same storage, use native rename
             await self.async_client.rename(str(self), target_str)
 
-        return PanPath(target_str)  # type: ignore
+        return target_path
 
-    async def a_replace(  # type: ignore[override]
+    async def a_replace(
         self,
-        target: Union[str, "CloudPath"],
-    ) -> "CloudPath":
+        target: Union[str, "Path"],
+    ) -> "PanPath":
         """Replace file at target (overwriting if exists).
 
         Args:
@@ -810,10 +838,10 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         """
         target = await self.async_client.readlink(str(self))
 
-        return PanPath(
+        return PanPath(  # type: ignore[return-value]
             target,
-            client=self._client,  # type: ignore
-            async_client=self._async_client,  # type: ignore
+            client=self._client,
+            async_client=self._async_client,
         )
 
     async def a_symlink_to(  # type: ignore[override]
