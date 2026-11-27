@@ -383,13 +383,6 @@ def pytest_unconfigure(config):
         _emulator_stoppers.pop()()
 
 
-def emulator_error(backend: str):
-    """Return why an emulator is unavailable (None when it started fine)."""
-    if LIVE:
-        return None
-    return _emulator_errors.get(backend)
-
-
 def _module_backend(module_name: str):
     if "s3" in module_name:
         return "s3"

@@ -4,9 +4,8 @@ These tests verify that PanPath implements the core cloudpathlib-compatible inte
 for path manipulation, file operations, and pathlib compatibility.
 """
 
-import sys
 import pytest
-from pathlib import PurePosixPath, Path
+from pathlib import PurePosixPath
 from panpath import PanPath
 
 

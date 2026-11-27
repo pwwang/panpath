@@ -601,6 +601,38 @@ def test_cloudpath_rename():
     assert dst2.exists()
     assert dst2.read_text() == "content to move"
 
+    # test string target preserves client
+    renamed = dst2.rename("mock://bucket/new-name-3.txt")
+    assert not dst2.exists()
+    assert renamed.exists()
+    assert renamed.read_text() == "content to move"
+
+
+def test_cloudpath_rename_dir():
+    """Test sync rename directory operations and error checks."""
+    client = MockSyncClient()
+    src_base = MockCloudPath("mock://bucket/rename-dir-src/", client=client)
+    dst_base = MockCloudPath("mock://bucket/rename-dir-dst/", client=client)
+
+    with pytest.raises(FileNotFoundError):
+        src_base.rename(dst_base)
+
+    src_base.mkdir(exist_ok=True)
+    file1 = src_base / "file1.txt"
+    file1.write_text("content1")
+
+    with pytest.raises(NotADirectoryError):
+        src_base.rename(file1)
+
+    with pytest.raises(IsADirectoryError):
+        file1.rename(src_base)
+
+    src_base.rename(dst_base)
+
+    assert not src_base.exists()
+    assert dst_base.exists()
+    assert (dst_base / "file1.txt").read_text() == "content1"
+
 
 def test_cloudpath_walk():
     """Test walk operations."""
@@ -1012,6 +1044,12 @@ async def test_cloudpath_async_rename():
     assert await src.a_exists()
     assert not await dst.a_exists()
     assert await src.a_read_text() == "async move"
+
+    # string target preserves client
+    renamed = await src.a_rename("mock://bucket/async-str.txt")
+    assert not await src.a_exists()
+    assert await renamed.a_exists()
+    assert await renamed.a_read_text() == "async move"
 
 
 async def test_cloudpath_async_rename_dir():

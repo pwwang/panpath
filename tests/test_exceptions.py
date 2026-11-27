@@ -1,6 +1,5 @@
 """Tests for exception classes and error handling."""
 
-import pytest
 from panpath.exceptions import (
     PanPathError,
     MissingDependencyError,
