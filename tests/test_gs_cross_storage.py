@@ -20,8 +20,8 @@ async def clouddir(request):
     await client.rmtree(outdir, ignore_errors=True)
 
 
-class TestLocalCrossStorage:
-    """Tests for cross-storage operations involving LocalPath."""
+class TestGCSCrossStorage:
+    """Tests for cross-storage operations involving GCS."""
 
     async def test_async_copy_cross_storage(self, tmp_path, clouddir):
         """Test async copy between different storage backends."""
