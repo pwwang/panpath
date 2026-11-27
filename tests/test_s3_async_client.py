@@ -3,8 +3,7 @@ import sys
 from panpath.s3_async_client import AsyncS3Client, ClientError
 from .utils import async_generator_to_list
 
-# Get S3 bucket from environment or use default
-S3_BUCKET = "panpath-test2"
+from .conftest import S3_BUCKET
 
 
 @pytest.fixture
@@ -88,7 +87,9 @@ async def test_asyncs3client_exists():
 async def test_asyncs3client_read_bytes():
     """Test reading bytes from an object using AsyncS3Client."""
     client = AsyncS3Client()
-    with pytest.raises(ClientError):
+    # Live AWS returns AccessDenied (ClientError) for a missing bucket;
+    # moto returns NoSuchBucket, which panpath maps to FileNotFoundError.
+    with pytest.raises((ClientError, FileNotFoundError)):
         await client.read_bytes("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         await client.read_bytes(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -100,7 +101,7 @@ async def test_asyncs3client_read_bytes():
 async def test_asyncs3client_read_text():
     """Test reading text from an object using AsyncS3Client."""
     client = AsyncS3Client()
-    with pytest.raises(ClientError):
+    with pytest.raises((ClientError, FileNotFoundError)):
         await client.read_text("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         await client.read_text(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -143,10 +144,12 @@ async def test_asyncs3client_get_set_metadata(testdir):
     assert isinstance(metadata, dict)
     assert "ContentLength" in metadata
 
-    await client.set_metadata(path, {"custom_key": "custom_value"})
+    # Hyphens, not underscores: S3 user metadata travels as HTTP headers and
+    # underscore keys are dropped by many servers.
+    await client.set_metadata(path, {"custom-key": "custom-value"})
     metadata = await client.get_metadata(path)
-    assert "custom_key" in metadata.get("Metadata", {})
-    assert metadata["Metadata"]["custom_key"] == "custom_value"
+    assert "custom-key" in metadata.get("Metadata", {})
+    assert metadata["Metadata"]["custom-key"] == "custom-value"
 
 
 async def test_asyncs3client_symlink(testdir):

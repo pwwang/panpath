@@ -2,9 +2,7 @@ import pytest
 import sys
 from panpath.s3_client import S3Client, ClientError
 
-
-# Get S3 bucket from environment or use default
-S3_BUCKET = "panpath-test2"
+from .conftest import S3_BUCKET
 
 
 @pytest.fixture
@@ -64,7 +62,9 @@ def test_s3client_exists():
 def test_s3client_read_bytes():
     """Test reading bytes from an object using S3Client."""
     client = S3Client()
-    with pytest.raises(ClientError):
+    # Live AWS returns AccessDenied (ClientError) for a missing bucket;
+    # moto returns NoSuchBucket, which panpath maps to FileNotFoundError.
+    with pytest.raises((ClientError, FileNotFoundError)):
         client.read_bytes("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         client.read_bytes(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -76,7 +76,7 @@ def test_s3client_read_bytes():
 def test_s3client_read_text():
     """Test reading text from an object using S3Client."""
     client = S3Client()
-    with pytest.raises(ClientError):
+    with pytest.raises((ClientError, FileNotFoundError)):
         client.read_text("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         client.read_text(f"s3://{S3_BUCKET}/nonexistent-blob.txt")

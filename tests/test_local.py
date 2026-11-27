@@ -6,6 +6,8 @@ import sys
 from panpath import LocalPath, PanPath
 from panpath.gs_async_client import AsyncGSClient
 
+from .conftest import GCS_BUCKET
+
 
 class TestLocalPath:
     """Tests for synchronous LocalPath."""
@@ -400,9 +402,14 @@ class TestLocalPath:
 @pytest.fixture
 async def clouddir(request):
     """Fixture to auto-clean test artifacts after test."""
+    from .conftest import emulator_error
+
+    error = emulator_error("gs")
+    if error:
+        pytest.skip(f"gs emulator unavailable: {error}")
     requestid = hash((request.node.name, sys.executable, sys.version_info)) & 0xFFFFFFFF
     client = AsyncGSClient()
-    outdir = f"gs://handy-buffer-287000.appspot.com/panpath-test-{requestid}"
+    outdir = f"gs://{GCS_BUCKET}/panpath-test-{requestid}"
     await client.mkdir(outdir, exist_ok=True)
     yield PanPath(outdir)
     # Cleanup

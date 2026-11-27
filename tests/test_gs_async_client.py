@@ -3,6 +3,7 @@ import sys
 from gcloud.aio.storage import Storage
 from panpath.exceptions import NoStatError
 from panpath.gs_async_client import AsyncGSClient
+from .conftest import GCS_BUCKET
 from .utils import async_generator_to_list
 
 
@@ -11,7 +12,7 @@ async def testdir(request):
     """Fixture to auto-clean test artifacts after test."""
     requestid = hash((request.node.name, sys.executable, sys.version_info)) & 0xFFFFFFFF
     client = AsyncGSClient()
-    outdir = f"gs://handy-buffer-287000.appspot.com/panpath-test-{requestid}"
+    outdir = f"gs://{GCS_BUCKET}/panpath-test-{requestid}"
     await client.mkdir(outdir, exist_ok=True)
     yield outdir
     # Cleanup
@@ -64,18 +65,18 @@ async def test_asyncgsclient_exists():
     exists = await client.exists("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
     assert exists is False
 
-    exists = await client.exists("gs://handy-buffer-287000.appspot.com/readonly.txt")
+    exists = await client.exists(f"gs://{GCS_BUCKET}/readonly.txt")
     assert exists is True
 
     async with client:  # auto close
-        exists = await client.exists("gs://handy-buffer-287000.appspot.com")
+        exists = await client.exists(f"gs://{GCS_BUCKET}")
         assert exists is True
 
     # new inner storage will be recreated
-    exists = await client.exists("gs://handy-buffer-287000.appspot.com/")
+    exists = await client.exists(f"gs://{GCS_BUCKET}/")
     assert exists is True
 
-    exists = await client.exists("gs://handy-buffer-287000.appspot.com/nonexistent/")
+    exists = await client.exists(f"gs://{GCS_BUCKET}/nonexistent/")
     assert exists is False
 
 
@@ -85,7 +86,7 @@ async def test_asyncgsclient_read_bytes():
     with pytest.raises(FileNotFoundError):
         await client.read_bytes("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
 
-    content = await client.read_bytes("gs://handy-buffer-287000.appspot.com/readonly.txt")
+    content = await client.read_bytes(f"gs://{GCS_BUCKET}/readonly.txt")
     assert content == b"123"
 
 
@@ -96,7 +97,7 @@ async def test_asyncgsclient_read_text():
         await client.read_text("gs://nonexistent-bucket-12345/nonexistent-blob.txt")
 
     content = await client.read_text(
-        "gs://handy-buffer-287000.appspot.com/readonly.txt", encoding="utf-8"
+        f"gs://{GCS_BUCKET}/readonly.txt", encoding="utf-8"
     )
     assert content == "123"
 
@@ -105,7 +106,7 @@ async def test_asyncgsclient_mkdir(request):
     """Test creating a 'directory' in GCS using AsyncGSClient."""
     requestid = hash((request.node.name, sys.executable, sys.version_info)) & 0xFFFFFFFF
     client = AsyncGSClient()
-    path = f"gs://handy-buffer-287000.appspot.com/mkdir-{requestid}/"
+    path = f"gs://{GCS_BUCKET}/mkdir-{requestid}/"
     await client.mkdir(f"{path}/subdir", exist_ok=True, parents=True)
     try:
         assert await client.exists(f"{path}/subdir")
@@ -124,7 +125,7 @@ async def test_asyncgsclient_mkdir(request):
     finally:
         # Clean up by deleting the created blobs
         await client.rmtree(
-            f"gs://handy-buffer-287000.appspot.com/mkdir-{requestid}", ignore_errors=True
+            f"gs://{GCS_BUCKET}/mkdir-{requestid}", ignore_errors=True
         )
 
 
@@ -493,8 +494,8 @@ async def test_asyncgsclient_list_dir(testdir):
 async def test_asyncgsclient_is_dir_file(testdir):
     """Test is_dir method of AsyncGSClient."""
     client = AsyncGSClient()
-    assert await client.is_dir("gs://handy-buffer-287000.appspot.com")  # existing bucket
-    assert not await client.is_file("gs://handy-buffer-287000.appspot.com")
+    assert await client.is_dir(f"gs://{GCS_BUCKET}")  # existing bucket
+    assert not await client.is_file(f"gs://{GCS_BUCKET}")
     assert await client.is_dir(testdir)
     assert not await client.is_file(testdir)
     assert not await client.is_dir(f"{testdir}/nonexistent")
