@@ -1,10 +1,12 @@
 """Regression tests for audit fixes."""
 
+import asyncio
 import io
+import threading
 
 import panpath
 from panpath import LocalPath, PanPath
-from panpath.clients import SyncFileHandle
+from panpath.clients import AsyncClient, SyncFileHandle
 
 
 class _MemHandle(SyncFileHandle):
@@ -112,3 +114,124 @@ async def test_a_copy_honours_follow_symlinks(tmp_path):
     await link.a_copy(followed, follow_symlinks=True)
     assert not followed.is_symlink()
     assert followed.read_text() == "data"
+
+
+class _FakeSDKClient:
+    """In-memory async SDK client recording close() calls and their loop."""
+
+    def __init__(self, fail_close: bool = False):
+        self.stale = False
+        self.fail_close = fail_close
+        self.closed = False
+        self.closed_on_loop = None
+        self.closed_event = threading.Event()
+
+    async def close(self):
+        self.closed_on_loop = asyncio.get_running_loop()
+        self.closed = True
+        self.closed_event.set()
+        if self.fail_close:
+            raise RuntimeError("close failed")
+
+
+_ConcreteAsyncBase = type(
+    "_ConcreteAsyncBase",
+    (AsyncClient,),
+    {name: lambda self, *a, **kw: None for name in AsyncClient.__abstractmethods__},
+)
+
+
+class _LifecycleAsyncClient(_ConcreteAsyncBase):
+    """Concrete AsyncClient using _FakeSDKClient to exercise _get_client()."""
+
+    prefix = ("fake",)
+
+    def __init__(self, fail_close: bool = False):
+        super().__init__()
+        self._fail_close = fail_close
+
+    async def _create_client(self):
+        return _FakeSDKClient(fail_close=self._fail_close)
+
+    def _is_client_closed(self, client):
+        return client.stale or client.closed
+
+
+async def test_async_client_closes_stale_client_on_same_loop():
+    """Replacing a stale client on the same loop awaits close and survives errors."""
+    client = _LifecycleAsyncClient(fail_close=True)
+    try:
+        sdk1 = await client._get_client()
+        sdk1.stale = True
+
+        sdk2 = await client._get_client()
+        assert sdk2 is not sdk1
+        assert sdk1.closed is True
+        assert sdk1.closed_on_loop is asyncio.get_running_loop()
+    finally:
+        client._fail_close = False
+        if client._client is not None:
+            client._client.fail_close = False
+        await client.close()
+
+
+def test_async_client_drops_client_from_closed_and_stopped_loops():
+    """Replacing a client whose old loop is closed or not running drops it cleanly."""
+    # Case 1: old loop is closed
+    client = _LifecycleAsyncClient()
+    loop1 = asyncio.new_event_loop()
+    try:
+        sdk1 = loop1.run_until_complete(client._get_client())
+    finally:
+        loop1.close()
+
+    async def _reacquire(c):
+        try:
+            return await c._get_client()
+        finally:
+            await c.close()
+
+    sdk2 = asyncio.run(_reacquire(client))
+    assert sdk2 is not sdk1
+    assert sdk1.closed is False
+
+    # Case 2: old loop is open but not running (cannot schedule/await without hanging)
+    client2 = _LifecycleAsyncClient()
+    loop2 = asyncio.new_event_loop()
+    try:
+        sdk3 = loop2.run_until_complete(client2._get_client())
+        sdk4 = asyncio.run(_reacquire(client2))
+        assert sdk4 is not sdk3
+        assert sdk3.closed is False
+    finally:
+        loop2.close()
+
+
+async def test_async_client_closes_previous_client_across_live_loops():
+    """Replacing a client from another thread's running loop schedules close on that loop."""
+    loop1 = asyncio.new_event_loop()
+    started = threading.Event()
+
+    def _run_loop():
+        asyncio.set_event_loop(loop1)
+        loop1.call_soon(started.set)
+        loop1.run_forever()
+
+    thread = threading.Thread(target=_run_loop, daemon=True)
+    thread.start()
+    assert started.wait(timeout=5.0)
+
+    client = _LifecycleAsyncClient()
+    try:
+        sdk1 = asyncio.run_coroutine_threadsafe(client._get_client(), loop1).result(timeout=5.0)
+        sdk2 = await client._get_client()
+
+        assert sdk2 is not sdk1
+        assert sdk1.closed_event.wait(timeout=2.0), "old client was not closed on its loop"
+        assert sdk1.closed is True
+        assert sdk1.closed_on_loop is loop1
+    finally:
+        await client.close()
+        loop1.call_soon_threadsafe(loop1.stop)
+        thread.join(timeout=5.0)
+        loop1.close()

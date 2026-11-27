@@ -280,9 +280,22 @@ class AsyncClient(Client, ABC):
             or self._is_client_closed(self._client)
         ):
             # Previous client was closed or belonged to another event loop; recreate.
+            old_client = self._client
+            old_loop = self._client_loop
             self._unregister_cleanup()
             self._client = None
             self._client_loop = None
+            try:
+                if old_loop is loop:
+                    await self._close_client(old_client)
+                elif old_loop is not None and not old_loop.is_closed() and old_loop.is_running():
+                    coro = self._close_client(old_client)
+                    try:
+                        asyncio.run_coroutine_threadsafe(coro, old_loop)
+                    except Exception:  # pragma: no cover
+                        coro.close()
+            except Exception:
+                pass
 
         if self._client is None:
             self._client = await self._create_client()
