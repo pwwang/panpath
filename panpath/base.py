@@ -125,28 +125,31 @@ class PanPath(PathlibPath):
     # These methods are used for IDE type hinting and documentation generation.
     # Actual implementations are in LocalPath and CloudPath subclasses and
     # are routed via __new__.
-    async def a_resolve(self) -> "PanPath":  # type: ignore[empty-body]
+    async def a_resolve(self) -> "PanPath":
         """Resolve to absolute path (no-op for cloud paths).
 
         Returns:
             Self (cloud paths are already absolute)
         """
+        raise NotImplementedError
 
-    async def a_exists(self) -> bool:  # type: ignore[empty-body]
+    async def a_exists(self) -> bool:
         """Asynchronously check if the path exists.
 
         Returns:
             True if the path exists, False otherwise.
         """
+        raise NotImplementedError
 
-    async def a_read_bytes(self) -> bytes:  # type: ignore[empty-body]
+    async def a_read_bytes(self) -> bytes:
         """Asynchronously read the file's bytes.
 
         Returns:
             File content as bytes.
         """
+        raise NotImplementedError
 
-    async def a_read_text(self, encoding: str = "utf-8") -> str:  # type: ignore[empty-body]
+    async def a_read_text(self, encoding: str = "utf-8") -> str:
         """Asynchronously read the file's text content.
 
         Args:
@@ -155,6 +158,7 @@ class PanPath(PathlibPath):
         Returns:
             File content as string.
         """
+        raise NotImplementedError
 
     async def a_write_bytes(self, data: bytes) -> Union[int, None]:
         """Asynchronously write bytes to the file.
@@ -165,12 +169,13 @@ class PanPath(PathlibPath):
         Returns:
             Number of bytes written. For some cloud paths, may return None.
         """
+        raise NotImplementedError
 
     async def a_write_text(
         self,
         data: str,
         encoding: str = "utf-8",
-    ) -> int:  # type: ignore[empty-body]
+    ) -> int:
         """Asynchronously write text to the file.
 
         Args:
@@ -180,6 +185,7 @@ class PanPath(PathlibPath):
         Returns:
             Number of characters written.
         """
+        raise NotImplementedError
 
     async def a_unlink(self, missing_ok: bool = False) -> None:
         """Asynchronously remove (delete) the file or empty directory.
@@ -188,36 +194,40 @@ class PanPath(PathlibPath):
             missing_ok: If True, does not raise an error if the file does not exist.
         """
 
-    async def a_iterdir(self) -> AsyncGenerator["PanPath", None]:  # type: ignore[empty-body]
+    async def a_iterdir(self) -> AsyncGenerator["PanPath", None]:
         """Asynchronously iterate over directory contents.
 
         Yields:
             PanPath instances for each item in the directory.
         """
+        raise NotImplementedError
 
-    async def a_is_dir(self) -> bool:  # type: ignore[empty-body]
+    async def a_is_dir(self) -> bool:
         """Asynchronously check if the path is a directory.
 
         Returns:
             True if the path is a directory, False otherwise.
         """
+        raise NotImplementedError
 
-    async def a_is_file(self) -> bool:  # type: ignore[empty-body]
+    async def a_is_file(self) -> bool:
         """Asynchronously check if the path is a file.
 
         Returns:
             True if the path is a file, False otherwise.
         """
+        raise NotImplementedError
 
     async def a_stat(
         self,
         follow_symlinks: bool = True,
-    ) -> os.stat_result:  # type: ignore[empty-body]
+    ) -> os.stat_result:
         """Asynchronously get the file or directory's status information.
 
         Returns:
             An object containing file status information (platform-dependent).
         """
+        raise NotImplementedError
 
     async def a_mkdir(
         self,
@@ -236,7 +246,7 @@ class PanPath(PathlibPath):
     async def a_glob(
         self,
         pattern: str,
-    ) -> AsyncGenerator["PanPath", None]:  # type: ignore[empty-body]
+    ) -> AsyncGenerator["PanPath", None]:
         """Asynchronously yield paths matching a glob pattern.
 
         Args:
@@ -245,11 +255,12 @@ class PanPath(PathlibPath):
         Returns:
             List of PanPath instances matching the pattern.
         """
+        raise NotImplementedError
 
     async def a_rglob(
         self,
         pattern: str,
-    ) -> AsyncGenerator["PanPath", None]:  # type: ignore[empty-body]
+    ) -> AsyncGenerator["PanPath", None]:
         """Asynchronously yield paths matching a recursive glob pattern.
 
         Args:
@@ -258,15 +269,17 @@ class PanPath(PathlibPath):
         Returns:
             List of PanPath instances matching the pattern.
         """
+        raise NotImplementedError
 
     async def a_walk(
         self,
-    ) -> AsyncGenerator[tuple["PanPath", List[str], List[str]], None]:  # type: ignore[empty-body]
+    ) -> AsyncGenerator[tuple["PanPath", List[str], List[str]], None]:
         """Asynchronously walk the directory tree.
 
         Yields:
             Tuples of (current_path, dirnames, filenames) at each level.
         """
+        raise NotImplementedError
 
     async def a_touch(
         self,
@@ -283,7 +296,7 @@ class PanPath(PathlibPath):
     async def a_rename(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":  # type: ignore[empty-body]
+    ) -> "PanPath":
         """Asynchronously rename this path to the target path.
 
         Args:
@@ -292,11 +305,12 @@ class PanPath(PathlibPath):
         Returns:
             The renamed PanPath instance.
         """
+        raise NotImplementedError
 
     async def a_replace(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":  # type: ignore[empty-body]
+    ) -> "PanPath":
         """Asynchronously replace this path with the target path.
 
         Args:
@@ -305,11 +319,12 @@ class PanPath(PathlibPath):
         Returns:
             The replaced PanPath instance.
         """
+        raise NotImplementedError
 
     async def a_rmdir(self) -> None:
         """Asynchronously remove the directory and its contents recursively."""
 
-    async def a_is_symlink(self) -> bool:  # type: ignore[empty-body]
+    async def a_is_symlink(self) -> bool:
         """Asynchronously check if the path is a symbolic link.
 
         For local path, this checks if the path is a symlink.
@@ -320,8 +335,9 @@ class PanPath(PathlibPath):
         Returns:
             True if the path is a symlink, False otherwise.
         """
+        raise NotImplementedError
 
-    async def a_readlink(self) -> "PanPath":  # type: ignore[empty-body]
+    async def a_readlink(self) -> "PanPath":
         """Asynchronously read the target of the symbolic link.
 
         For local path, this reads the symlink target.
@@ -330,6 +346,7 @@ class PanPath(PathlibPath):
         Returns:
             The target PanPath of the symlink.
         """
+        raise NotImplementedError
 
     async def a_symlink_to(
         self,
@@ -357,7 +374,7 @@ class PanPath(PathlibPath):
     async def a_copy(
         self,
         target: Union[str, "PathlibPath"],
-    ) -> "PanPath":  # type: ignore[empty-body]
+    ) -> "PanPath":
         """Asynchronously copy this path to the target path.
 
         Args:
@@ -366,12 +383,13 @@ class PanPath(PathlibPath):
         Returns:
             The copied PanPath instance.
         """
+        raise NotImplementedError
 
     async def a_copytree(
         self,
         target: Union[str, "PathlibPath"],
         follow_symlinks: bool = True,
-    ) -> "PanPath":  # type: ignore[empty-body]
+    ) -> "PanPath":
         """Asynchronously copy the directory and all its contents recursively to the target path.
 
         Args:
@@ -381,13 +399,14 @@ class PanPath(PathlibPath):
         Returns:
             The copied PanPath instance.
         """
+        raise NotImplementedError
 
     def a_open(
         self,
         mode: str = "r",
         encoding: str = "utf-8",
         **kwargs: Any,
-    ) -> "AsyncFileHandle":  # type: ignore[empty-body]
+    ) -> "AsyncFileHandle":
         """Asynchronously open the file and return an async file handle.
 
         Args:
@@ -398,11 +417,13 @@ class PanPath(PathlibPath):
         Returns:
             An async file handle.
         """
+        raise NotImplementedError
 
     # backports
-    def walk(self) -> Any:  # type: ignore[empty-body]
+    def walk(self) -> Any:
         """Walk the directory tree.
 
         Yields:
             Tuples of (current_path, dirnames, filenames) at each level.
         """
+        raise NotImplementedError

@@ -42,7 +42,6 @@ class S3Client(SyncClient):
                 extra="s3",
             )
         self._client = boto3.client("s3", **kwargs)
-        self._resource = boto3.resource("s3", **kwargs)
 
     def exists(self, path: str) -> bool:
         """Check if S3 object exists."""
@@ -634,7 +633,7 @@ class S3SyncFileHandle(SyncFileHandle):
         return self._client.get_object(Bucket=self._bucket, Key=self._blob)["Body"]
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception corresponds to FileNotFoundError."""
         if isinstance(exception, ClientError):
             error_code = exception.response.get("Error", {}).get("Code")
