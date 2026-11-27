@@ -107,11 +107,12 @@ class PanPath(PathlibPath):
             new_args = (clean_path,) + args[1:]
             # Use PathlibPath.__new__() to properly initialize the path object
             instance = PathlibPath.__new__(LocalPath, *new_args)
-            # In Python 3.10, __init__ doesn't accept arguments
-            # In Python 3.12+, __init__ needs the arguments
+            # Python 3.9-3.11: Path.__new__ has already initialized the object.
+            # Python 3.12+: PurePath.__init__ must receive the arguments to set
+            # _raw_paths.
             if sys.version_info >= (3, 12):
                 LocalPath.__init__(instance, *new_args, **kwargs)  # type: ignore[no-untyped-call]
-            else:  # pragma: no cover
+            elif sys.version_info < (3, 12):
                 LocalPath.__init__(instance)  # type: ignore[no-untyped-call]
             return instance
 

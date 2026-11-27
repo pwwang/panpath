@@ -41,11 +41,13 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         if hasattr(self, "_raw_paths"):
             # Already initialized in __new__, skip
             return
-        # In Python 3.10, pathlib.Path.__init__() doesn't accept arguments
-        # In Python 3.12+, pathlib.Path.__init__() needs the arguments
+        # Python 3.9-3.11: Path.__new__ fully initializes the object and
+        # __init__ is object.__init__, which accepts no arguments.
+        # Python 3.12+: PurePath.__new__ only allocates; PurePath.__init__
+        # builds _raw_paths from the arguments.
         if sys.version_info >= (3, 12):
             super().__init__(*args, **kwargs)
-        else:  # pragma: no cover
+        elif sys.version_info < (3, 12):
             super().__init__()
 
     async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
@@ -613,12 +615,11 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         if sys.version_info >= (3, 12):
             yield from Path.walk(self, *args, **kwargs)  # type: ignore[no-untyped-call]
             return
-
-        if args or kwargs:  # pragma: no cover
-            raise NotImplementedError(
-                "walk() does not accept arguments in this backport."
-            )
-        else:  # pragma: no cover
+        elif sys.version_info < (3, 12):
+            if args or kwargs:
+                raise NotImplementedError(
+                    "walk() does not accept arguments in this backport."
+                )
             for dirpath, dirnames, filenames in os.walk(str(self)):
                 yield (
                     PanPath(dirpath),

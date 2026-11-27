@@ -54,11 +54,11 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         kwargs.pop("async_client", None)
         # Python version compatibility for PurePosixPath.__init__():
         # - Python 3.9-3.11: Fully initialized in __new__()
-        # - Python 3.12+: Needs __init__(*args) to set _raw_paths, _drv, etc.
+        # - Python 3.12+: Needs __init__(*args) to set _raw_paths
         if sys.version_info >= (3, 12):
             # Python 3.12+ requires calling __init__ with args to set internal properties
             PurePosixPath.__init__(self, *args)  # type: ignore
-        # else: Python 3.9-3.11 don't need __init__ called (already done in __new__)
+        # Python 3.9-3.11: already initialized in __new__(), nothing to do
 
     @property
     def client(self) -> "SyncClient":
@@ -270,13 +270,13 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         # Python 3.12+ supports case_sensitive keyword argument
         if sys.version_info >= (3, 12):
             return key_path.match(path_pattern, case_sensitive=case_sensitive)
+        elif sys.version_info < (3, 12):
+            # Python < 3.12 fallback (only case-sensitive matching is natively supported)
+            if case_sensitive is False:
+                return PurePosixPath(str(key_path).lower()).match(path_pattern.lower())
 
-        # Python < 3.12 fallback (only case-sensitive matching is natively supported)
-        if case_sensitive is False:
-            return PurePosixPath(str(key_path).lower()).match(path_pattern.lower())
-
-        # Use PurePosixPath's match which handles ** correctly
-        return key_path.match(path_pattern)
+            # Use PurePosixPath's match which handles ** correctly
+            return key_path.match(path_pattern)
 
     def glob(self, pattern: str) -> Iterator["CloudPath"]:  # type: ignore[override]
         """Glob for files matching pattern.
