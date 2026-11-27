@@ -27,18 +27,18 @@ export AZURE_STORAGE_CONNECTION_STRING=your_connection_string
 ## Custom Clients
 
 ```python
-from panpath import PanPath
-from panpath.clients import get_s3_client
+from panpath.s3_client import S3Client
+from panpath.s3_path import S3Path
 
-# Configure S3 client
-get_s3_client(
+# Configure a shared S3 client
+S3Path._default_client = S3Client(
     aws_access_key_id="key",
     aws_secret_access_key="secret",
-    region_name="us-west-2"
+    region_name="us-west-2",
 )
 
-# Use configured client
-path = PanPath("s3://bucket/file.txt")
+# Every S3Path now uses it
+path = S3Path("s3://bucket/file.txt")
 ```
 
 ## See Also

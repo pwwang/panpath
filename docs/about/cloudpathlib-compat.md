@@ -137,7 +137,8 @@ for item in items:
 
 ### Methods Added for Compatibility
 
-To ensure cloudpathlib compatibility, we added these methods to `CloudPath` and `AsyncCloudPath`:
+To ensure cloudpathlib compatibility, we added these methods to `CloudPath`
+(and the `a_`-prefixed async variants):
 
 - `absolute()` - Returns self (cloud paths are always absolute)
 - `is_absolute()` - Always returns True

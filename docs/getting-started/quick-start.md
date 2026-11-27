@@ -302,18 +302,18 @@ Configure cloud credentials using environment variables:
 For advanced use cases, you can configure clients:
 
 ```python
-from panpath import PanPath
-from panpath.clients import get_s3_client
+from panpath.s3_client import S3Client
+from panpath.s3_path import S3Path
 
-# Get or create client with custom config
-client = get_s3_client(
+# Create a shared client with custom config
+S3Path._default_client = S3Client(
     aws_access_key_id="your_key",
     aws_secret_access_key="your_secret",
-    region_name="us-west-2"
+    region_name="us-west-2",
 )
 
 # Use the path normally
-path = PanPath("s3://bucket/file.txt")
+path = S3Path("s3://bucket/file.txt")
 ```
 
 ## Next Steps

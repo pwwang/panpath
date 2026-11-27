@@ -4,23 +4,22 @@ Understanding and handling errors in PanPath.
 
 ## Common Exceptions
 
+panpath raises the standard Python exceptions, so the same `except` clauses work
+for local and cloud paths:
+
 ```python
 from panpath import PanPath
-from panpath.exceptions import (
-    PanPathException,
-    PathNotFoundError,
-    PermissionError,
-)
+from panpath.exceptions import PanPathError
 
 path = PanPath("s3://bucket/nonexistent.txt")
 
 try:
     content = path.read_text()
-except PathNotFoundError:
+except FileNotFoundError:
     print("File not found")
 except PermissionError:
     print("Access denied")
-except PanPathException as e:
+except PanPathError as e:
     print(f"Other error: {e}")
 ```
 

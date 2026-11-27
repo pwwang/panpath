@@ -156,18 +156,24 @@ path: S3Path = PanPath("s3://bucket/key")
 
 ## Testing
 
-Use local mock infrastructure for testing without cloud credentials:
+Tests need no cloud credentials. Use local paths, or point the provider SDK at
+a local emulator (e.g. `moto` for S3, `gcp-storage-emulator` for GCS, Azurite
+for Azure) by configuring the client, e.g.:
 
 ```python
-import pytest
-from panpath.testing import use_local_mocks
+from panpath.s3_client import S3Client
+from panpath.s3_path import S3Path
 
-@use_local_mocks()
-def test_s3_operations():
-    path = PanPath("s3://test-bucket/file.txt")
-    path.write_text("test content")
-    assert path.read_text() == "test content"
+client = S3Client(endpoint_url="http://localhost:5000")  # moto server
+S3Path._default_client = client
+
+path = S3Path("s3://test-bucket/file.txt")
+path.write_text("test content")
+assert path.read_text() == "test content"
 ```
+
+The project's own test suite does the equivalent via the `AWS_ENDPOINT_URL` /
+emulator env vars — see `tests/conftest.py`.
 
 ## Migration Guide
 

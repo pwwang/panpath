@@ -241,17 +241,17 @@ Most operations are identical:
 
 === "PanPath"
     ```python
-    from panpath import PanPath
-    from panpath.clients import get_s3_client
+    from panpath.s3_client import S3Client
+    from panpath.s3_path import S3Path
 
     # Configure client (optional - uses env vars by default)
-    client = get_s3_client(
+    client = S3Client(
         aws_access_key_id="key",
         aws_secret_access_key="secret"
     )
 
-    # Paths automatically use configured client
-    path = PanPath("s3://bucket/file.txt")
+    # Pass the client to a path, or set S3Path._default_client for all paths
+    path = S3Path("s3://bucket/file.txt", client=client)
     ```
 
 ### 4. File Caching
@@ -320,11 +320,11 @@ client = S3Client(...)
 path = S3Path("s3://bucket/key", client=client)
 
 # After
-from panpath import PanPath
-from panpath.clients import get_s3_client
+from panpath.s3_client import S3Client
+from panpath.s3_path import S3Path
 
-get_s3_client(...)  # Configure once
-path = PanPath("s3://bucket/key")  # Uses configured client
+client = S3Client(...)
+path = S3Path("s3://bucket/key", client=client)
 ```
 
 ### Step 4: Update Async Code
@@ -399,10 +399,11 @@ Here's a complete migration example:
 === "PanPath"
     ```python
     from panpath import PanPath
-    from panpath.clients import get_s3_client
+    from panpath.s3_client import S3Client
+    from panpath.s3_path import S3Path
 
-    # Configure client (optional - uses env vars by default)
-    get_s3_client(
+    # Configure shared client (optional - uses env vars by default)
+    S3Path._default_client = S3Client(
         aws_access_key_id="key",
         aws_secret_access_key="secret"
     )
