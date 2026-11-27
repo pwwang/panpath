@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import re
-import weakref
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    import aioboto3  # type: ignore[import-not-found]
+    import aioboto3  # type: ignore[import-untyped]
     from aiobotocore.client import AioBaseClient  # type: ignore[import-untyped, unused-ignore]
     from botocore.exceptions import ClientError  # type: ignore[import-untyped, unused-ignore]
 
@@ -25,45 +23,6 @@ try:
 except ImportError:
     HAS_AIOBOTO3 = False
     ClientError = Exception
-
-
-# Track all active client instances for cleanup
-_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
-
-
-async def _async_cleanup_all_clients() -> None:
-    """Async cleanup of all active client instances."""
-    # Create a copy of the set to avoid modification during iteration
-    client_to_clean = list(_active_clients)
-
-    for client_ref in client_to_clean:
-        client: AioBaseClient = client_ref()  # type: ignore[assignment]
-        if client is None:  # pragma: no cover
-            continue
-
-        try:
-            await client.close()
-        except Exception:  # pragma: no cover
-            # Ignore errors during cleanup
-            pass
-
-    _active_clients.clear()
-
-
-def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
-    """Register cleanup to run before loop closes."""
-    # Get the original shutdown_asyncgens method
-    original_shutdown = loop.shutdown_asyncgens
-
-    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
-        """Shutdown that includes client cleanup."""
-        # Clean up clients first
-        await _async_cleanup_all_clients()
-        # Then run original shutdown
-        await original_shutdown()
-
-    # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
 
 
 class AsyncS3Client(AsyncClient):
@@ -85,60 +44,22 @@ class AsyncS3Client(AsyncClient):
                 package="aioboto3",
                 extra="async-s3",
             )
-
-        self._client: Optional[AioBaseClient] = None
+        super().__init__()
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
+
+    async def _create_client(self) -> AioBaseClient:
+        """Create a new aioboto3 S3 client."""
+        return await aioboto3.Session(**self._kwargs).client("s3").__aenter__()
+
+    def _is_client_closed(self, client: Any) -> bool:
+        try:
+            return not client._endpoint.http_session._sessions
+        except Exception:  # pragma: no cover
+            return True
 
     async def _get_client(self) -> AioBaseClient:
         """Get or create shared client."""
-        # For aioboto3, the client is lightweight and doesn't need recreation
-        # Track it for cleanup purposes
-        needs_recreation = False
-        if self._client is None:
-            needs_recreation = True
-        else:
-            try:
-                if not self._client._endpoint.http_session._sessions:
-                    needs_recreation = True
-                    if self._client_ref is not None:
-                        _active_clients.discard(self._client_ref)
-                        self._client_ref = None
-                    self._client = None
-            except Exception:  # pragma: no cover
-                needs_recreation = True
-                self._client = None
-
-        if needs_recreation:
-            self._client = await aioboto3.Session(**self._kwargs).client("s3").__aenter__()
-            self._client_ref = weakref.ref(self._client, self._on_client_deleted)
-            _active_clients.add(self._client_ref)
-
-        # Register cleanup with the current event loop
-        try:
-            loop = asyncio.get_running_loop()
-            # Check if we've already patched this loop
-            if not hasattr(loop, "_panpath_s3_cleanup_registered"):
-                _register_loop_cleanup(loop)
-                loop._panpath_s3_cleanup_registered = True  # type: ignore
-        except RuntimeError:  # pragma: no cover
-            # No running loop, cleanup will be handled by explicit close
-            pass
-
-        return self._client  # type: ignore[return-value]
-
-    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
-        """Called when client is garbage collected."""
-        _active_clients.discard(ref)
-
-    async def close(self) -> None:
-        """Close the client and cleanup resources."""
-        if self._client is not None:
-            if self._client_ref is not None:
-                _active_clients.discard(self._client_ref)
-
-            await self._client.close()
-            self._client = None
+        return await super()._get_client()
 
     async def exists(self, path: str) -> bool:
         """Check if S3 object exists."""
@@ -146,13 +67,13 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         if not key:
             try:
-                await client.head_bucket(Bucket=bucket)  # type: ignore[no-any-return]
+                await client.head_bucket(Bucket=bucket)
                 return True
             except ClientError:
                 return False
 
         try:
-            await client.head_object(Bucket=bucket, Key=key)  # type: ignore[no-any-return]
+            await client.head_object(Bucket=bucket, Key=key)
             return True
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
@@ -162,7 +83,7 @@ class AsyncS3Client(AsyncClient):
                 if key.endswith("/"):
                     return False
                 try:
-                    await client.head_object(  # type: ignore[no-any-return]
+                    await client.head_object(
                         Bucket=bucket,
                         Key=key + "/",
                     )
@@ -179,7 +100,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.get_object(Bucket=bucket, Key=key)  # type: ignore
+            response = await client.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
                 return await stream.read()  # type: ignore[no-any-return]
         except ClientError as e:
@@ -196,7 +117,7 @@ class AsyncS3Client(AsyncClient):
         """Write bytes to S3 object."""
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
-        await client.put_object(Bucket=bucket, Key=key, Body=data)  # type: ignore
+        await client.put_object(Bucket=bucket, Key=key, Body=data)
 
     async def delete(self, path: str) -> None:
         """Delete S3 object."""
@@ -210,7 +131,7 @@ class AsyncS3Client(AsyncClient):
             raise FileNotFoundError(f"S3 object not found: {path}")
 
         try:
-            await client.delete_object(Bucket=bucket, Key=key)  # type: ignore
+            await client.delete_object(Bucket=bucket, Key=key)
         except ClientError:  # pragma: no cover
             raise
 
@@ -223,7 +144,7 @@ class AsyncS3Client(AsyncClient):
         results = []
         client = await self._get_client()
         paginator = client.get_paginator("list_objects_v2")
-        async for page in paginator.paginate(  # type: ignore
+        async for page in paginator.paginate(
             Bucket=bucket,
             Prefix=prefix,
             Delimiter="/",
@@ -246,7 +167,7 @@ class AsyncS3Client(AsyncClient):
 
         prefix = key if key.endswith("/") else key + "/"
         client = await self._get_client()
-        response = await client.list_objects_v2(  # type: ignore
+        response = await client.list_objects_v2(
             Bucket=bucket,
             Prefix=prefix,
             MaxKeys=1,
@@ -261,7 +182,7 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         try:
-            await client.head_object(Bucket=bucket, Key=key)  # type: ignore
+            await client.head_object(Bucket=bucket, Key=key)
             return True
         except ClientError:
             return False
@@ -271,7 +192,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.head_object(Bucket=bucket, Key=key)  # type: ignore
+            response = await client.head_object(Bucket=bucket, Key=key)
         except ClientError as e:  # pragma: no cover
             if e.response["Error"]["Code"] == "404":
                 raise FileNotFoundError(f"S3 object not found: {path}")
@@ -363,7 +284,7 @@ class AsyncS3Client(AsyncClient):
         # Check if it already exists
         client = await self._get_client()
         try:
-            await client.head_object(Bucket=bucket, Key=key)  # type: ignore
+            await client.head_object(Bucket=bucket, Key=key)
             if not exist_ok:
                 raise FileExistsError(f"Directory already exists: {path}")
             return
@@ -374,7 +295,7 @@ class AsyncS3Client(AsyncClient):
                 raise
 
         # Create empty directory marker
-        await client.put_object(Bucket=bucket, Key=key, Body=b"")  # type: ignore
+        await client.put_object(Bucket=bucket, Key=key, Body=b"")
 
     async def get_metadata(self, path: str) -> dict[str, Any]:
         """Get object metadata.
@@ -388,7 +309,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         try:
-            response = await client.head_object(Bucket=bucket, Key=key)  # type: ignore
+            response = await client.head_object(Bucket=bucket, Key=key)
             return response  # type: ignore[no-any-return]
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
@@ -405,7 +326,7 @@ class AsyncS3Client(AsyncClient):
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
         # S3 requires copying object to itself to update metadata
-        await client.copy_object(  # type: ignore
+        await client.copy_object(
             Bucket=bucket,
             Key=key,
             CopySource={"Bucket": bucket, "Key": key},
@@ -460,7 +381,7 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         # Create empty object with symlink metadata
-        await client.put_object(  # type: ignore
+        await client.put_object(
             Bucket=bucket,
             Key=key,
             Body=b"",
@@ -499,7 +420,7 @@ class AsyncS3Client(AsyncClient):
             else:
                 file_pattern = "*"
 
-            async for page in pages:  # type: ignore
+            async for page in pages:
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if fnmatch(key, f"*{file_pattern}"):
@@ -508,7 +429,7 @@ class AsyncS3Client(AsyncClient):
         else:
             # Non-recursive - list objects with delimiter
             prefix_with_slash = f"{prefix}/" if prefix and not prefix.endswith("/") else prefix
-            response = await client.list_objects_v2(  # type: ignore
+            response = await client.list_objects_v2(
                 Bucket=bucket, Prefix=prefix_with_slash, Delimiter="/"
             )
 
@@ -543,7 +464,7 @@ class AsyncS3Client(AsyncClient):
         # Organize into directory structure
         dirs: dict[str, tuple[set[str], set[str]]] = {}  # dirpath -> (subdirs, files)
 
-        async for page in pages:  # type: ignore
+        async for page in pages:
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 # Get relative path from prefix
@@ -602,7 +523,7 @@ class AsyncS3Client(AsyncClient):
 
         bucket, key = self.__class__._parse_path(path)
         client = await self._get_client()
-        await client.put_object(Bucket=bucket, Key=key, Body=b"")  # type: ignore
+        await client.put_object(Bucket=bucket, Key=key, Body=b"")
 
     async def rename(self, src: str, dst: str) -> None:
         """Rename/move file.
@@ -621,12 +542,12 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         # Copy object
-        await client.copy_object(  # type: ignore
+        await client.copy_object(
             Bucket=dst_bucket, Key=dst_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
         # Delete source
-        await client.delete_object(Bucket=src_bucket, Key=src_key)  # type: ignore
+        await client.delete_object(Bucket=src_bucket, Key=src_key)
 
     async def rmdir(self, path: str) -> None:
         """Remove directory marker.
@@ -649,7 +570,7 @@ class AsyncS3Client(AsyncClient):
         if await self.is_dir(path) and await self.list_dir(path):
             raise OSError(f"Directory not empty: {path}")
 
-        await client.delete_object(Bucket=bucket, Key=key)  # type: ignore
+        await client.delete_object(Bucket=bucket, Key=key)
 
     async def rmtree(
         self, path: str, ignore_errors: bool = False, onerror: Optional[Any] = None
@@ -673,16 +594,16 @@ class AsyncS3Client(AsyncClient):
             # List all objects with this prefix
             objects_to_delete = []
             paginator = client.get_paginator("list_objects_v2")
-            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):  # type: ignore
+            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
                 if "Contents" in page:
                     objects_to_delete.extend([{"Key": obj["Key"]} for obj in page["Contents"]])
 
             # Delete in batches (max 1000 per request)
-            async def _delete_objs():
+            async def _delete_objs() -> None:
                 if objects_to_delete:
                     for i in range(0, len(objects_to_delete), 1000):
                         batch = objects_to_delete[i : i + 1000]
-                        await client.delete_objects(  # type: ignore
+                        await client.delete_objects(
                             Bucket=bucket,
                             Delete={"Objects": batch},
                         )
@@ -722,7 +643,7 @@ class AsyncS3Client(AsyncClient):
 
         client = await self._get_client()
         # Use S3's native copy operation
-        await client.copy_object(  # type: ignore
+        await client.copy_object(
             Bucket=tgt_bucket, Key=tgt_key, CopySource={"Bucket": src_bucket, "Key": src_key}
         )
 
@@ -757,7 +678,7 @@ class AsyncS3Client(AsyncClient):
         client = await self._get_client()
         # List all objects with source prefix
         paginator = client.get_paginator("list_objects_v2")
-        async for page in paginator.paginate(  # type: ignore
+        async for page in paginator.paginate(
             Bucket=src_bucket,
             Prefix=src_prefix,
         ):
@@ -771,7 +692,7 @@ class AsyncS3Client(AsyncClient):
                 tgt_key = tgt_prefix + rel_path
 
                 # Copy object
-                await client.copy_object(  # type: ignore
+                await client.copy_object(
                     Bucket=tgt_bucket,
                     Key=tgt_key,
                     CopySource={"Bucket": src_bucket, "Key": src_key},
@@ -787,11 +708,11 @@ class S3AsyncFileHandle(AsyncFileHandle):
     async def _create_stream(self) -> None:
         """Create the underlying stream for reading or writing."""
         client: AioBaseClient = await self._client_factory()
-        response = await client.get_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
+        response = await client.get_object(Bucket=self._bucket, Key=self._blob)
         return response["Body"]  # type: ignore[no-any-return]
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
         return isinstance(exception, ClientError) and exception.response.get("Error", {}).get(
             "Code"
@@ -814,13 +735,13 @@ class S3AsyncFileHandle(AsyncFileHandle):
         if isinstance(data, str):
             data = data.encode(self._encoding)
 
-        client: AioBaseClient = self._client  # type: ignore
+        client: AioBaseClient = self._client
 
         # For 'w' mode on first write, overwrite existing content
         if self._first_write and not self._is_append:
             self._first_write = False
             # Simple overwrite
-            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore
+            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
             return
 
         self._first_write = False
@@ -828,7 +749,7 @@ class S3AsyncFileHandle(AsyncFileHandle):
         # For subsequent writes or append mode, use read-modify-write
         # Check if object exists
         try:
-            await client.head_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
+            await client.head_object(Bucket=self._bucket, Key=self._blob)
             object_exists = True
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
@@ -838,13 +759,13 @@ class S3AsyncFileHandle(AsyncFileHandle):
 
         if not object_exists:
             # Simple upload for new objects
-            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)  # type: ignore
+            await client.put_object(Bucket=self._bucket, Key=self._blob, Body=data)
         else:
             # For existing objects, download, concatenate, and re-upload
-            response = await client.get_object(Bucket=self._bucket, Key=self._blob)  # type: ignore
+            response = await client.get_object(Bucket=self._bucket, Key=self._blob)
             existing_data = await response["Body"].read()
             combined_data = existing_data + data
-            await client.put_object(  # type: ignore
+            await client.put_object(
                 Bucket=self._bucket,
                 Key=self._blob,
                 Body=combined_data,

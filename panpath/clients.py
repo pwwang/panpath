@@ -10,6 +10,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
     Awaitable,
@@ -17,6 +18,46 @@ from typing import (
 
 import re
 import warnings
+import weakref
+
+# Per-event-loop registry of AsyncClient instances with open SDK clients.
+_LOOP_CLIENTS: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, Set[AsyncClient]]" = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _register_loop_cleanup(loop: asyncio.AbstractEventLoop, client: "AsyncClient") -> None:
+    """Register an AsyncClient to be closed before ``loop`` shuts down."""
+    try:
+        clients = _LOOP_CLIENTS.get(loop)
+    except TypeError:  # pragma: no cover - non-weakrefable custom loop
+        return
+
+    if clients is None:
+        clients = set()
+        _LOOP_CLIENTS[loop] = clients
+        original_shutdown = loop.shutdown_asyncgens
+        loop_ref = weakref.ref(loop)
+
+        async def _shutdown_with_cleanup() -> None:
+            current_loop = loop_ref()
+            pending = (
+                list(_LOOP_CLIENTS.pop(current_loop, ())) if current_loop is not None else []
+            )
+            for active in pending:
+                try:
+                    await active.close()
+                except Exception:  # pragma: no cover
+                    pass
+            await original_shutdown()
+
+        try:
+            loop.shutdown_asyncgens = _shutdown_with_cleanup  # type: ignore[method-assign]
+        except (AttributeError, TypeError):  # pragma: no cover - immutable custom loop
+            _LOOP_CLIENTS.pop(loop, None)
+            return
+
+    clients.add(client)
 
 
 class Client(ABC):
@@ -204,9 +245,60 @@ class SyncClient(Client, ABC):
 class AsyncClient(Client, ABC):
     """Base class for asynchronous cloud storage clients."""
 
-    @abstractmethod
+    _client: Any = None
+    _client_loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def __init__(self) -> None:
+        self._client = None
+        self._client_loop = None
+
+    async def _create_client(self) -> Any:
+        """Create a new underlying async SDK client."""
+        raise NotImplementedError  # pragma: no cover
+
+    async def _close_client(self, client: Any) -> None:
+        """Close the underlying async SDK client."""
+        await client.close()
+
+    def _is_client_closed(self, client: Any) -> bool:
+        """Check whether the underlying SDK client has already been closed."""
+        return False  # pragma: no cover
+
+    def _unregister_cleanup(self) -> None:
+        """Remove this client from its event loop's cleanup registry."""
+        if self._client_loop is not None:
+            clients = _LOOP_CLIENTS.get(self._client_loop)
+            if clients is not None:
+                clients.discard(self)
+
+    async def _get_client(self) -> Any:
+        """Get or create the underlying async SDK client for the running loop."""
+        loop = asyncio.get_running_loop()
+        if self._client is not None and (
+            self._client_loop is not loop
+            or self._client_loop.is_closed()
+            or self._is_client_closed(self._client)
+        ):
+            # Previous client was closed or belonged to another event loop; recreate.
+            self._unregister_cleanup()
+            self._client = None
+            self._client_loop = None
+
+        if self._client is None:
+            self._client = await self._create_client()
+            self._client_loop = loop
+            _register_loop_cleanup(loop, self)
+
+        return self._client
+
     async def close(self) -> None:
         """Close any open connections/resources."""
+        if self._client is not None:
+            client = self._client
+            self._unregister_cleanup()
+            self._client = None
+            self._client_loop = None
+            await self._close_client(client)
 
     @abstractmethod
     async def exists(self, path: str) -> bool:
@@ -418,7 +510,7 @@ class AsyncFileHandle(ABC):
 
     @classmethod
     @abstractmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
 
     @abstractmethod
@@ -497,7 +589,7 @@ class AsyncFileHandle(ABC):
             try:
                 self._stream = await self._create_stream()
             except Exception as e:
-                if self.__class__._expception_as_filenotfound(e):
+                if self.__class__._exception_as_filenotfound(e):
                     raise FileNotFoundError(
                         f"File not found: {self._prefix}://{self._bucket}/{self._blob}"
                     ) from None
@@ -823,7 +915,7 @@ class SyncFileHandle(ABC):
 
     @classmethod
     @abstractmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
 
     @abstractmethod
@@ -909,7 +1001,7 @@ class SyncFileHandle(ABC):
             try:
                 self._stream = self._create_stream()
             except Exception as e:
-                if self.__class__._expception_as_filenotfound(e):
+                if self.__class__._exception_as_filenotfound(e):
                     raise FileNotFoundError(
                         f"File not found: {self._prefix}://{self._bucket}/{self._blob}"
                     ) from None
@@ -941,20 +1033,50 @@ class SyncFileHandle(ABC):
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
+        # First, consume any buffered data
+        if self._read_buffer:
+            if size == -1:  # pragma: no cover
+                # Return all buffered data plus rest of stream
+                buffered = self._read_buffer
+                self._read_buffer = b"" if self._is_binary else ""
+                rest = self._stream_read(-1)
+                self._read_pos += len(rest)
+                self._eof = True
+                result: Union[str, bytes] = buffered + rest  # type: ignore
+                return result
+            else:
+                # Return from buffer first
+                if len(self._read_buffer) >= size:
+                    result_buf: Union[str, bytes] = self._read_buffer[:size]
+                    self._read_buffer = self._read_buffer[size:]
+                    return result_buf
+                else:  # pragma: no cover
+                    # Not enough in buffer, need to read more
+                    buffered = self._read_buffer
+                    self._read_buffer = b"" if self._is_binary else ""
+                    remaining = size - len(buffered)
+                    result_chunk = self._stream_read(remaining)
+                    if not result_chunk:
+                        self._eof = True
+                        return buffered
+                    self._read_pos += len(result_chunk)
+                    combined: Union[str, bytes] = buffered + result_chunk  # type: ignore
+                    return combined
+
         # No buffered data, read from stream
         if size == -1:
-            result = self._stream_read(-1)
-            self._read_pos += len(result)
+            result_stream = self._stream_read(-1)
+            self._read_pos += len(result_stream)
             self._eof = True
-            return result
+            return result_stream
         else:
-            result = self._stream_read(size)
-            if not result:  # pragma: no cover
+            result_stream = self._stream_read(size)
+            if not result_stream:  # pragma: no cover
                 self._eof = True
-                return result
+                return result_stream
 
-            self._read_pos += len(result)
-            return result
+            self._read_pos += len(result_stream)
+            return result_stream
 
     def readline(self, size: int = -1) -> Union[str, bytes]:
         """Read and return one line from the file."""

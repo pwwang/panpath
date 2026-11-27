@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Set, Union, AsyncGenerator
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Union, cast
 
-import asyncio
 import os
-import weakref
 from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from azure.storage.blob.aio import BlobServiceClient  # type: ignore[import-not-found]
-    from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
+    from azure.storage.blob.aio import BlobServiceClient
+    from azure.core.exceptions import ResourceNotFoundError
 
 try:
     from azure.storage.blob.aio import BlobServiceClient
@@ -21,46 +19,7 @@ try:
     HAS_AZURE_AIO = True
 except ImportError:
     HAS_AZURE_AIO = False
-    ResourceNotFoundError = Exception
-
-
-# Track all active client instances for cleanup
-_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
-
-
-async def _async_cleanup_all_clients() -> None:
-    """Async cleanup of all active client instances."""
-    # Create a copy of the set to avoid modification during iteration
-    clients_to_clean = list(_active_clients)
-
-    for client_ref in clients_to_clean:
-        client = client_ref()
-        if client is None:  # pragma: no cover
-            continue
-
-        try:
-            await client.close()
-        except Exception:  # pragma: no cover
-            # Ignore errors during cleanup
-            pass
-
-    _active_clients.clear()
-
-
-def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
-    """Register cleanup to run before loop closes."""
-    # Get the original shutdown_asyncgens method
-    original_shutdown = loop.shutdown_asyncgens
-
-    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
-        """Shutdown that includes client cleanup."""
-        # Clean up clients first
-        await _async_cleanup_all_clients()
-        # Then run original shutdown
-        await original_shutdown()
-
-    # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
+    ResourceNotFoundError = Exception  # type: ignore[misc, assignment]
 
 
 class AsyncAzureBlobClient(AsyncClient):
@@ -81,76 +40,30 @@ class AsyncAzureBlobClient(AsyncClient):
                 package="azure-storage-blob[aio]",
                 extra="async-azure",
             )
+        super().__init__()
         if not connection_string and "AZURE_STORAGE_CONNECTION_STRING" in os.environ:
             connection_string = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
-        self._client: Optional[BlobServiceClient] = None
         self._connection_string = connection_string
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
 
-    async def _get_client(self) -> Optional[BlobServiceClient]:
+    async def _create_client(self) -> BlobServiceClient:
+        """Create a new BlobServiceClient."""
+        if self._connection_string:
+            return BlobServiceClient.from_connection_string(
+                self._connection_string, **self._kwargs
+            )
+        return BlobServiceClient(**self._kwargs)  # pragma: no cover
+
+    def _is_client_closed(self, client: Any) -> bool:
+        try:
+            transport = client._client._client._pipeline._transport
+            return bool(transport._has_been_opened and not transport.session)
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            return True
+
+    async def _get_client(self) -> BlobServiceClient:
         """Get or create shared BlobServiceClient."""
-        # Check if client needs to be recreated (closed or never created)
-        needs_recreation = False
-        if self._client is None:
-            needs_recreation = True
-        else:
-            # Check if the underlying aiohttp session is closed
-            try:
-                # Azure BlobServiceClient uses aiohttp internally
-                # Check if the transport/session is closed
-                if (
-                    self._client._client._client._pipeline._transport._has_been_opened
-                    and not self._client._client._client._pipeline._transport.session
-                ):
-                    needs_recreation = True
-                    # Clean up the old client reference
-                    if self._client_ref is not None:
-                        _active_clients.discard(self._client_ref)
-                        self._client_ref = None
-                    self._client = None
-            except (AttributeError, RuntimeError):  # pragma: no cover
-                needs_recreation = True
-                self._client = None
-
-        if needs_recreation:
-            if self._connection_string:
-                self._client = BlobServiceClient.from_connection_string(
-                    self._connection_string, **self._kwargs
-                )
-            else:  # pragma: no cover
-                self._client = BlobServiceClient(**self._kwargs)
-
-            # Track this client instance for cleanup
-            self._client_ref = weakref.ref(self._client, self._on_client_deleted)
-            _active_clients.add(self._client_ref)
-
-            # Register cleanup with the current event loop
-            try:
-                loop = asyncio.get_running_loop()
-                # Check if we've already patched this loop
-                if not hasattr(loop, "_panpath_az_cleanup_registered"):
-                    _register_loop_cleanup(loop)
-                    loop._panpath_az_cleanup_registered = True  # type: ignore
-            except RuntimeError:  # pragma: no cover
-                # No running loop, cleanup will be handled by explicit close
-                pass
-
-        return self._client
-
-    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
-        """Called when client is garbage collected."""
-        _active_clients.discard(ref)
-
-    async def close(self) -> None:
-        """Close the client and cleanup resources."""
-        if self._client is not None:
-            # Remove from active clients
-            if self._client_ref is not None:
-                _active_clients.discard(self._client_ref)
-            # Close the client
-            await self._client.close()
-            self._client = None
+        return cast("BlobServiceClient", await super()._get_client())
 
     async def exists(self, path: str) -> bool:
         """Check if Azure blob exists."""
@@ -159,7 +72,7 @@ class AsyncAzureBlobClient(AsyncClient):
         if not blob_name:
             try:
                 container_client = client.get_container_client(container_name)
-                return await container_client.exists()  # type: ignore[no-any-return]
+                return await container_client.exists()
             except Exception:  # pragma: no cover
                 return False
 
@@ -173,7 +86,7 @@ class AsyncAzureBlobClient(AsyncClient):
                 return False
             # Checking if it is possibly a directory
             blob_client_dir = client.get_blob_client(container_name, blob_name + "/")
-            return await blob_client_dir.exists()  # type: ignore[no-any-return]
+            return await blob_client_dir.exists()
         except Exception:  # pragma: no cover
             return False
 
@@ -185,7 +98,7 @@ class AsyncAzureBlobClient(AsyncClient):
 
         try:
             download_stream = await blob_client.download_blob()
-            return await download_stream.readall()  # type: ignore[no-any-return]
+            return await download_stream.readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -231,7 +144,9 @@ class AsyncAzureBlobClient(AsyncClient):
                     results.append(f"{self.prefix[0]}://{container_name}/{item.name}")
             else:  # pragma: no cover
                 # BlobPrefix (directory)
-                results.append(f"{self.prefix[0]}://{container_name}/{item.prefix.rstrip('/')}")
+                results.append(
+                    f"{self.prefix[0]}://{container_name}/{item.prefix.rstrip('/')}"  # type: ignore[union-attr]
+                )
 
         return results
 
@@ -257,7 +172,7 @@ class AsyncAzureBlobClient(AsyncClient):
             return False
 
         blob_client = client.get_blob_client(container_name, blob_name.rstrip("/"))
-        return await blob_client.exists()  # type: ignore[no-any-return]
+        return await blob_client.exists()
 
     async def stat(self, path: str) -> os.stat_result:
         """Get Azure blob metadata."""
@@ -380,7 +295,8 @@ class AsyncAzureBlobClient(AsyncClient):
         blob_client = client.get_blob_client(container_name, blob_name)
 
         try:
-            return await blob_client.get_blob_properties()  # type: ignore[no-any-return]
+            # BlobProperties is a DictMixin, so it indexes like a dict.
+            return cast("dict[str, str]", await blob_client.get_blob_properties())
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -528,7 +444,7 @@ class AsyncAzureBlobClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(filter(None, files)))
 
-    async def touch(  # type: ignore[no-untyped-def, override]
+    async def touch(
         self,
         path: str,
         exist_ok: bool = True,
@@ -744,7 +660,7 @@ class AzureAsyncFileHandle(AsyncFileHandle):
         ).chunks()
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
         return isinstance(exception, ResourceNotFoundError)
 
@@ -768,8 +684,9 @@ class AzureAsyncFileHandle(AsyncFileHandle):
                 pass
 
             self._eof = True
-            result = (b"" if self._is_binary else "").join(chunks)  # type: ignore[attr-defined]
-            return result  # type: ignore[no-any-return]
+            if self._is_binary:
+                return b"".join(cast("list[bytes]", chunks))
+            return "".join(cast("list[str]", chunks))
         else:
             while len(self._read_residue) < size:
                 try:
@@ -789,11 +706,11 @@ class AzureAsyncFileHandle(AsyncFileHandle):
                 self._eof = True
                 result = self._read_residue
                 self._read_residue = b"" if self._is_binary else ""
-                return result  # type: ignore[no-any-return]
+                return result
 
             result = self._read_residue[:size]
             self._read_residue = self._read_residue[size:]
-            return result  # type: ignore[no-any-return]
+            return result
 
     async def _upload(self, data: Union[str, bytes]) -> None:
         """Upload data to Azure blob using append semantics.
@@ -820,7 +737,7 @@ class AzureAsyncFileHandle(AsyncFileHandle):
             await blob_client.upload_blob(data, overwrite=True)
             return
 
-        from azure.storage.blob import BlobType  # type: ignore[import-not-found]
+        from azure.storage.blob import BlobType
 
         self._first_write = False
 
