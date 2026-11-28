@@ -380,6 +380,80 @@ async def test_async_client_get_client_retries_after_creation_failure():
         await client.close()
 
 
+async def test_async_client_close_wins_over_in_flight_creation():
+    """close() during _create_client() must not deadlock, must close the result, and allow reuse."""
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    created = []
+
+    class _GatedCreateClient(_LifecycleAsyncClient):
+        async def _create_client(self):
+            if not entered.is_set():
+                entered.set()
+                await release.wait()
+            sdk = _FakeSDKClient()
+            created.append(sdk)
+            return sdk
+
+    client = _GatedCreateClient()
+    get_task = asyncio.create_task(client._get_client())
+    try:
+        await entered.wait()
+
+        # close() must return immediately without waiting for creation to finish.
+        await asyncio.wait_for(client.close(), timeout=1.0)
+        assert client._client is None
+
+        # A subsequent _get_client() after close() must succeed and not be clobbered
+        # when the pre-close creation later completes.
+        reused = await asyncio.wait_for(client._get_client(), timeout=1.0)
+        assert client._client is reused
+        assert reused.closed is False
+
+        release.set()
+        stale = await get_task
+        assert stale is not reused
+        assert stale.closed is True
+        assert client._client is reused
+        assert reused.closed is False
+
+        await client.close()
+        assert client._client is None
+        assert reused.closed is True
+    finally:
+        release.set()
+        if not get_task.done():
+            get_task.cancel()
+        await asyncio.gather(get_task, return_exceptions=True)
+
+
+async def test_async_client_close_during_creation_leaves_no_cached_client():
+    """When close() lands mid-creation and no new call occurs, no client stays cached."""
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    created = []
+
+    class _GatedCreateClient(_LifecycleAsyncClient):
+        async def _create_client(self):
+            entered.set()
+            await release.wait()
+            sdk = _FakeSDKClient()
+            created.append(sdk)
+            return sdk
+
+    client = _GatedCreateClient()
+    get_task = asyncio.create_task(client._get_client())
+    await entered.wait()
+
+    await asyncio.wait_for(client.close(), timeout=1.0)
+    release.set()
+    await get_task
+
+    assert client._client is None
+    assert len(created) == 1
+    assert created[0].closed is True
+
+
 def _run_pytest_with_emulator_error(
     tmp_path,
     allow_missing=False,

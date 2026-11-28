@@ -252,17 +252,19 @@ class AsyncClient(Client, ABC):
     # reference would keep its WeakKeyDictionary key alive forever.
     _client_loop: Optional["weakref.ref[asyncio.AbstractEventLoop]"] = None
     _client_task: Optional["asyncio.Task[Any]"] = None
+    _close_epoch: int = 0
 
     def __init__(self) -> None:
         self._client = None
         self._client_loop = None
         self._client_task = None
+        self._close_epoch = 0
 
     async def _create_client(self) -> Any:
         """Create a new underlying async SDK client."""
         raise NotImplementedError  # pragma: no cover
 
-    async def _create_and_cache(self, loop: asyncio.AbstractEventLoop) -> Any:
+    async def _create_and_cache(self, loop: asyncio.AbstractEventLoop, epoch: int) -> Any:
         """Create the underlying SDK client and cache it for ``loop``."""
         task = asyncio.current_task()
         try:
@@ -270,6 +272,9 @@ class AsyncClient(Client, ABC):
         finally:
             if self._client_task is task:
                 self._client_task = None
+        if self._close_epoch != epoch:
+            await self._close_client(client)
+            return client
         self._client = client
         self._client_loop = weakref.ref(loop)
         _register_loop_cleanup(loop, self)
@@ -294,6 +299,7 @@ class AsyncClient(Client, ABC):
     async def _get_client(self) -> Any:
         """Get or create the underlying async SDK client for the running loop."""
         loop = asyncio.get_running_loop()
+        epoch = self._close_epoch
         old_loop = self._client_loop() if self._client_loop is not None else None
         if self._client is not None and (
             old_loop is not loop
@@ -320,7 +326,7 @@ class AsyncClient(Client, ABC):
         if self._client is None:
             task = self._client_task
             if task is None or task.done() or task.get_loop() is not loop:
-                task = loop.create_task(self._create_and_cache(loop))
+                task = loop.create_task(self._create_and_cache(loop, epoch))
                 if not task.done():
                     self._client_task = task
             return await task
@@ -329,6 +335,8 @@ class AsyncClient(Client, ABC):
 
     async def close(self) -> None:
         """Close any open connections/resources."""
+        self._close_epoch += 1
+        self._client_task = None
         if self._client is not None:
             client = self._client
             self._unregister_cleanup()
