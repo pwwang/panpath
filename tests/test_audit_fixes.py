@@ -140,6 +140,36 @@ async def test_a_walk_is_top_down(tmp_path):
     assert dirs == [root, root / "sub"]
 
 
+async def test_a_walk_does_not_follow_dir_symlink_cycle(tmp_path):
+    """a_walk() must not recurse into directory symlinks (matching Path.walk on 3.12+)."""
+    root = LocalPath(tmp_path / "tree")
+    a = root / "a"
+    b = a / "b"
+    b.mkdir(parents=True)
+    (a / "f1.txt").write_text("1")
+    (b / "f2.txt").write_text("2")
+    (b / "loop").symlink_to(a, target_is_directory=True)
+
+    cap = 50
+    async_rows = []
+    async for row in root.a_walk():
+        async_rows.append(row)
+        if len(async_rows) >= cap:
+            break
+
+    sync_rows = list(root.walk())
+    assert len(async_rows) == len(sync_rows) == 3
+    assert [d for d, _, _ in async_rows] == [d for d, _, _ in sync_rows]
+
+    if sys.version_info >= (3, 12):
+        norm = lambda rows: [(d, sorted(ds), sorted(fs)) for d, ds, fs in rows]  # noqa: E731
+        assert norm(async_rows) == norm(sync_rows)
+    # Path.walk (3.12+) classifies directory symlinks as filenames, never dirnames.
+    _, b_dirs, b_files = async_rows[-1]
+    assert "loop" not in b_dirs
+    assert "loop" in b_files
+
+
 async def test_a_glob_keeps_directory_prefix(tmp_path):
     """a_glob('sub/**/*.txt') must only match under sub/, like glob()."""
     root = LocalPath(tmp_path / "root")

@@ -198,7 +198,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         filenames = []
         for entry in await aiofiles.os.listdir(str(self)):
             path = self / entry
-            if await path.a_is_dir():
+            if not await path.a_is_symlink() and await path.a_is_dir():
                 dirnames.append(entry)
             else:
                 filenames.append(entry)
