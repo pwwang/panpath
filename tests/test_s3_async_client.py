@@ -1,5 +1,6 @@
 import pytest
 import sys
+from panpath import PanPath
 from panpath.s3_async_client import AsyncS3Client, ClientError
 from .utils import async_generator_to_list
 
@@ -322,6 +323,31 @@ async def test_asyncs3client_rename(testdir):
     # Rename non-existent object
     with pytest.raises(FileNotFoundError):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
+
+
+async def test_asyncs3client_rename_markerless_directory(testdir):
+    """A prefix-only directory has no marker; a_rename must still move it."""
+    client = AsyncS3Client()
+    source = f"{testdir}/markerless"
+    target = f"{testdir}/renamed"
+    await client.write_bytes(f"{source}/a.txt", b"data")
+
+    source_path = PanPath(source)
+    assert await source_path.a_is_dir()
+    assert not await source_path.a_exists()  # prefix-only: no directory marker
+
+    await source_path.a_rename(target)
+
+    assert not await source_path.a_is_dir()
+    moved = [item.name async for item in PanPath(target).a_iterdir()]
+    assert moved == ["a.txt"]
+    assert await PanPath(f"{target}/a.txt").a_read_bytes() == b"data"
+
+
+async def test_asyncs3client_rename_missing_path_raises(testdir):
+    """A genuinely missing a_rename source still raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        await PanPath(f"{testdir}/missing").a_rename(f"{testdir}/renamed-missing")
 
 
 async def test_asyncs3client_rmdir(testdir):

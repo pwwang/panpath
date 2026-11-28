@@ -1,5 +1,6 @@
 import pytest
 import sys
+from panpath import PanPath
 from panpath.s3_client import S3Client, ClientError
 
 from .conftest import S3_BUCKET
@@ -290,6 +291,30 @@ def test_s3client_rename(testdir):
     assert client.exists(target_path)
     content = client.read_bytes(target_path)
     assert content == data
+
+
+def test_s3client_rename_markerless_directory(testdir):
+    """A prefix-only directory has no marker; rename must still move it."""
+    client = S3Client()
+    source = f"{testdir}/markerless"
+    target = f"{testdir}/renamed"
+    client.write_bytes(f"{source}/a.txt", b"data")
+
+    source_path = PanPath(source)
+    assert source_path.is_dir()
+    assert not source_path.exists()  # prefix-only: no directory marker object
+
+    source_path.rename(target)
+
+    assert not source_path.is_dir()
+    assert [item.name for item in PanPath(target).iterdir()] == ["a.txt"]
+    assert PanPath(f"{target}/a.txt").read_bytes() == b"data"
+
+
+def test_s3client_rename_missing_path_raises(testdir):
+    """A genuinely missing rename source still raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        PanPath(f"{testdir}/missing").rename(f"{testdir}/renamed-missing")
 
 
 def test_s3client_rmdir(testdir):

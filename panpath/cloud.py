@@ -329,7 +329,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             New path instance
         """
-        if not self.exists():
+        if not (self.exists() or self.is_dir()):
             raise FileNotFoundError(f"Source path does not exist: {self}")
 
         target_str = str(target)
@@ -362,7 +362,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
                 relative_path = item.relative_to(self)
                 new_target = target_path / relative_path
                 item.rename(new_target)
-            self.rmdir()
+            if self.exists():
+                self.rmdir()
             return target_path
 
         # Check if cross-storage operation (cloud <-> local or cloud <-> cloud)
@@ -745,7 +746,7 @@ class CloudPath(PanPath, PurePosixPath, ABC):
         Returns:
             New path instance
         """
-        if not await self.a_exists():
+        if not (await self.a_exists() or await self.a_is_dir()):
             raise FileNotFoundError(f"Source path does not exist: {self}")
 
         target_str = str(target)
@@ -781,7 +782,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
                 relative_path = item.relative_to(self)
                 new_target = target_path / relative_path
                 await item.a_rename(new_target)
-            await self.a_rmdir()
+            if await self.a_exists():
+                await self.a_rmdir()
             return target_path
 
         # Check if cross-storage operation
