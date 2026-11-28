@@ -42,6 +42,8 @@ AZURITE_KEY = (
 
 # backend -> reason it could not be started (empty when healthy)
 _emulator_errors: dict[str, str] = {}
+# backend -> documented platform limitation, skipped independently of opt-in allowance
+_expected_unavailable: dict[str, str] = {}
 _emulator_stoppers = []
 
 
@@ -221,8 +223,8 @@ def _patch_gcs_trailing_slash() -> None:
 
 def _start_gcs() -> None:
     if sys.version_info < (3, 10):
-        # Older emulator releases cannot store ``dir/`` marker objects.
-        raise RuntimeError("gcp-storage-emulator requires Python >= 3.10")
+        _expected_unavailable["gs"] = "gcp-storage-emulator requires Python >= 3.10"
+        return
     warnings.filterwarnings("ignore", message=".*pkg_resources.*")
     _patch_gcs_compose()
     _patch_gcs_trailing_slash()
@@ -368,13 +370,13 @@ _STARTERS = {"s3": _start_s3, "gs": _start_gcs, "azure": _start_azure}
 
 
 def pytest_configure(config):
-    """Start emulators before collection so failures turn into skips."""
+    """Start emulators before collection; unexpected startup failures fail by default."""
     if LIVE:
         return
     for backend, start in _STARTERS.items():
         try:
             start()
-        except Exception as exc:  # noqa: BLE001 - an unavailable emulator is a skip
+        except Exception as exc:  # noqa: BLE001 - raised at collection unless explicitly allowed
             _emulator_errors[backend] = f"{type(exc).__name__}: {exc}"
 
 
@@ -394,14 +396,20 @@ def _module_backend(module_name: str):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip cloud test modules whose emulator is unavailable."""
+    """Fail or skip cloud modules whose emulator is unavailable."""
     if LIVE:
         return
     for item in items:
         backend = _module_backend(item.module.__name__)
-        if backend in _emulator_errors:
-            item.add_marker(
-                pytest.mark.skip(
-                    reason=f"{backend} emulator unavailable: {_emulator_errors[backend]}"
-                )
+        if backend in _expected_unavailable:
+            reason = _expected_unavailable[backend]
+            item.add_marker(pytest.mark.skip(reason=f"{backend} emulator unavailable: {reason}"))
+        elif backend in _emulator_errors:
+            message = (
+                f"{backend} emulator failed to start: {_emulator_errors[backend]}. "
+                "Set PANPATH_ALLOW_MISSING_EMULATORS=1 to skip cloud tests instead."
             )
+            if os.environ.get("PANPATH_ALLOW_MISSING_EMULATORS") == "1":
+                item.add_marker(pytest.mark.skip(reason=message))
+            else:
+                raise pytest.UsageError(message)

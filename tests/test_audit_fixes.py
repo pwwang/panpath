@@ -2,6 +2,9 @@
 
 import asyncio
 import io
+import os
+import subprocess
+import sys
 import threading
 
 import panpath
@@ -235,3 +238,99 @@ async def test_async_client_closes_previous_client_across_live_loops():
         loop1.call_soon_threadsafe(loop1.stop)
         thread.join(timeout=5.0)
         loop1.close()
+
+
+def _run_pytest_with_emulator_error(
+    tmp_path,
+    allow_missing=False,
+    module_name="test_s3_client.py",
+    live=False,
+    backend="s3",
+    expected_unavailable=False,
+):
+    """Run a cloud module through the real collection hook with a saved error."""
+    harness_path = os.path.join(os.path.dirname(__file__), "conftest.py")
+    script = [
+        "import importlib.util",
+        f"spec = importlib.util.spec_from_file_location('harness', {harness_path!r})",
+        "harness = importlib.util.module_from_spec(spec)",
+        "spec.loader.exec_module(harness)",
+        f"harness._emulator_errors[{backend!r}] = 'RuntimeError: emulator broke'",
+    ]
+    if expected_unavailable:
+        script.append(
+            "harness._expected_unavailable['gs'] = "
+            "'gcp-storage-emulator requires Python >= 3.10'"
+        )
+    script.extend(
+        [
+            "def pytest_collection_modifyitems(config, items):",
+            "    harness.pytest_collection_modifyitems(config, items)",
+        ]
+    )
+    (tmp_path / "conftest.py").write_text("\n".join(script) + "\n")
+    (tmp_path / module_name).write_text("def test_placeholder(): pass\n")
+    env = os.environ.copy()
+    if live:
+        env["PANPATH_LIVE"] = "1"
+    else:
+        env.pop("PANPATH_LIVE", None)
+    env.pop("PANPATH_ALLOW_MISSING_EMULATORS", None)
+    if allow_missing:
+        env["PANPATH_ALLOW_MISSING_EMULATORS"] = "1"
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "--no-header", "-o", "addopts="],
+        cwd=tmp_path,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_emulator_start_failure_fails_pytest_by_default(tmp_path):
+    """A recorded cloud startup error must make the child pytest run fail."""
+    result = _run_pytest_with_emulator_error(tmp_path)
+
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "s3" in result.stdout + result.stderr
+    assert "RuntimeError: emulator broke" in result.stdout + result.stderr
+    assert "PANPATH_ALLOW_MISSING_EMULATORS=1" in result.stdout + result.stderr
+
+
+def test_emulator_start_failure_can_be_skipped_explicitly(tmp_path):
+    """Developers can explicitly permit tests to skip without emulators."""
+    result = _run_pytest_with_emulator_error(tmp_path, allow_missing=True)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 skipped" in result.stdout + result.stderr
+
+
+def test_local_module_is_not_blocked_by_emulator_error(tmp_path):
+    """Pure-local modules remain runnable when a cloud emulator is missing."""
+    result = _run_pytest_with_emulator_error(
+        tmp_path, module_name="test_local.py"
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout + result.stderr
+
+
+def test_live_mode_ignores_recorded_emulator_error(tmp_path):
+    """Live mode does not use emulators, even with a recorded startup error."""
+    result = _run_pytest_with_emulator_error(tmp_path, live=True)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout + result.stderr
+
+
+def test_gcs_is_explicitly_unavailable_before_python_310(tmp_path):
+    """The Python 3.9 GCS exception is narrow and carries its version reason."""
+    result = _run_pytest_with_emulator_error(
+        tmp_path,
+        module_name="test_gs_client.py",
+        backend="gs",
+        expected_unavailable=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 skipped" in result.stdout + result.stderr
