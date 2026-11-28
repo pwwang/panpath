@@ -21,6 +21,8 @@ import warnings
 import weakref
 
 # Per-event-loop registry of AsyncClient instances with open SDK clients.
+# Values are strong so loop shutdown can still close them; clients therefore
+# must not hold their loop strongly or the weak key would never die.
 _LOOP_CLIENTS: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, Set[AsyncClient]]" = (
     weakref.WeakKeyDictionary()
 )
@@ -246,7 +248,9 @@ class AsyncClient(Client, ABC):
     """Base class for asynchronous cloud storage clients."""
 
     _client: Any = None
-    _client_loop: Optional[asyncio.AbstractEventLoop] = None
+    # Weak: the cleanup registry holds this client strongly, so a strong loop
+    # reference would keep its WeakKeyDictionary key alive forever.
+    _client_loop: Optional["weakref.ref[asyncio.AbstractEventLoop]"] = None
 
     def __init__(self) -> None:
         self._client = None
@@ -266,22 +270,23 @@ class AsyncClient(Client, ABC):
 
     def _unregister_cleanup(self) -> None:
         """Remove this client from its event loop's cleanup registry."""
-        if self._client_loop is not None:
-            clients = _LOOP_CLIENTS.get(self._client_loop)
+        loop = self._client_loop() if self._client_loop is not None else None
+        if loop is not None:
+            clients = _LOOP_CLIENTS.get(loop)
             if clients is not None:
                 clients.discard(self)
 
     async def _get_client(self) -> Any:
         """Get or create the underlying async SDK client for the running loop."""
         loop = asyncio.get_running_loop()
+        old_loop = self._client_loop() if self._client_loop is not None else None
         if self._client is not None and (
-            self._client_loop is not loop
-            or self._client_loop.is_closed()
+            old_loop is not loop
+            or old_loop.is_closed()
             or self._is_client_closed(self._client)
         ):
             # Previous client was closed or belonged to another event loop; recreate.
             old_client = self._client
-            old_loop = self._client_loop
             self._unregister_cleanup()
             self._client = None
             self._client_loop = None
@@ -299,7 +304,7 @@ class AsyncClient(Client, ABC):
 
         if self._client is None:
             self._client = await self._create_client()
-            self._client_loop = loop
+            self._client_loop = weakref.ref(loop)
             _register_loop_cleanup(loop, self)
 
         return self._client

@@ -1,11 +1,13 @@
 """Regression tests for audit fixes."""
 
 import asyncio
+import gc
 import io
 import os
 import subprocess
 import sys
 import threading
+import weakref
 
 import panpath
 from panpath import LocalPath, PanPath
@@ -238,6 +240,21 @@ async def test_async_client_closes_previous_client_across_live_loops():
         loop1.call_soon_threadsafe(loop1.stop)
         thread.join(timeout=5.0)
         loop1.close()
+
+
+def test_closed_loop_is_collectable_after_client_is_dropped():
+    """A closed loop must not be pinned by the cleanup registry."""
+    loop = asyncio.new_event_loop()
+    client = _LifecycleAsyncClient()
+    loop.run_until_complete(client._get_client())
+    loop.close()
+    loop_ref = weakref.ref(loop)
+
+    del loop, client
+    gc.collect()
+    gc.collect()
+
+    assert loop_ref() is None, "closed event loop is still retained"
 
 
 def _run_pytest_with_emulator_error(
