@@ -1,10 +1,9 @@
 import pytest
 import sys
+from panpath import PanPath
 from panpath.s3_client import S3Client, ClientError
 
-
-# Get S3 bucket from environment or use default
-S3_BUCKET = "panpath-test2"
+from .conftest import S3_BUCKET
 
 
 @pytest.fixture
@@ -64,7 +63,9 @@ def test_s3client_exists():
 def test_s3client_read_bytes():
     """Test reading bytes from an object using S3Client."""
     client = S3Client()
-    with pytest.raises(ClientError):
+    # Live AWS returns AccessDenied (ClientError) for a missing bucket;
+    # moto returns NoSuchBucket, which panpath maps to FileNotFoundError.
+    with pytest.raises((ClientError, FileNotFoundError)):
         client.read_bytes("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         client.read_bytes(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -76,7 +77,7 @@ def test_s3client_read_bytes():
 def test_s3client_read_text():
     """Test reading text from an object using S3Client."""
     client = S3Client()
-    with pytest.raises(ClientError):
+    with pytest.raises((ClientError, FileNotFoundError)):
         client.read_text("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         client.read_text(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -156,6 +157,43 @@ def test_s3client_symlink(testdir):
     resolved_path = client.readlink(symlink_path)
     assert resolved_path == f"{testdir}/target_blob.txt"
     assert client.read_bytes(resolved_path) == data
+
+
+def test_s3client_legacy_symlink_metadata(monkeypatch):
+    """Legacy S3 symlinks written with underscore symlink_target still resolve."""
+    assert S3Client.symlink_target_metaname == "symlink-target"
+    client = S3Client()
+
+    # Absolute legacy target
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {"Metadata": {"symlink_target": "s3://bucket/target.txt"}},
+    )
+    assert client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/target.txt"
+
+    # Relative legacy target
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {"Metadata": {"symlink_target": "target.txt"}},
+    )
+    assert client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/dir/target.txt"
+
+    # Current hyphenated key takes precedence when both are present
+    monkeypatch.setattr(
+        client,
+        "get_metadata",
+        lambda path: {
+            "Metadata": {
+                "symlink-target": "s3://bucket/new.txt",
+                "symlink_target": "s3://bucket/old.txt",
+            }
+        },
+    )
+    assert client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/new.txt"
 
 
 def test_s3client_glob(testdir):
@@ -253,6 +291,30 @@ def test_s3client_rename(testdir):
     assert client.exists(target_path)
     content = client.read_bytes(target_path)
     assert content == data
+
+
+def test_s3client_rename_markerless_directory(testdir):
+    """A prefix-only directory has no marker; rename must still move it."""
+    client = S3Client()
+    source = f"{testdir}/markerless"
+    target = f"{testdir}/renamed"
+    client.write_bytes(f"{source}/a.txt", b"data")
+
+    source_path = PanPath(source)
+    assert source_path.is_dir()
+    assert not source_path.exists()  # prefix-only: no directory marker object
+
+    source_path.rename(target)
+
+    assert not source_path.is_dir()
+    assert [item.name for item in PanPath(target).iterdir()] == ["a.txt"]
+    assert PanPath(f"{target}/a.txt").read_bytes() == b"data"
+
+
+def test_s3client_rename_missing_path_raises(testdir):
+    """A genuinely missing rename source still raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        PanPath(f"{testdir}/missing").rename(f"{testdir}/renamed-missing")
 
 
 def test_s3client_rmdir(testdir):

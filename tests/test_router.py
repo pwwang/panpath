@@ -1,7 +1,5 @@
 """Basic tests for PanPath router."""
 
-import pytest
-
 from panpath import PanPath, LocalPath
 
 

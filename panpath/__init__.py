@@ -62,21 +62,10 @@ __all__ = [
     "PanPath",
     "CloudPath",
     "LocalPath",
-    # Export cloud paths if available
+    # Cloud path classes, only if the backend extras are installed
+    *(
+        name
+        for name in ("S3Path", "GSPath", "AzurePath")
+        if name in globals()
+    ),
 ]
-
-# Add cloud path classes to __all__ if they're available
-try:
-    __all__.extend(["S3Path"])
-except NameError:
-    pass
-
-try:
-    __all__.extend(["GSPath"])
-except NameError:
-    pass
-
-try:
-    __all__.extend(["AzurePath"])
-except NameError:
-    pass

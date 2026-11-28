@@ -1,14 +1,14 @@
 """Azure Blob Storage client implementation."""
 
-from typing import TYPE_CHECKING, Any, Iterator, Optional, Union
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Union, cast
 import os
 
 from panpath.clients import SyncClient, SyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
 
 if TYPE_CHECKING:
-    from azure.storage.blob import BlobServiceClient  # type: ignore[import-not-found]
-    from azure.core.exceptions import ResourceNotFoundError  # type: ignore[import-not-found]
+    from azure.storage.blob import BlobServiceClient
+    from azure.core.exceptions import ResourceNotFoundError
 
 try:
     from azure.storage.blob import BlobServiceClient
@@ -17,7 +17,7 @@ try:
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
-    ResourceNotFoundError = Exception
+    ResourceNotFoundError = Exception  # type: ignore[misc, assignment]
 
 
 class AzureBlobClient(SyncClient):
@@ -53,7 +53,7 @@ class AzureBlobClient(SyncClient):
             # Check if container exists
             try:
                 container_client = self._client.get_container_client(container_name)
-                return container_client.exists()  # type: ignore[no-any-return]
+                return container_client.exists()
             except Exception:  # pragma: no cover
                 return False
 
@@ -66,7 +66,7 @@ class AzureBlobClient(SyncClient):
                 return False
             # Checking if it is possibly a directory
             blob_client_dir = self._client.get_blob_client(container_name, blob_name + "/")
-            return blob_client_dir.exists()  # type: ignore[no-any-return]
+            return blob_client_dir.exists()
         except Exception:  # pragma: no cover
             return False
 
@@ -75,7 +75,7 @@ class AzureBlobClient(SyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
         blob_client = self._client.get_blob_client(container_name, blob_name)
         try:
-            return blob_client.download_blob().readall()  # type: ignore[no-any-return]
+            return blob_client.download_blob().readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -116,7 +116,9 @@ class AzureBlobClient(SyncClient):
                     results.append(f"{self.prefix[0]}://{container_name}/{item.name}")
             else:  # pragma: no cover
                 # BlobPrefix (directory)
-                results.append(f"{self.prefix[0]}://{container_name}/{item.prefix.rstrip('/')}")
+                results.append(
+                    f"{self.prefix[0]}://{container_name}/{item.prefix.rstrip('/')}"  # type: ignore[union-attr]
+                )
 
         return results
 
@@ -141,7 +143,7 @@ class AzureBlobClient(SyncClient):
             return False
 
         blob_client = self._client.get_blob_client(container_name, blob_name.rstrip("/"))
-        return blob_client.exists()  # type: ignore[no-any-return]
+        return blob_client.exists()
 
     def stat(self, path: str) -> os.stat_result:
         """Get Azure blob metadata."""
@@ -256,7 +258,8 @@ class AzureBlobClient(SyncClient):
         container_name, blob_name = self.__class__._parse_path(path)
         blob_client = self._client.get_blob_client(container_name, blob_name)
         try:
-            return blob_client.get_blob_properties()  # type: ignore[no-any-return]
+            # BlobProperties is a DictMixin, so it indexes like a dict.
+            return cast("dict[str, str]", blob_client.get_blob_properties())
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Azure blob not found: {path}")
 
@@ -396,7 +399,7 @@ class AzureBlobClient(SyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(filter(None, files)))
 
-    def touch(  # type: ignore[no-untyped-def, override]
+    def touch(
         self,
         path: str,
         exist_ok: bool = True,
@@ -492,7 +495,7 @@ class AzureBlobClient(SyncClient):
             container_client = self._client.get_container_client(container_name)
 
             # List and delete all blobs with this prefix
-            def _blobs_delete():
+            def _blobs_delete() -> None:
                 for blob in container_client.list_blobs(name_starts_with=prefix):
                     blob_client = self._client.get_blob_client(container_name, blob.name)
                     blob_client.delete_blob()
@@ -585,7 +588,7 @@ class AzureSyncFileHandle(SyncFileHandle):
         self._read_residue = b"" if self._is_binary else ""
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
         return isinstance(exception, ResourceNotFoundError)
 
@@ -618,8 +621,9 @@ class AzureSyncFileHandle(SyncFileHandle):
                 pass
 
             self._eof = True
-            result = (b"" if self._is_binary else "").join(chunks)  # type: ignore[attr-defined]
-            return result  # type: ignore[no-any-return]
+            if self._is_binary:
+                return b"".join(cast("list[bytes]", chunks))
+            return "".join(cast("list[str]", chunks))
         else:
             while len(self._read_residue) < size:
                 try:
@@ -639,11 +643,11 @@ class AzureSyncFileHandle(SyncFileHandle):
                 self._eof = True
                 result = self._read_residue
                 self._read_residue = b"" if self._is_binary else ""
-                return result  # type: ignore[no-any-return]
+                return result
 
             result = self._read_residue[:size]
             self._read_residue = self._read_residue[size:]
-            return result  # type: ignore[no-any-return]
+            return result
 
     def _upload(self, data: Union[str, bytes]) -> None:
         """Upload data to Azure blob using append semantics.

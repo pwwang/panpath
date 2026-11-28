@@ -78,13 +78,12 @@ if directory.exists() and directory.is_dir():
 
 ```python
 from panpath import PanPath
-from panpath.exceptions import PathNotFoundError, PermissionError
 
 directory = PanPath("s3://bucket/data/")
 
 try:
     directory.rmtree()
-except PathNotFoundError:
+except FileNotFoundError:
     print("Directory doesn't exist")
 except PermissionError:
     print("Access denied")
@@ -560,7 +559,7 @@ asyncio.run(fast_copy())
 
 ```python
 from panpath import PanPath
-from panpath.exceptions import PanPathException
+from panpath.exceptions import PanPathError
 
 def robust_copytree(src: str, dst: str):
     """Copy directory with error handling."""
@@ -570,7 +569,7 @@ def robust_copytree(src: str, dst: str):
     try:
         src_path.copytree(dst_path)
         print("Copy successful!")
-    except PanPathException as e:
+    except (OSError, PanPathError) as e:
         print(f"Error during copy: {e}")
         # Cleanup partial copy
         if dst_path.exists():

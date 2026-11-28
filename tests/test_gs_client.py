@@ -3,9 +3,7 @@ import sys
 from panpath.exceptions import NoStatError
 from panpath.gs_client import GSClient
 
-
-# Get GCS bucket from environment or use default
-GCS_BUCKET = "handy-buffer-287000.appspot.com"
+from .conftest import GCS_BUCKET
 
 
 @pytest.fixture

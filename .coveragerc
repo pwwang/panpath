@@ -16,3 +16,8 @@ exclude_lines =
     if not HAS_BOTO3:
     except ImportError:
     except NameError:
+    # API stubs on the base classes; every concrete path class overrides them
+    raise NotImplementedError
+    # Version-conditional branches: each arm is unreachable on some CI
+    # interpreter, and coverage is measured per interpreter.
+    (?:el)?if sys\.version_info

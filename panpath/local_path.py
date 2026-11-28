@@ -1,6 +1,7 @@
 """Local filesystem path implementation."""
 # pyright: reportPossiblyUnboundVariable=false
 
+import asyncio
 import os
 import shutil
 import sys
@@ -40,11 +41,13 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         if hasattr(self, "_raw_paths"):
             # Already initialized in __new__, skip
             return
-        # In Python 3.10, pathlib.Path.__init__() doesn't accept arguments
-        # In Python 3.12+, pathlib.Path.__init__() needs the arguments
+        # Python 3.9-3.11: Path.__new__ fully initializes the object and
+        # __init__ is object.__init__, which accepts no arguments.
+        # Python 3.12+: PurePath.__new__ only allocates; PurePath.__init__
+        # builds _raw_paths from the arguments.
         if sys.version_info >= (3, 12):
-            super().__init__(*args, **kwargs)
-        else:  # pragma: no cover
+            super().__init__(*args)
+        elif sys.version_info < (3, 12):
             super().__init__()
 
     async def a_touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
@@ -102,12 +105,14 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         return await self.a_rename(target)
 
     async def a_resolve(self) -> "PanPath":
-        """Resolve to absolute path (no-op for cloud paths).
-
-        Returns:
-            Self (cloud paths are already absolute)
-        """
-        return await self.a_readlink() if await self.a_is_symlink() else self
+        """Resolve to an absolute path, following symlinks (async)."""
+        if not HAS_AIOFILES:
+            raise MissingDependencyError(
+                backend="async local paths",
+                package="aiofiles",
+                extra="all-async",
+            )
+        return await asyncio.to_thread(self.resolve)
 
     async def a_copy(self, target: Union[str, "Path"], follow_symlinks: bool = True) -> "PanPath":
         """Copy file to target.
@@ -132,13 +137,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                     package="aiofiles",
                     extra="all-async",
                 )
-            async with aiofiles.open(str(self), mode="rb") as sf:
-                async with aiofiles.open(target_str, mode="wb") as df:
-                    while True:
-                        chunk = await sf.read(1024 * 1024)
-                        if not chunk:  # pragma: no cover
-                            break
-                        await df.write(chunk)
+            await asyncio.to_thread(
+                shutil.copy2, str(self), target_str, follow_symlinks=follow_symlinks
+            )
 
         return PanPath(target_str)
 
@@ -197,13 +198,14 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         filenames = []
         for entry in await aiofiles.os.listdir(str(self)):
             path = self / entry
-            if await path.a_is_dir():
+            if not await path.a_is_symlink() and await path.a_is_dir():
                 dirnames.append(entry)
-                async for sub in path.a_walk():
-                    yield sub
             else:
                 filenames.append(entry)
         yield (self, dirnames, filenames)
+        for dirname in dirnames:
+            async for sub in (self / dirname).a_walk():
+                yield sub
 
     async def a_readlink(self) -> "LocalPath":
         """Asynchronously read the target of a symbolic link.
@@ -259,27 +261,13 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        from fnmatch import fnmatch
-
         if not pattern:
             raise ValueError("Unacceptable pattern: {!r}".format(pattern))
 
-        # aiofiles does not support globbing natively
-        # let's implement it with walk
-        if "**" in pattern:
-            pattern_parts = pattern.split("**/")
-            if len(pattern_parts) > 1:
-                file_pattern = pattern_parts[1]
-            else:  # pragma: no cover
-                file_pattern = "*"
-            async for dirpath, _, filenames in self.a_walk():
-                for filename in filenames:
-                    if fnmatch(filename, file_pattern):
-                        yield dirpath / filename
-        else:
-            async for entry in self.a_iterdir():
-                if fnmatch(entry.name, pattern):
-                    yield entry
+        # aiofiles does not support globbing natively; run sync glob in a worker thread
+        matches = await asyncio.to_thread(lambda: list(self.glob(pattern)))
+        for match in matches:
+            yield match
 
     async def a_rglob(  # type: ignore[override]
         self,
@@ -448,8 +436,15 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
 
         await aiofiles.os.rmdir(str(self))
 
-    async def a_rmtree(self) -> None:  # type: ignore[override]
-        """Recursively remove directory and its contents (async)."""
+    async def a_rmtree(
+        self, ignore_errors: bool = False, onerror: Optional[Any] = None
+    ) -> None:
+        """Recursively remove directory and its contents (async).
+
+        Args:
+            ignore_errors: If True, errors during removal are ignored.
+            onerror: Callable that accepts (function, path, excinfo).
+        """
         if not HAS_AIOFILES:
             raise MissingDependencyError(
                 backend="async local paths",
@@ -457,13 +452,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        for entry in await aiofiles.os.listdir(str(self)):
-            path = self / entry
-            if await path.a_is_dir():
-                await path.a_rmtree()
-            else:
-                await aiofiles.os.remove(str(path))
-        await aiofiles.os.rmdir(str(self))
+        await asyncio.to_thread(
+            shutil.rmtree, str(self), ignore_errors=ignore_errors, onerror=onerror
+        )
 
     async def a_iterdir(  # type: ignore[override]
         self,
@@ -513,9 +504,9 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
                 extra="all-async",
             )
 
-        return aiofiles.open(  # type: ignore
+        return aiofiles.open(
             str(self),
-            mode=mode,  # type: ignore
+            mode=mode,
             buffering=buffering,
             encoding=encoding,
             errors=errors,
@@ -601,9 +592,14 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         """Remove empty directory."""
         os.rmdir(str(self))
 
-    def rmtree(self) -> None:
-        """Recursively remove directory and its contents."""
-        shutil.rmtree(str(self))
+    def rmtree(self, ignore_errors: bool = False, onerror: Optional[Any] = None) -> None:
+        """Recursively remove directory and its contents.
+
+        Args:
+            ignore_errors: If True, errors during removal are ignored.
+            onerror: Callable that accepts (function, path, excinfo).
+        """
+        shutil.rmtree(str(self), ignore_errors=ignore_errors, onerror=onerror)
 
     # backports, walk is introduced in Python 3.12
     def walk(  # type: ignore[no-untyped-def]
@@ -619,14 +615,13 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         if sys.version_info >= (3, 12):
             yield from Path.walk(self, *args, **kwargs)  # type: ignore[no-untyped-call]
             return
-
-        if args or kwargs:  # pragma: no cover
-            raise NotImplementedError(
-                "walk() does not accept arguments in this backport."
-            )
-        else:  # pragma: no cover
+        elif sys.version_info < (3, 12):
+            if args or kwargs:
+                raise NotImplementedError(
+                    "walk() does not accept arguments in this backport."
+                )
             for dirpath, dirnames, filenames in os.walk(str(self)):
-                yield (  # type: ignore[misc]
+                yield (
                     PanPath(dirpath),
                     dirnames,
                     filenames,

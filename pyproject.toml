@@ -10,9 +10,7 @@ authors = [{name = "panpath contributors"}]
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9,<4.0"
-dependencies = [
-    "typing-extensions>=4.0.0",
-]
+dependencies = []
 keywords = ["path", "pathlib", "s3", "gcs", "azure", "cloud", "async", "asyncio"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -60,7 +58,9 @@ dev = [
     "python-dotenv>=1,<2",
     "mypy>=1.0.0",
     "black>=23.0.0",
-    "moto[s3]>=4.0.0",
+    # Cloud emulators used by the test suite (Azure uses `npx azurite`).
+    "moto[server]>=5.0.0",
+    "gcp-storage-emulator>=2026.7.19; python_version >= '3.10'",
 ]
 docs = [
     "mkdocs>=1.5.0",
@@ -68,15 +68,6 @@ docs = [
     "mkapi-fix>=0.1",
     "mkdocs-git-revision-date-localized-plugin>=1.2.0",
 ]
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.packages.find]
-include = ["panpath*"]
-
-[tool.setuptools.package-data]
-panpath = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -87,7 +78,8 @@ python_functions = ["test_*"]
 addopts = "-v -n auto --cov=panpath --cov-report=term-missing --cov-config=.coveragerc"
 
 [tool.mypy]
-python_version = "3.9"
+# mypy 2.x cannot target 3.9, so 3.10 (the lowest it still checks) is the gate.
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true

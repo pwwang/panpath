@@ -1,10 +1,10 @@
 import pytest
 import sys
+from panpath import PanPath
 from panpath.s3_async_client import AsyncS3Client, ClientError
 from .utils import async_generator_to_list
 
-# Get S3 bucket from environment or use default
-S3_BUCKET = "panpath-test2"
+from .conftest import S3_BUCKET
 
 
 @pytest.fixture
@@ -88,7 +88,9 @@ async def test_asyncs3client_exists():
 async def test_asyncs3client_read_bytes():
     """Test reading bytes from an object using AsyncS3Client."""
     client = AsyncS3Client()
-    with pytest.raises(ClientError):
+    # Live AWS returns AccessDenied (ClientError) for a missing bucket;
+    # moto returns NoSuchBucket, which panpath maps to FileNotFoundError.
+    with pytest.raises((ClientError, FileNotFoundError)):
         await client.read_bytes("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         await client.read_bytes(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -100,7 +102,7 @@ async def test_asyncs3client_read_bytes():
 async def test_asyncs3client_read_text():
     """Test reading text from an object using AsyncS3Client."""
     client = AsyncS3Client()
-    with pytest.raises(ClientError):
+    with pytest.raises((ClientError, FileNotFoundError)):
         await client.read_text("s3://nonexistent-bucket-12345/nonexistent-blob.txt")
     with pytest.raises(FileNotFoundError):
         await client.read_text(f"s3://{S3_BUCKET}/nonexistent-blob.txt")
@@ -143,10 +145,12 @@ async def test_asyncs3client_get_set_metadata(testdir):
     assert isinstance(metadata, dict)
     assert "ContentLength" in metadata
 
-    await client.set_metadata(path, {"custom_key": "custom_value"})
+    # Hyphens, not underscores: S3 user metadata travels as HTTP headers and
+    # underscore keys are dropped by many servers.
+    await client.set_metadata(path, {"custom-key": "custom-value"})
     metadata = await client.get_metadata(path)
-    assert "custom_key" in metadata.get("Metadata", {})
-    assert metadata["Metadata"]["custom_key"] == "custom_value"
+    assert "custom-key" in metadata.get("Metadata", {})
+    assert metadata["Metadata"]["custom-key"] == "custom-value"
 
 
 async def test_asyncs3client_symlink(testdir):
@@ -182,6 +186,37 @@ async def test_asyncs3client_symlink(testdir):
     assert resolved_path == f"{testdir}/target_blob.txt"
     content = await client.read_bytes(resolved_path)
     assert content == data
+
+
+async def test_asyncs3client_legacy_symlink_metadata(monkeypatch):
+    """Legacy S3 symlinks written with underscore symlink_target still resolve."""
+    assert AsyncS3Client.symlink_target_metaname == "symlink-target"
+    client = AsyncS3Client()
+
+    async def _meta_abs(path):
+        return {"Metadata": {"symlink_target": "s3://bucket/target.txt"}}
+
+    monkeypatch.setattr(client, "get_metadata", _meta_abs)
+    assert await client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/target.txt"
+
+    async def _meta_rel(path):
+        return {"Metadata": {"symlink_target": "target.txt"}}
+
+    monkeypatch.setattr(client, "get_metadata", _meta_rel)
+    assert await client.is_symlink("s3://bucket/dir/link.txt") is True
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/dir/target.txt"
+
+    async def _meta_both(path):
+        return {
+            "Metadata": {
+                "symlink-target": "s3://bucket/new.txt",
+                "symlink_target": "s3://bucket/old.txt",
+            }
+        }
+
+    monkeypatch.setattr(client, "get_metadata", _meta_both)
+    assert await client.readlink("s3://bucket/dir/link.txt") == "s3://bucket/new.txt"
 
 
 async def test_asyncs3client_glob(testdir):
@@ -288,6 +323,31 @@ async def test_asyncs3client_rename(testdir):
     # Rename non-existent object
     with pytest.raises(FileNotFoundError):
         await client.rename(f"{testdir}/nonexistent_blob.txt", f"{testdir}/new_blob.txt")
+
+
+async def test_asyncs3client_rename_markerless_directory(testdir):
+    """A prefix-only directory has no marker; a_rename must still move it."""
+    client = AsyncS3Client()
+    source = f"{testdir}/markerless"
+    target = f"{testdir}/renamed"
+    await client.write_bytes(f"{source}/a.txt", b"data")
+
+    source_path = PanPath(source)
+    assert await source_path.a_is_dir()
+    assert not await source_path.a_exists()  # prefix-only: no directory marker
+
+    await source_path.a_rename(target)
+
+    assert not await source_path.a_is_dir()
+    moved = [item.name async for item in PanPath(target).a_iterdir()]
+    assert moved == ["a.txt"]
+    assert await PanPath(f"{target}/a.txt").a_read_bytes() == b"data"
+
+
+async def test_asyncs3client_rename_missing_path_raises(testdir):
+    """A genuinely missing a_rename source still raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        await PanPath(f"{testdir}/missing").a_rename(f"{testdir}/renamed-missing")
 
 
 async def test_asyncs3client_rmdir(testdir):

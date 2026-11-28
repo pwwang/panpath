@@ -25,6 +25,11 @@ class S3Client(SyncClient):
     """Synchronous S3 client implementation using boto3."""
 
     prefix = ("s3",)
+    # User metadata travels as HTTP headers, and headers with underscores are
+    # silently dropped by many servers (moto, proxies, nginx). Use a hyphen for
+    # writes, and fall back to the legacy underscore key on reads.
+    symlink_target_metaname = "symlink-target"
+    _legacy_symlink_target_metaname = "symlink_target"
 
     def __init__(self, **kwargs: Any):
         """Initialize S3 client.
@@ -39,7 +44,6 @@ class S3Client(SyncClient):
                 extra="s3",
             )
         self._client = boto3.client("s3", **kwargs)
-        self._resource = boto3.resource("s3", **kwargs)
 
     def exists(self, path: str) -> bool:
         """Check if S3 object exists."""
@@ -297,7 +301,11 @@ class S3Client(SyncClient):
         """
         try:
             metadata = self.get_metadata(path)
-            return self.__class__.symlink_target_metaname in metadata.get("Metadata", {})
+            user_meta: Any = metadata.get("Metadata", {})
+            return (
+                self.__class__.symlink_target_metaname in user_meta
+                or self.__class__._legacy_symlink_target_metaname in user_meta
+            )
         except FileNotFoundError:
             return False
 
@@ -311,8 +319,9 @@ class S3Client(SyncClient):
             Symlink target path
         """
         metadata = self.get_metadata(path)
-        target = metadata.get("Metadata", {}).get(  # type: ignore[union-attr, call-overload]
-            self.__class__.symlink_target_metaname
+        user_meta: Any = metadata.get("Metadata", {})
+        target = user_meta.get(self.__class__.symlink_target_metaname) or user_meta.get(
+            self.__class__._legacy_symlink_target_metaname
         )
         if not target:
             raise ValueError(f"Not a symlink: {path!r}")
@@ -631,7 +640,7 @@ class S3SyncFileHandle(SyncFileHandle):
         return self._client.get_object(Bucket=self._bucket, Key=self._blob)["Body"]
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception corresponds to FileNotFoundError."""
         if isinstance(exception, ClientError):
             error_code = exception.response.get("Error", {}).get("Code")

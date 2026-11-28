@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import datetime
-import weakref
 import os
 import sys
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Union, cast
 
 from panpath.clients import AsyncClient, AsyncFileHandle
 from panpath.exceptions import MissingDependencyError, NoStatError
@@ -32,45 +30,6 @@ except ImportError:
     HAS_GCLOUD_AIO = False
 
 
-# Track all active storage instances for cleanup
-_active_clients: Set[weakref.ref] = set()  # type: ignore[type-arg]
-
-
-async def _async_cleanup_all_clients() -> None:
-    """Async cleanup of all active storage instances."""
-    # Create a copy of the set to avoid modification during iteration
-    clients_to_clean = list(_active_clients)
-
-    for client_ref in clients_to_clean:
-        storage = client_ref()
-        if storage is None:  # pragma: no cover
-            continue
-
-        try:
-            await storage.close()
-        except Exception:  # pragma: no cover
-            # Ignore errors during cleanup
-            pass
-
-    _active_clients.clear()
-
-
-def _register_loop_cleanup(loop: asyncio.AbstractEventLoop) -> None:
-    """Register cleanup to run before loop closes."""
-    # Get the original shutdown_asyncgens method
-    original_shutdown = loop.shutdown_asyncgens
-
-    async def shutdown_with_cleanup():  # type: ignore[no-untyped-def]
-        """Shutdown that includes storage cleanup."""
-        # Clean up storages first
-        await _async_cleanup_all_clients()
-        # Then run original shutdown
-        await original_shutdown()
-
-    # Replace with our version
-    loop.shutdown_asyncgens = shutdown_with_cleanup  # type: ignore[method-assign]
-
-
 class AsyncGSClient(AsyncClient):
     """Asynchronous Google Cloud Storage client implementation."""
 
@@ -89,64 +48,22 @@ class AsyncGSClient(AsyncClient):
                 package="gcloud-aio-storage",
                 extra="async-gs",
             )
-        self._client: Optional[Storage] = None
+        super().__init__()
         self._kwargs = kwargs
-        self._client_ref: Optional[weakref.ref] = None  # type: ignore[type-arg]
+
+    async def _create_client(self) -> Storage:
+        """Create a new gcloud-aio Storage client."""
+        return Storage(**self._kwargs)
+
+    def _is_client_closed(self, client: Any) -> bool:
+        try:
+            return bool(client.session.session.closed)
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            return True
 
     async def _get_client(self) -> Storage:
         """Get or create shared storage client for the AsyncGSClient."""
-        # Check if storage needs to be recreated (closed or never created)
-        needs_recreation = False
-        if self._client is None:
-            needs_recreation = True
-        else:
-            # Check if the underlying aiohttp session is closed
-            try:
-                if self._client.session.session.closed:
-                    needs_recreation = True
-                    # Clean up the old storage reference
-                    if self._client_ref is not None:
-                        _active_clients.discard(self._client_ref)
-                        self._client_ref = None
-                    self._client = None
-            except (AttributeError, RuntimeError):  # pragma: no cover
-                # If we can't check the session state, recreate to be safe
-                needs_recreation = True
-                self._client = None
-
-        if needs_recreation:
-            self._client = Storage(**self._kwargs)
-            # Track this storage instance for cleanup
-            self._client_ref = weakref.ref(self._client, self._on_client_deleted)
-            _active_clients.add(self._client_ref)
-
-            # Register cleanup with the current event loop
-            try:
-                loop = asyncio.get_running_loop()
-                # Check if we've already patched this loop
-                if not hasattr(loop, "_panpath_gs_cleanup_registered"):
-                    _register_loop_cleanup(loop)
-                    loop._panpath_gs_cleanup_registered = True  # type: ignore
-            except RuntimeError:  # pragma: no cover
-                # No running loop, cleanup will be handled by explicit close
-                pass
-
-        return self._client  # type: ignore[return-value]
-
-    def _on_client_deleted(self, ref: "weakref.ref[Any]") -> None:  # pragma: no cover
-        """Called when storage is garbage collected."""
-        _active_clients.discard(ref)
-
-    async def close(self) -> None:
-        """Close the storage client and cleanup resources."""
-        if self._client is not None:
-            # Remove from active storages
-            if self._client_ref is not None:
-                _active_clients.discard(self._client_ref)
-                self._client_ref = None
-            # Close the storage
-            await self._client.close()
-            self._client = None
+        return cast("Storage", await super()._get_client())
 
     async def exists(self, path: str) -> bool:
         """Check if GCS blob exists."""
@@ -580,7 +497,7 @@ class AsyncGSClient(AsyncClient):
         for d, (subdirs, files) in sorted(dirs.items()):
             yield (d, sorted(subdirs), sorted(filter(None, files)))
 
-    async def touch(  # type: ignore[no-untyped-def, override]
+    async def touch(
         self,
         path: str,
         exist_ok: bool = True,
@@ -682,7 +599,7 @@ class AsyncGSClient(AsyncClient):
             blob_names = [item["name"] for item in blobs.get("items", [])]
 
             # Delete all blobs
-            async def _delete_fn():
+            async def _delete_fn() -> None:
                 for blob_name in blob_names:
                     await storage.delete(bucket_name, blob_name)
             delete_fn = _delete_fn
@@ -779,11 +696,11 @@ class GSAsyncFileHandle(AsyncFileHandle):
         )
 
     @classmethod
-    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+    def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates blob does not exist."""
         status = getattr(exception, "status", None)
         if status is not None:
-            return status == 404
+            return bool(status == 404)
         return False
 
     async def _upload(self, data: Union[str, bytes]) -> None:

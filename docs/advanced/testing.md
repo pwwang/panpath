@@ -28,21 +28,25 @@ def process_file(path: PanPath) -> str:
 
 ## Mocking Cloud Clients
 
-For more advanced testing:
+Swap the client for a mock by passing it to the path:
 
 ```python
-from unittest.mock import Mock, patch
-from panpath import PanPath
+from unittest.mock import Mock
+from panpath.s3_path import S3Path
 
-@patch('panpath.clients.get_s3_client')
-def test_s3_operation(mock_get_client):
+def test_s3_operation():
     mock_client = Mock()
-    mock_get_client.return_value = mock_client
+    path = S3Path("s3://bucket/file.txt", client=mock_client)
 
-    # Test your code
-    path = PanPath("s3://bucket/file.txt")
-    # ...
+    path.read_text()
+    mock_client.read_text.assert_called_once_with(
+        "s3://bucket/file.txt", encoding="utf-8"
+    )
 ```
+
+For a more realistic setup, run the provider's local emulator (moto for S3,
+`gcp-storage-emulator` for GCS, Azurite for Azure) and point the client's
+`endpoint_url` at it — see `tests/conftest.py` for a working example.
 
 ## See Also
 
