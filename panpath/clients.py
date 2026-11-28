@@ -470,6 +470,14 @@ class AsyncFileHandle(ABC):
     the provider's specific streaming capabilities.
     """
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        # 0.4.12 subclasses implement only the legacy spelling; satisfy the
+        # abstract hook from it, but leave a subclass implementing neither broken.
+        legacy = cls.__dict__.get("_expception_as_filenotfound")
+        if legacy is not None and "_exception_as_filenotfound" not in cls.__dict__:
+            cls._exception_as_filenotfound = legacy  # type: ignore[method-assign]
+
     def __init__(
         self,
         client_factory: Callable[[], Awaitable[Any]],
@@ -530,6 +538,11 @@ class AsyncFileHandle(ABC):
     @abstractmethod
     def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
+
+    @classmethod
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+        """Deprecated 0.4.12 spelling; delegates to ``_exception_as_filenotfound``."""
+        return cls._exception_as_filenotfound(exception)
 
     @abstractmethod
     async def _create_stream(self) -> Any:
@@ -877,6 +890,14 @@ class SyncFileHandle(ABC):
     the provider's specific streaming capabilities.
     """
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        # 0.4.12 subclasses implement only the legacy spelling; satisfy the
+        # abstract hook from it, but leave a subclass implementing neither broken.
+        legacy = cls.__dict__.get("_expception_as_filenotfound")
+        if legacy is not None and "_exception_as_filenotfound" not in cls.__dict__:
+            cls._exception_as_filenotfound = legacy  # type: ignore[method-assign]
+
     def __init__(
         self,
         client: Any,
@@ -935,6 +956,11 @@ class SyncFileHandle(ABC):
     @abstractmethod
     def _exception_as_filenotfound(cls, exception: Exception) -> bool:
         """Check if exception indicates 'file not found'."""
+
+    @classmethod
+    def _expception_as_filenotfound(cls, exception: Exception) -> bool:
+        """Deprecated 0.4.12 spelling; delegates to ``_exception_as_filenotfound``."""
+        return cls._exception_as_filenotfound(exception)
 
     @abstractmethod
     def _create_stream(self) -> Any:

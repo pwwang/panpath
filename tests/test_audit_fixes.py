@@ -11,7 +11,7 @@ import weakref
 
 import panpath
 from panpath import LocalPath, PanPath
-from panpath.clients import AsyncClient, SyncFileHandle
+from panpath.clients import AsyncClient, AsyncFileHandle, SyncFileHandle
 
 
 class _MemHandle(SyncFileHandle):
@@ -30,6 +30,74 @@ class _MemHandle(SyncFileHandle):
 
     def _upload(self, data):
         pass
+
+
+class _LegacySpellingHandle(SyncFileHandle):
+    """Third-party shape written against the 0.4.12 hook spelling."""
+
+    @classmethod
+    def _expception_as_filenotfound(cls, exception):
+        return isinstance(exception, FileNotFoundError)
+
+    def _create_stream(self):
+        return io.BytesIO(b"")
+
+    def _upload(self, data):
+        pass
+
+
+class _CorrectedSpellingHandle(SyncFileHandle):
+    """Subclass using the corrected hook spelling."""
+
+    @classmethod
+    def _exception_as_filenotfound(cls, exception):
+        return isinstance(exception, FileNotFoundError)
+
+    def _create_stream(self):
+        return io.BytesIO(b"")
+
+    def _upload(self, data):
+        pass
+
+
+def test_file_handle_accepts_both_hook_spellings():
+    """Legacy and corrected hook spellings must both allow construction."""
+    legacy = _LegacySpellingHandle(client=None, bucket="b", blob="k", prefix="mem")
+    corrected = _CorrectedSpellingHandle(client=None, bucket="b", blob="k", prefix="mem")
+
+    assert legacy._exception_as_filenotfound(FileNotFoundError())
+    assert corrected._expception_as_filenotfound(FileNotFoundError())
+
+
+async def test_async_file_handle_accepts_both_hook_spellings():
+    """The async base class must accept both hook spellings too."""
+    class LegacyAsyncHandle(AsyncFileHandle):
+        @classmethod
+        def _expception_as_filenotfound(cls, exception):
+            return isinstance(exception, FileNotFoundError)
+
+        async def _create_stream(self):
+            return None
+
+        async def _upload(self, data):
+            pass
+
+    class CorrectedAsyncHandle(AsyncFileHandle):
+        @classmethod
+        def _exception_as_filenotfound(cls, exception):
+            return isinstance(exception, FileNotFoundError)
+
+        async def _create_stream(self):
+            return None
+
+        async def _upload(self, data):
+            pass
+
+    async def factory():
+        return None
+
+    for handle_cls in (LegacyAsyncHandle, CorrectedAsyncHandle):
+        handle_cls(client_factory=factory, bucket="b", blob="k", prefix="mem")
 
 
 def test_sync_read_consumes_readline_buffer():
