@@ -325,6 +325,59 @@ def test_closed_loop_is_collectable_after_client_is_dropped():
     assert loop_ref() is None, "closed event loop is still retained"
 
 
+async def test_async_client_get_client_single_flight():
+    """Concurrent _get_client() calls share one _create_client() invocation."""
+    created = []
+
+    class _SlowCreateClient(_LifecycleAsyncClient):
+        async def _create_client(self):
+            await asyncio.sleep(0.05)
+            sdk = _FakeSDKClient()
+            created.append(sdk)
+            return sdk
+
+    client = _SlowCreateClient()
+    try:
+        results = await asyncio.gather(*(client._get_client() for _ in range(10)))
+        assert len(created) == 1
+        assert len(results) == 10
+        assert all(sdk is created[0] for sdk in results)
+    finally:
+        await client.close()
+
+    assert created[0].closed is True
+
+
+async def test_async_client_get_client_retries_after_creation_failure():
+    """A failed in-flight creation must clear _client_task so retries succeed."""
+    attempts = 0
+
+    class _FlakyCreateClient(_LifecycleAsyncClient):
+        async def _create_client(self):
+            nonlocal attempts
+            attempts += 1
+            await asyncio.sleep(0.01)
+            if attempts == 1:
+                raise RuntimeError("transient creation failure")
+            return _FakeSDKClient()
+
+    client = _FlakyCreateClient()
+    try:
+        results = await asyncio.gather(
+            *(client._get_client() for _ in range(5)),
+            return_exceptions=True,
+        )
+        assert attempts == 1
+        assert all(isinstance(r, RuntimeError) for r in results)
+        assert client._client is None
+
+        sdk = await client._get_client()
+        assert attempts == 2
+        assert sdk is client._client
+    finally:
+        await client.close()
+
+
 def _run_pytest_with_emulator_error(
     tmp_path,
     allow_missing=False,

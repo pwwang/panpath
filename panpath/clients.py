@@ -251,14 +251,29 @@ class AsyncClient(Client, ABC):
     # Weak: the cleanup registry holds this client strongly, so a strong loop
     # reference would keep its WeakKeyDictionary key alive forever.
     _client_loop: Optional["weakref.ref[asyncio.AbstractEventLoop]"] = None
+    _client_task: Optional["asyncio.Task[Any]"] = None
 
     def __init__(self) -> None:
         self._client = None
         self._client_loop = None
+        self._client_task = None
 
     async def _create_client(self) -> Any:
         """Create a new underlying async SDK client."""
         raise NotImplementedError  # pragma: no cover
+
+    async def _create_and_cache(self, loop: asyncio.AbstractEventLoop) -> Any:
+        """Create the underlying SDK client and cache it for ``loop``."""
+        task = asyncio.current_task()
+        try:
+            client = await self._create_client()
+        finally:
+            if self._client_task is task:
+                self._client_task = None
+        self._client = client
+        self._client_loop = weakref.ref(loop)
+        _register_loop_cleanup(loop, self)
+        return client
 
     async def _close_client(self, client: Any) -> None:
         """Close the underlying async SDK client."""
@@ -303,9 +318,12 @@ class AsyncClient(Client, ABC):
                 pass
 
         if self._client is None:
-            self._client = await self._create_client()
-            self._client_loop = weakref.ref(loop)
-            _register_loop_cleanup(loop, self)
+            task = self._client_task
+            if task is None or task.done() or task.get_loop() is not loop:
+                task = loop.create_task(self._create_and_cache(loop))
+                if not task.done():
+                    self._client_task = task
+            return await task
 
         return self._client
 
