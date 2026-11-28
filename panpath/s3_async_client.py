@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import weakref
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, Union
 
 from panpath.clients import AsyncClient, AsyncFileHandle
@@ -47,16 +48,35 @@ class AsyncS3Client(AsyncClient):
             )
         super().__init__()
         self._kwargs = kwargs
+        self._closed_clients: weakref.WeakSet[Any] = weakref.WeakSet()
+        self._used_clients: weakref.WeakSet[Any] = weakref.WeakSet()
 
     async def _create_client(self) -> AioBaseClient:
         """Create a new aioboto3 S3 client."""
         return await aioboto3.Session(**self._kwargs).client("s3").__aenter__()
 
-    def _is_client_closed(self, client: Any) -> bool:
+    async def _close_client(self, client: Any) -> None:
+        """Close the underlying aioboto3 S3 client and mark it closed."""
         try:
-            return not client._endpoint.http_session._sessions
-        except Exception:  # pragma: no cover
+            self._closed_clients.add(client)
+        except TypeError:  # pragma: no cover
+            pass
+        await super()._close_client(client)
+
+    def _is_client_closed(self, client: Any) -> bool:
+        if client in self._closed_clients:
             return True
+        try:
+            sessions = client._endpoint.http_session._sessions
+        except Exception:  # pragma: no cover
+            return False
+        if sessions:
+            try:
+                self._used_clients.add(client)
+            except TypeError:  # pragma: no cover
+                pass
+            return False
+        return client in self._used_clients
 
     async def _get_client(self) -> AioBaseClient:
         """Get or create shared client."""

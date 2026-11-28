@@ -555,3 +555,26 @@ async def test_cloudpath_readlink_local_target_omits_client_kwargs(monkeypatch):
         (("s3://bucket/real.txt",), {"client": sync_client, "async_client": async_client}),
         (("s3://bucket/real.txt",), {"client": sync_client, "async_client": async_client}),
     ]
+
+
+async def test_async_s3_client_fresh_not_reported_closed():
+    """Fresh AsyncS3Client SDK client has no sessions yet and must not be treated as closed."""
+    from panpath.s3_async_client import AsyncS3Client
+
+    client = AsyncS3Client(
+        region_name="us-east-1",
+        aws_access_key_id="test",
+        aws_secret_access_key="test",
+    )
+    try:
+        sdk1 = await client._get_client()
+        assert client._is_client_closed(sdk1) is False
+
+        sdk2 = await client._get_client()
+        sdk3 = await client._get_client()
+        assert sdk1 is sdk2 is sdk3
+        assert client._is_client_closed(object()) is False
+    finally:
+        await client.close()
+
+    assert client._is_client_closed(sdk1) is True
