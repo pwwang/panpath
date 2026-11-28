@@ -7,10 +7,12 @@ import os
 import subprocess
 import sys
 import threading
+import warnings
 import weakref
 
 import panpath
-from panpath import LocalPath, PanPath
+import panpath.cloud as cloud_module
+from panpath import CloudPath, LocalPath, PanPath
 from panpath.clients import AsyncClient, AsyncFileHandle, SyncFileHandle
 
 
@@ -472,3 +474,84 @@ def test_gcs_is_explicitly_unavailable_before_python_310(tmp_path):
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "1 skipped" in result.stdout + result.stderr
+
+
+def test_panpath_local_ignores_client_kwargs():
+    """PanPath/LocalPath local construction must not forward client kwargs to PurePath."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        p1 = PanPath("/tmp/x", client=None)
+        p2 = PanPath("/tmp/x", async_client=None)
+        p3 = PanPath("file:///tmp/x", client=None, async_client=None)
+        p4 = LocalPath("/tmp/x", client=None)
+
+    for p in (p1, p2, p3, p4):
+        assert isinstance(p, LocalPath)
+        assert str(p) == "/tmp/x"
+
+
+async def test_cloudpath_readlink_local_target_omits_client_kwargs(monkeypatch):
+    """CloudPath.readlink/a_readlink must not pass client kwargs for local targets."""
+
+    class _StubSyncClient:
+        def __init__(self, target):
+            self.target = target
+
+        def readlink(self, path):
+            return self.target
+
+    class _StubAsyncClient:
+        def __init__(self, target):
+            self.target = target
+
+        async def readlink(self, path):
+            return self.target
+
+    class _StubCloudPath(CloudPath):
+        @classmethod
+        def _create_default_client(cls):
+            raise NotImplementedError
+
+        @classmethod
+        def _create_default_async_client(cls):
+            raise NotImplementedError
+
+    calls = []
+    real_panpath = PanPath
+
+    def _spy_panpath(*args, **kwargs):
+        calls.append((args, kwargs))
+        return real_panpath(*args, **kwargs)
+
+    monkeypatch.setattr(cloud_module, "PanPath", _spy_panpath)
+
+    sync_client = _StubSyncClient("/tmp/local_target.txt")
+    async_client = _StubAsyncClient("file:///tmp/local_target.txt")
+    link = _StubCloudPath("s3://bucket/link", client=sync_client, async_client=async_client)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        sync_target = link.readlink()
+        async_target = await link.a_readlink()
+
+    assert isinstance(sync_target, LocalPath)
+    assert str(sync_target) == "/tmp/local_target.txt"
+    assert isinstance(async_target, LocalPath)
+    assert str(async_target) == "/tmp/local_target.txt"
+    assert calls == [
+        (("/tmp/local_target.txt",), {}),
+        (("file:///tmp/local_target.txt",), {}),
+    ]
+
+    # Cloud targets still preserve client and async_client.
+    calls.clear()
+    sync_client.target = "s3://bucket/real.txt"
+    async_client.target = "s3://bucket/real.txt"
+    cloud_sync = link.readlink()
+    cloud_async = await link.a_readlink()
+    assert str(cloud_sync) == "s3://bucket/real.txt"
+    assert str(cloud_async) == "s3://bucket/real.txt"
+    assert calls == [
+        (("s3://bucket/real.txt",), {"client": sync_client, "async_client": async_client}),
+        (("s3://bucket/real.txt",), {"client": sync_client, "async_client": async_client}),
+    ]

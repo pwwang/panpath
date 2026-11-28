@@ -46,7 +46,7 @@ class LocalPath(_ConcretePath, PanPath):  # type: ignore[valid-type, misc]
         # Python 3.12+: PurePath.__new__ only allocates; PurePath.__init__
         # builds _raw_paths from the arguments.
         if sys.version_info >= (3, 12):
-            super().__init__(*args, **kwargs)
+            super().__init__(*args)
         elif sys.version_info < (3, 12):
             super().__init__()
 

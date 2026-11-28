@@ -17,7 +17,7 @@ from typing import (
     Tuple,
     Union,
 )
-from panpath.base import PanPath
+from panpath.base import PanPath, _parse_uri
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -426,6 +426,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             Path that this symlink points to
         """
         target = self.client.readlink(str(self))
+        if _parse_uri(target)[0] is None:
+            return PanPath(target)  # type: ignore[return-value]
 
         return PanPath(  # type: ignore[return-value]
             target,
@@ -839,6 +841,8 @@ class CloudPath(PanPath, PurePosixPath, ABC):
             Path that this symlink points to
         """
         target = await self.async_client.readlink(str(self))
+        if _parse_uri(target)[0] is None:
+            return PanPath(target)  # type: ignore[return-value]
 
         return PanPath(  # type: ignore[return-value]
             target,

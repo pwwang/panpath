@@ -111,7 +111,7 @@ class PanPath(PathlibPath):
             # Python 3.12+: PurePath.__init__ must receive the arguments to set
             # _raw_paths.
             if sys.version_info >= (3, 12):
-                LocalPath.__init__(instance, *new_args, **kwargs)  # type: ignore[no-untyped-call]
+                LocalPath.__init__(instance, *new_args)  # type: ignore[no-untyped-call]
             elif sys.version_info < (3, 12):
                 LocalPath.__init__(instance)  # type: ignore[no-untyped-call]
             return instance
